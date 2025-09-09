@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      agendamentos: {
+        Row: {
+          created_at: string
+          data_agendamento: string
+          email_cliente: string
+          id: string
+          nome_cliente: string
+          slot_numero: number
+          status: string
+          telefone_cliente: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data_agendamento: string
+          email_cliente: string
+          id?: string
+          nome_cliente: string
+          slot_numero: number
+          status?: string
+          telefone_cliente?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data_agendamento?: string
+          email_cliente?: string
+          id?: string
+          nome_cliente?: string
+          slot_numero?: number
+          status?: string
+          telefone_cliente?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       contatos_agente: {
         Row: {
           agente: string | null
