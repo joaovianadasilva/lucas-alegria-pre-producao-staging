@@ -6,85 +6,11 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-interface ServiceAccount {
-  type: string;
-  project_id: string;
-  private_key_id: string;
-  private_key: string;
-  client_email: string;
-  client_id: string;
-  auth_uri: string;
-  token_uri: string;
-  auth_provider_x509_cert_url: string;
-  client_x509_cert_url: string;
-  universe_domain: string;
-}
-
-async function getAccessToken(serviceAccount: ServiceAccount): Promise<string> {
-  const now = Math.floor(Date.now() / 1000);
-  const payload = {
-    iss: serviceAccount.client_email,
-    scope: 'https://www.googleapis.com/auth/spreadsheets',
-    aud: serviceAccount.token_uri,
-    exp: now + 3600,
-    iat: now,
-  };
-
-  const header = { alg: 'RS256', typ: 'JWT' };
-  
-  // Create JWT manually using Web Crypto API
-  const encoder = new TextEncoder();
-  const headerEncoded = btoa(JSON.stringify(header)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
-  const payloadEncoded = btoa(JSON.stringify(payload)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
-  
-  const data = `${headerEncoded}.${payloadEncoded}`;
-  
-  // Import private key
-  const privateKey = await crypto.subtle.importKey(
-    'pkcs8',
-    encoder.encode(serviceAccount.private_key.replace(/\\n/g, '\n')),
-    {
-      name: 'RSASSA-PKCS1-v1_5',
-      hash: 'SHA-256',
-    },
-    false,
-    ['sign']
-  );
-  
-  // Sign the JWT
-  const signature = await crypto.subtle.sign(
-    'RSASSA-PKCS1-v1_5',
-    privateKey,
-    encoder.encode(data)
-  );
-  
-  const signatureBase64 = btoa(String.fromCharCode(...new Uint8Array(signature)))
-    .replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
-  
-  const jwt = `${data}.${signatureBase64}`;
-  
-  // Exchange JWT for access token
-  const tokenResponse = await fetch(serviceAccount.token_uri, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: new URLSearchParams({
-      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-      assertion: jwt,
-    }),
-  });
-  
-  const tokenData = await tokenResponse.json();
-  return tokenData.access_token;
-}
-
-async function getSheetData(spreadsheetId: string, range: string, accessToken: string) {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}`;
+async function getSheetData(spreadsheetId: string, range: string, apiKey: string) {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}?key=${apiKey}`;
   
   const response = await fetch(url, {
     headers: {
-      'Authorization': `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
     },
   });
@@ -96,13 +22,12 @@ async function getSheetData(spreadsheetId: string, range: string, accessToken: s
   return await response.json();
 }
 
-async function updateSheetData(spreadsheetId: string, range: string, values: any[][], accessToken: string) {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}?valueInputOption=RAW`;
+async function updateSheetData(spreadsheetId: string, range: string, values: any[][], apiKey: string) {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}?valueInputOption=RAW&key=${apiKey}`;
   
   const response = await fetch(url, {
     method: 'PUT',
     headers: {
-      'Authorization': `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
@@ -126,14 +51,11 @@ serve(async (req) => {
   try {
     const { action, spreadsheetId, data } = await req.json();
     
-    // Get service account credentials from Supabase secrets
-    const serviceAccountKey = Deno.env.get('GOOGLE_SERVICE_ACCOUNT_KEY');
-    if (!serviceAccountKey) {
-      throw new Error('Google Service Account Key not found');
+    // Get Google Sheets API key from Supabase secrets
+    const apiKey = Deno.env.get('GOOGLE_SHEETS_API_KEY');
+    if (!apiKey) {
+      throw new Error('Google Sheets API Key not found');
     }
-    
-    const serviceAccount: ServiceAccount = JSON.parse(serviceAccountKey);
-    const accessToken = await getAccessToken(serviceAccount);
     
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -145,7 +67,7 @@ serve(async (req) => {
         console.log('Fetching dates and slots from sheet');
         
         // Fetch data from Google Sheets (assuming data starts from row 2, column A to K)
-        const sheetData = await getSheetData(spreadsheetId, 'A:K', accessToken);
+        const sheetData = await getSheetData(spreadsheetId, 'A:K', apiKey);
         const rows = sheetData.values || [];
         
         const datesWithSlots: { [key: string]: { [key: number]: string } } = {};
@@ -177,7 +99,7 @@ serve(async (req) => {
         console.log('Creating booking:', { dataAgendamento, slotNumero, nomeCliente, emailCliente });
         
         // First, check if slot is available in Google Sheets
-        const sheetData = await getSheetData(spreadsheetId, 'A:K', accessToken);
+        const sheetData = await getSheetData(spreadsheetId, 'A:K', apiKey);
         const rows = sheetData.values || [];
         
         let rowIndex = -1;
@@ -226,7 +148,8 @@ serve(async (req) => {
         await updateSheetData(
           spreadsheetId, 
           cellRange, 
-          [[`${nomeCliente} - ${emailCliente}`]]
+          [[`${nomeCliente} - ${emailCliente}`]],
+          apiKey
         );
         
         console.log('Booking created successfully:', booking);
