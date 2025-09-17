@@ -22,13 +22,80 @@ async function getSheetData(spreadsheetId: string, range: string, apiKey: string
   return await response.json();
 }
 
-async function updateSheetData(spreadsheetId: string, range: string, values: any[][], apiKey: string) {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}?valueInputOption=RAW&key=${apiKey}`;
+async function generateJWT(clientEmail: string, privateKey: string, scope: string): Promise<string> {
+  const header = {
+    alg: 'RS256',
+    typ: 'JWT'
+  };
+
+  const now = Math.floor(Date.now() / 1000);
+  const payload = {
+    iss: clientEmail,
+    scope: scope,
+    aud: 'https://oauth2.googleapis.com/token',
+    exp: now + 3600,
+    iat: now
+  };
+
+  const encodedHeader = btoa(JSON.stringify(header)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+  const encodedPayload = btoa(JSON.stringify(payload)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+  
+  const signatureInput = `${encodedHeader}.${encodedPayload}`;
+  
+  // Import the private key
+  const keyData = privateKey.replace(/\\n/g, '\n');
+  const key = await crypto.subtle.importKey(
+    'pkcs8',
+    new TextEncoder().encode(keyData),
+    {
+      name: 'RSASSA-PKCS1-v1_5',
+      hash: 'SHA-256',
+    },
+    false,
+    ['sign']
+  );
+
+  // Sign the JWT
+  const signature = await crypto.subtle.sign(
+    'RSASSA-PKCS1-v1_5',
+    key,
+    new TextEncoder().encode(signatureInput)
+  );
+
+  const encodedSignature = btoa(String.fromCharCode(...new Uint8Array(signature)))
+    .replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+
+  return `${signatureInput}.${encodedSignature}`;
+}
+
+async function getAccessToken(clientEmail: string, privateKey: string): Promise<string> {
+  const jwt = await generateJWT(clientEmail, privateKey, 'https://www.googleapis.com/auth/spreadsheets');
+  
+  const response = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get access token: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  return data.access_token;
+}
+
+async function updateSheetData(spreadsheetId: string, range: string, values: any[][], clientEmail: string, privateKey: string) {
+  const accessToken = await getAccessToken(clientEmail, privateKey);
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}?valueInputOption=RAW`;
   
   const response = await fetch(url, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
+      'Authorization': `Bearer ${accessToken}`,
     },
     body: JSON.stringify({
       values: values,
@@ -55,6 +122,14 @@ serve(async (req) => {
     const apiKey = Deno.env.get('GOOGLE_SHEETS_API_KEY');
     if (!apiKey) {
       throw new Error('Google Sheets API Key not found');
+    }
+    
+    // Get Service Account credentials for write operations
+    const clientEmail = Deno.env.get('GOOGLE_SA_CLIENT_EMAIL');
+    const privateKey = Deno.env.get('GOOGLE_SA_PRIVATE_KEY');
+    
+    if (!clientEmail || !privateKey) {
+      throw new Error('Google Service Account credentials not found');
     }
     
     // Initialize Supabase client
@@ -203,7 +278,8 @@ serve(async (req) => {
           spreadsheetId, 
           cellRange, 
           [[`${nomeCliente} - ${emailCliente}`]],
-          apiKey
+          clientEmail,
+          privateKey
         );
         
         console.log('Booking created successfully:', booking);
