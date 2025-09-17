@@ -22,50 +22,107 @@ async function getSheetData(spreadsheetId: string, range: string, apiKey: string
   return await response.json();
 }
 
+function processPemKey(pemKey: string): ArrayBuffer {
+  console.log('Processando chave PEM...');
+  
+  // Remove PEM headers, footers, and whitespace
+  const pemHeader = "-----BEGIN PRIVATE KEY-----";
+  const pemFooter = "-----END PRIVATE KEY-----";
+  const altPemHeader = "-----BEGIN RSA PRIVATE KEY-----";
+  const altPemFooter = "-----END RSA PRIVATE KEY-----";
+  
+  let cleanKey = pemKey.replace(/\\n/g, '\n'); // Convert escaped newlines
+  
+  // Handle both standard and RSA-specific PEM formats
+  if (cleanKey.includes(pemHeader)) {
+    cleanKey = cleanKey.replace(pemHeader, "").replace(pemFooter, "");
+  } else if (cleanKey.includes(altPemHeader)) {
+    cleanKey = cleanKey.replace(altPemHeader, "").replace(altPemFooter, "");
+  }
+  
+  // Remove all whitespace characters (spaces, newlines, tabs)
+  cleanKey = cleanKey.replace(/\s/g, "");
+  
+  console.log('Chave limpa (primeiros 50 chars):', cleanKey.substring(0, 50));
+  
+  try {
+    // Decode base64 to binary
+    const binaryDer = atob(cleanKey);
+    
+    // Convert to ArrayBuffer
+    const keyBuffer = new ArrayBuffer(binaryDer.length);
+    const keyArray = new Uint8Array(keyBuffer);
+    for (let i = 0; i < binaryDer.length; i++) {
+      keyArray[i] = binaryDer.charCodeAt(i);
+    }
+    
+    console.log('Chave convertida para ArrayBuffer, tamanho:', keyBuffer.byteLength);
+    return keyBuffer;
+    
+  } catch (error) {
+    console.error('Erro ao processar chave PEM:', error);
+    throw new Error(`Falha ao processar chave PEM: ${error.message}`);
+  }
+}
+
 async function generateJWT(clientEmail: string, privateKey: string, scope: string): Promise<string> {
-  const header = {
-    alg: 'RS256',
-    typ: 'JWT'
-  };
-
-  const now = Math.floor(Date.now() / 1000);
-  const payload = {
-    iss: clientEmail,
-    scope: scope,
-    aud: 'https://oauth2.googleapis.com/token',
-    exp: now + 3600,
-    iat: now
-  };
-
-  const encodedHeader = btoa(JSON.stringify(header)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
-  const encodedPayload = btoa(JSON.stringify(payload)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+  console.log('Gerando JWT para:', clientEmail);
   
-  const signatureInput = `${encodedHeader}.${encodedPayload}`;
-  
-  // Import the private key
-  const keyData = privateKey.replace(/\\n/g, '\n');
-  const key = await crypto.subtle.importKey(
-    'pkcs8',
-    new TextEncoder().encode(keyData),
-    {
-      name: 'RSASSA-PKCS1-v1_5',
-      hash: 'SHA-256',
-    },
-    false,
-    ['sign']
-  );
+  try {
+    const header = {
+      alg: 'RS256',
+      typ: 'JWT'
+    };
 
-  // Sign the JWT
-  const signature = await crypto.subtle.sign(
-    'RSASSA-PKCS1-v1_5',
-    key,
-    new TextEncoder().encode(signatureInput)
-  );
+    const now = Math.floor(Date.now() / 1000);
+    const payload = {
+      iss: clientEmail,
+      scope: scope,
+      aud: 'https://oauth2.googleapis.com/token',
+      exp: now + 3600,
+      iat: now
+    };
 
-  const encodedSignature = btoa(String.fromCharCode(...new Uint8Array(signature)))
-    .replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+    const encodedHeader = btoa(JSON.stringify(header)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+    const encodedPayload = btoa(JSON.stringify(payload)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+    
+    const signatureInput = `${encodedHeader}.${encodedPayload}`;
+    
+    // Process PEM key correctly
+    console.log('Processando chave privada...');
+    const keyBuffer = processPemKey(privateKey);
+    
+    console.log('Importando chave criptográfica...');
+    const key = await crypto.subtle.importKey(
+      'pkcs8',
+      keyBuffer,
+      {
+        name: 'RSASSA-PKCS1-v1_5',
+        hash: 'SHA-256',
+      },
+      false,
+      ['sign']
+    );
 
-  return `${signatureInput}.${encodedSignature}`;
+    console.log('Assinando JWT...');
+    const signature = await crypto.subtle.sign(
+      'RSASSA-PKCS1-v1_5',
+      key,
+      new TextEncoder().encode(signatureInput)
+    );
+
+    const encodedSignature = btoa(String.fromCharCode(...new Uint8Array(signature)))
+      .replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+
+    console.log('JWT gerado com sucesso');
+    return `${signatureInput}.${encodedSignature}`;
+    
+  } catch (error) {
+    console.error('Erro ao gerar JWT:', error);
+    console.error('Tipo de erro:', error.constructor.name);
+    console.error('Mensagem:', error.message);
+    throw new Error(`Falha ao gerar JWT: ${error.message}`);
+  }
 }
 
 async function getAccessToken(clientEmail: string, privateKey: string): Promise<string> {
