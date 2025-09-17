@@ -96,8 +96,8 @@ export const useAgendamentos = (spreadsheetId: string) => {
     
     for (let i = 1; i <= 10; i++) {
       const slotValue = slots[i] || '';
-      // Slot is available if empty or not blocked with "-"
-      if (slotValue === '' || slotValue.trim() === '') {
+      // Slot is available only if explicitly marked as available
+      if (slotValue === 'DISPONÍVEL' || slotValue === '✓' || slotValue === 'DISPONIVEL') {
         availableSlots.push(i);
       }
     }
@@ -109,8 +109,9 @@ export const useAgendamentos = (spreadsheetId: string) => {
     const slots = datesWithSlots[date] || {};
     const slotValue = slots[slot] || '';
     
+    if (slotValue === 'DISPONÍVEL' || slotValue === '✓' || slotValue === 'DISPONIVEL') return 'available';
     if (slotValue === '-') return 'blocked';
-    if (slotValue === '' || slotValue.trim() === '') return 'available';
+    if (slotValue === '' || slotValue.trim() === '') return 'blocked';
     return 'occupied';
   };
 
