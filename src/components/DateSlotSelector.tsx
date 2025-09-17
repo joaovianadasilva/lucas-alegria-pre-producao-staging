@@ -80,7 +80,8 @@ export const DateSlotSelector = ({ spreadsheetId, onSlotSelect }: DateSlotSelect
                   <span className="font-medium">
                     {new Date(date).toLocaleDateString('pt-BR', { 
                       day: '2-digit', 
-                      month: '2-digit' 
+                      month: '2-digit',
+                      year: '2-digit'
                     })}
                   </span>
                   <span className="text-xs opacity-75">

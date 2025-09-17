@@ -74,23 +74,47 @@ serve(async (req) => {
         console.log('Total de linhas:', rows.length);
         console.log('Primeiras 5 linhas:', JSON.stringify(rows.slice(0, 5), null, 2));
         
+        // Helper function to convert dd/mm/yyyy to yyyy-mm-dd
+        const convertDateFormat = (dateStr: string): string => {
+          if (!dateStr) return dateStr;
+          
+          // Check if it's already in ISO format
+          if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            return dateStr;
+          }
+          
+          // Convert dd/mm/yyyy to yyyy-mm-dd
+          const dateParts = dateStr.split('/');
+          if (dateParts.length === 3) {
+            const day = dateParts[0].padStart(2, '0');
+            const month = dateParts[1].padStart(2, '0');
+            const year = dateParts[2];
+            const isoDate = `${year}-${month}-${day}`;
+            console.log(`Convertendo data: ${dateStr} -> ${isoDate}`);
+            return isoDate;
+          }
+          
+          return dateStr;
+        };
+
         const datesWithSlots: { [key: string]: { [key: number]: string } } = {};
         
         // Process each row (skip header if exists)
         for (let i = 1; i < rows.length; i++) {
           const row = rows[i];
           if (row && row[0]) { // Check if date exists in column A
-            const date = row[0];
-            datesWithSlots[date] = {};
+            const originalDate = row[0];
+            const convertedDate = convertDateFormat(originalDate);
+            datesWithSlots[convertedDate] = {};
             
-            console.log(`=== PROCESSANDO LINHA ${i + 1} (DATA: ${date}) ===`);
+            console.log(`=== PROCESSANDO LINHA ${i + 1} (DATA: ${originalDate} -> ${convertedDate}) ===`);
             console.log('Linha completa:', JSON.stringify(row, null, 2));
             
             // Check slots 1-10 (columns B-K, indices 1-10)
             for (let slotNum = 1; slotNum <= 10; slotNum++) {
               const cellValue = row[slotNum];
               const processedValue = cellValue || '';
-              datesWithSlots[date][slotNum] = processedValue;
+              datesWithSlots[convertedDate][slotNum] = processedValue;
               
               console.log(`  Slot ${slotNum}: original="${cellValue}" processed="${processedValue}" tipo="${typeof cellValue}"`);
             }
@@ -111,6 +135,23 @@ serve(async (req) => {
         
         console.log('Creating booking:', { dataAgendamento, slotNumero, nomeCliente, emailCliente });
         
+        // Helper function to convert yyyy-mm-dd back to dd/mm/yyyy for Google Sheets lookup
+        const convertToSheetFormat = (isoDate: string): string => {
+          if (!isoDate) return isoDate;
+          
+          // Check if it's in ISO format
+          if (isoDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            const [year, month, day] = isoDate.split('-');
+            return `${day}/${month}/${year}`;
+          }
+          
+          return isoDate;
+        };
+        
+        // Convert the ISO date back to Google Sheets format for lookup
+        const sheetDateFormat = convertToSheetFormat(dataAgendamento);
+        console.log(`Procurando data na planilha: ${dataAgendamento} -> ${sheetDateFormat}`);
+        
         // First, check if slot is available in Google Sheets
         const sheetData = await getSheetData(spreadsheetId, 'A:K', apiKey);
         const rows = sheetData.values || [];
@@ -118,9 +159,9 @@ serve(async (req) => {
         let rowIndex = -1;
         let isSlotAvailable = false;
         
-        // Find the row with the matching date
+        // Find the row with the matching date (using original sheet format)
         for (let i = 1; i < rows.length; i++) {
-          if (rows[i] && rows[i][0] === dataAgendamento) {
+          if (rows[i] && rows[i][0] === sheetDateFormat) {
             rowIndex = i;
             const cellValue = rows[i][slotNumero] || '';
             isSlotAvailable = cellValue === '' || cellValue.trim() === '';
