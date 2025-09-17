@@ -64,11 +64,15 @@ serve(async (req) => {
 
     switch (action) {
       case 'getDatesAndSlots': {
-        console.log('Fetching dates and slots from sheet');
+        console.log('=== DIAGNÓSTICO: Fetching dates and slots from sheet ===');
         
         // Fetch data from Google Sheets (assuming data starts from row 2, column A to K)
         const sheetData = await getSheetData(spreadsheetId, 'A:K', apiKey);
         const rows = sheetData.values || [];
+        
+        console.log('=== DADOS BRUTOS DO GOOGLE SHEETS ===');
+        console.log('Total de linhas:', rows.length);
+        console.log('Primeiras 5 linhas:', JSON.stringify(rows.slice(0, 5), null, 2));
         
         const datesWithSlots: { [key: string]: { [key: number]: string } } = {};
         
@@ -79,13 +83,22 @@ serve(async (req) => {
             const date = row[0];
             datesWithSlots[date] = {};
             
+            console.log(`=== PROCESSANDO LINHA ${i + 1} (DATA: ${date}) ===`);
+            console.log('Linha completa:', JSON.stringify(row, null, 2));
+            
             // Check slots 1-10 (columns B-K, indices 1-10)
             for (let slotNum = 1; slotNum <= 10; slotNum++) {
-              const cellValue = row[slotNum] || '';
-              datesWithSlots[date][slotNum] = cellValue;
+              const cellValue = row[slotNum];
+              const processedValue = cellValue || '';
+              datesWithSlots[date][slotNum] = processedValue;
+              
+              console.log(`  Slot ${slotNum}: original="${cellValue}" processed="${processedValue}" tipo="${typeof cellValue}"`);
             }
           }
         }
+        
+        console.log('=== OBJETO FINAL datesWithSlots ===');
+        console.log(JSON.stringify(datesWithSlots, null, 2));
         
         return new Response(
           JSON.stringify({ success: true, data: datesWithSlots }),

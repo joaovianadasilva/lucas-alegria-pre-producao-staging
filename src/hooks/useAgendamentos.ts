@@ -25,6 +25,7 @@ export const useAgendamentos = (spreadsheetId: string) => {
   const fetchDatesAndSlots = async () => {
     setLoading(true);
     try {
+      console.log('=== HOOK: Chamando edge function ===');
       const { data, error } = await supabase.functions.invoke('google-sheets-integration', {
         body: {
           action: 'getDatesAndSlots',
@@ -34,7 +35,12 @@ export const useAgendamentos = (spreadsheetId: string) => {
 
       if (error) throw error;
       
+      console.log('=== HOOK: Resposta da edge function ===');
+      console.log('data:', JSON.stringify(data, null, 2));
+      
       if (data?.success) {
+        console.log('=== HOOK: Dados recebidos ===');
+        console.log('datesWithSlots recebido:', JSON.stringify(data.data, null, 2));
         setDatesWithSlots(data.data);
       } else {
         throw new Error(data?.error || 'Erro ao carregar dados');
@@ -94,24 +100,48 @@ export const useAgendamentos = (spreadsheetId: string) => {
     const slots = datesWithSlots[date] || {};
     const availableSlots: number[] = [];
     
+    console.log(`=== HOOK: getAvailableSlots para data ${date} ===`);
+    console.log('slots object:', JSON.stringify(slots, null, 2));
+    
     for (let i = 1; i <= 10; i++) {
-      const slotValue = slots[i] || '';
+      const slotValue = slots[i];
+      const defaultValue = slotValue || '';
+      const isEmpty = defaultValue === '' || defaultValue.trim() === '';
+      
+      console.log(`  Slot ${i}: original="${slotValue}" default="${defaultValue}" isEmpty=${isEmpty} tipo="${typeof slotValue}"`);
+      
       // Slot is available if empty
-      if (slotValue === '' || slotValue.trim() === '') {
+      if (isEmpty) {
         availableSlots.push(i);
+        console.log(`    ➤ ADICIONADO como disponível`);
+      } else {
+        console.log(`    ➤ NÃO disponível`);
       }
     }
     
+    console.log(`Slots disponíveis para ${date}:`, availableSlots);
     return availableSlots;
   };
 
   const getSlotStatus = (date: string, slot: number): 'available' | 'occupied' | 'blocked' => {
     const slots = datesWithSlots[date] || {};
-    const slotValue = slots[slot] || '';
+    const slotValue = slots[slot];
+    const defaultValue = slotValue || '';
     
-    if (slotValue === '' || slotValue.trim() === '') return 'available';
-    if (slotValue === '-') return 'blocked';
-    return 'occupied';
+    console.log(`=== HOOK: getSlotStatus para ${date} slot ${slot} ===`);
+    console.log(`  original="${slotValue}" default="${defaultValue}" tipo="${typeof slotValue}"`);
+    
+    let status: 'available' | 'occupied' | 'blocked';
+    if (defaultValue === '' || defaultValue.trim() === '') {
+      status = 'available';
+    } else if (defaultValue === '-') {
+      status = 'blocked';
+    } else {
+      status = 'occupied';
+    }
+    
+    console.log(`  ➤ STATUS: ${status}`);
+    return status;
   };
 
   const getAvailableDates = () => {
