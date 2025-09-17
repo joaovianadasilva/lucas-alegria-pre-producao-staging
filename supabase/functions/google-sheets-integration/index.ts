@@ -252,27 +252,11 @@ serve(async (req) => {
           throw new Error('Slot não está disponível');
         }
         
-        // Insert booking into Supabase
-        const { data: booking, error: supabaseError } = await supabase
-          .from('agendamentos')
-          .insert({
-            data_agendamento: dataAgendamento,
-            slot_numero: slotNumero,
-            nome_cliente: nomeCliente,
-            email_cliente: emailCliente,
-            telefone_cliente: telefoneCliente,
-            status: 'confirmado'
-          })
-          .select()
-          .single();
-        
-        if (supabaseError) {
-          throw new Error(`Erro ao salvar no banco: ${supabaseError.message}`);
-        }
-        
-        // Update Google Sheets with booking info
+        // Update Google Sheets with booking info (planilha é a fonte da verdade)
         const columnLetter = String.fromCharCode(65 + slotNumero); // Convert slot number to column letter (B=1, C=2, etc.)
         const cellRange = `${columnLetter}${rowIndex + 1}`;
+        
+        console.log(`Atualizando planilha - Range: ${cellRange}, Valor: ${nomeCliente} - ${emailCliente}`);
         
         await updateSheetData(
           spreadsheetId, 
@@ -282,10 +266,20 @@ serve(async (req) => {
           privateKey
         );
         
-        console.log('Booking created successfully:', booking);
+        console.log('Agendamento criado com sucesso na planilha');
+        
+        // Criar objeto de resposta simples
+        const bookingData = {
+          data_agendamento: dataAgendamento,
+          slot_numero: slotNumero,
+          nome_cliente: nomeCliente,
+          email_cliente: emailCliente,
+          telefone_cliente: telefoneCliente,
+          status: 'confirmado'
+        };
         
         return new Response(
-          JSON.stringify({ success: true, data: booking }),
+          JSON.stringify({ success: true, data: bookingData }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
