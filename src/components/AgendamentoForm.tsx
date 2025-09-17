@@ -66,7 +66,7 @@ export const AgendamentoForm = ({
         <div className="text-sm text-muted-foreground space-y-1">
           <div className="flex items-center gap-2">
             <CalendarX className="h-4 w-4" />
-            Data: {new Date(selectedDate).toLocaleDateString('pt-BR')}
+            Data: {selectedDate.split('-').reverse().join('/')}
           </div>
           <div className="flex items-center gap-2">
             <Clock className="h-4 w-4" />
