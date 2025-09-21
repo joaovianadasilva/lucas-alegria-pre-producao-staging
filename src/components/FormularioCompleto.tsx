@@ -201,9 +201,34 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Origem</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Informe a origem da venda" {...field} />
-                    </FormControl>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione a origem da venda" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="indicacao">Indicação</SelectItem>
+                        <SelectItem value="ex-cliente">Ex-cliente</SelectItem>
+                        <SelectItem value="panfleto">Panfleto</SelectItem>
+                        <SelectItem value="cartaz-banner-outdoor">Cartaz/Banner/Outdoor</SelectItem>
+                        <SelectItem value="google">Google</SelectItem>
+                        <SelectItem value="facebook">Facebook</SelectItem>
+                        <SelectItem value="instagram">Instagram</SelectItem>
+                        <SelectItem value="internet">Internet</SelectItem>
+                        <SelectItem value="anuncio-parede-placa">Anúncio na parede / Placa</SelectItem>
+                        <SelectItem value="carro-veiculos-empresa">Carro/Veículos da empresa</SelectItem>
+                        <SelectItem value="anuncio-avenida">Anúncio na avenida</SelectItem>
+                        <SelectItem value="caixa-poste">Caixa no poste</SelectItem>
+                        <SelectItem value="via-tecnico">Via Técnico</SelectItem>
+                        <SelectItem value="propaganda">Propaganda</SelectItem>
+                        <SelectItem value="mora-proximo">Mora próximo</SelectItem>
+                        <SelectItem value="condominio">Condomínio</SelectItem>
+                        <SelectItem value="ja-cliente">Já é cliente</SelectItem>
+                        <SelectItem value="via-vendedor">Via Vendedor</SelectItem>
+                        <SelectItem value="nao-informado">Não informado</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
