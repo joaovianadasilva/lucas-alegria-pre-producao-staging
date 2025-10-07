@@ -11,11 +11,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Calendar, Clock, Settings } from 'lucide-react';
+import { Loader2, Calendar, Clock, Settings, ChevronsUpDown, X } from 'lucide-react';
 import { FormularioCompleto as IFormularioCompleto, UFS, DIAS_VENCIMENTO } from '@/types/formulario';
 import { DateSlotSelector } from './DateSlotSelector';
 import { ConfiguracaoPlanos } from './ConfiguracaoPlanos';
 import { carregarPlanos, carregarAdicionais, formatarItemCatalogo } from '@/lib/catalogoStorage';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
 
 const formularioSchema = z.object({
   origem: z.string().min(1, 'Origem é obrigatória'),
@@ -52,7 +55,7 @@ const formularioSchema = z.object({
   inscricaoEstadual: z.string().optional(),
 
   planoContratado: z.string().min(1, 'Plano contratado é obrigatório'),
-  adicionaisContratados: z.string().optional(),
+  adicionaisContratados: z.array(z.string()).optional(),
   diaVencimento: z.string().min(1, 'Dia de vencimento é obrigatório'),
   previsaoInstalacao: z.string().min(1, 'Previsão de instalação é obrigatória'),
   observacao: z.string().optional(),
@@ -743,26 +746,70 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Adicionais Contratados</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione adicionais (opcional)" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {adicionaisOptions.length === 0 ? (
-                          <SelectItem value="sem-adicionais" disabled>
-                            Nenhum adicional cadastrado
-                          </SelectItem>
-                        ) : (
-                          adicionaisOptions.map((adicional) => (
-                            <SelectItem key={adicional} value={adicional}>
-                              {adicional}
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            className="w-full justify-between font-normal"
+                          >
+                            {field.value && field.value.length > 0
+                              ? `${field.value.length} adicional(is) selecionado(s)`
+                              : "Selecione adicionais (opcional)"}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0">
+                        <div className="max-h-64 overflow-auto p-4 space-y-2">
+                          {adicionaisOptions.map((adicional) => (
+                            <div
+                              key={adicional}
+                              className="flex items-center space-x-2"
+                            >
+                              <Checkbox
+                                checked={field.value?.includes(adicional) || false}
+                                onCheckedChange={(checked) => {
+                                  const currentValue = field.value || [];
+                                  if (checked) {
+                                    field.onChange([...currentValue, adicional]);
+                                  } else {
+                                    field.onChange(
+                                      currentValue.filter((val) => val !== adicional)
+                                    );
+                                  }
+                                }}
+                              />
+                              <label className="text-sm cursor-pointer flex-1">
+                                {adicional}
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                    {field.value && field.value.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {field.value.map((adicional) => (
+                          <Badge
+                            key={adicional}
+                            variant="secondary"
+                            className="gap-1"
+                          >
+                            {adicional.split(' - ')[1] || adicional}
+                            <X
+                              className="h-3 w-3 cursor-pointer"
+                              onClick={() => {
+                                field.onChange(
+                                  field.value?.filter((val) => val !== adicional) || []
+                                );
+                              }}
+                            />
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}

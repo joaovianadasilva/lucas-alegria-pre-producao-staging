@@ -39,7 +39,7 @@ export interface FormularioCompleto {
 
   // Informações do Contrato
   planoContratado: string;
-  adicionaisContratados?: string;
+  adicionaisContratados?: string[];
   diaVencimento: string;
   previsaoInstalacao: string;
   observacao?: string;
