@@ -190,6 +190,31 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
     loadOptions();
   }, []);
 
+  // Limpar campos condicionais quando o tipo de cliente muda
+  useEffect(() => {
+    if (tipoCliente === 'F') {
+      // Se mudou para Pessoa Física, limpar campos de Pessoa Jurídica
+      form.setValue('cnpj', undefined);
+      form.setValue('razaoSocial', undefined);
+      form.setValue('inscricaoEstadual', undefined);
+    } else if (tipoCliente === 'J') {
+      // Se mudou para Pessoa Jurídica, limpar campos de Pessoa Física
+      form.setValue('cpf', undefined);
+      form.setValue('rg', undefined);
+      form.setValue('orgaoExpedicao', undefined);
+      form.setValue('dataNascimento', undefined);
+    } else if (tipoCliente === 'E') {
+      // Se mudou para Estrangeiro, limpar ambos
+      form.setValue('cpf', undefined);
+      form.setValue('rg', undefined);
+      form.setValue('orgaoExpedicao', undefined);
+      form.setValue('dataNascimento', undefined);
+      form.setValue('cnpj', undefined);
+      form.setValue('razaoSocial', undefined);
+      form.setValue('inscricaoEstadual', undefined);
+    }
+  }, [tipoCliente, form]);
+
   const handleSlotSelect = (date: string, slot: number) => {
     setSelectedDate(date);
     setSelectedSlot(slot);
