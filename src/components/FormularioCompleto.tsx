@@ -103,6 +103,20 @@ const formularioSchema = z.object({
         path: ['razaoSocial']
       });
     }
+    if (!data.cpf || data.cpf.trim() === '') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'CPF do responsável é obrigatório para Pessoa Jurídica',
+        path: ['cpf']
+      });
+    }
+    if (!data.rg || data.rg.trim() === '') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'RG do responsável é obrigatório para Pessoa Jurídica',
+        path: ['rg']
+      });
+    }
   }
   
   // Validação condicional para endereço de instalação diferente
@@ -198,9 +212,7 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
       form.setValue('razaoSocial', undefined);
       form.setValue('inscricaoEstadual', undefined);
     } else if (tipoCliente === 'J') {
-      // Se mudou para Pessoa Jurídica, limpar campos de Pessoa Física
-      form.setValue('cpf', undefined);
-      form.setValue('rg', undefined);
+      // Se mudou para Pessoa Jurídica, limpar apenas campos específicos de PF
       form.setValue('orgaoExpedicao', undefined);
       form.setValue('dataNascimento', undefined);
     } else if (tipoCliente === 'E') {
@@ -371,14 +383,16 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
                 )}
               />
 
-              {tipoCliente === 'F' && (
+              {(tipoCliente === 'F' || tipoCliente === 'J') && (
                 <>
                   <FormField
                     control={form.control}
                     name="cpf"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>CPF</FormLabel>
+                        <FormLabel>
+                          {tipoCliente === 'J' ? 'CPF do Responsável' : 'CPF'}
+                        </FormLabel>
                         <FormControl>
                           <Input placeholder="000.000.000-00" {...field} />
                         </FormControl>
@@ -392,7 +406,9 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
                     name="rg"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>RG</FormLabel>
+                        <FormLabel>
+                          {tipoCliente === 'J' ? 'RG do Responsável' : 'RG'}
+                        </FormLabel>
                         <FormControl>
                           <Input placeholder="RG" {...field} />
                         </FormControl>
@@ -401,33 +417,37 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
                     )}
                   />
                   
-                  <FormField
-                    control={form.control}
-                    name="orgaoExpedicao"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Órgão de Expedição</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Ex: SSP/SP" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="dataNascimento"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Data de Nascimento</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  {tipoCliente === 'F' && (
+                    <>
+                      <FormField
+                        control={form.control}
+                        name="orgaoExpedicao"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Órgão de Expedição</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Ex: SSP/SP" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="dataNascimento"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Data de Nascimento</FormLabel>
+                            <FormControl>
+                              <Input type="date" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </>
+                  )}
                 </>
               )}
 
