@@ -45,5 +45,5 @@ export const salvarAdicionais = (adicionais: ItemCatalogo[]): void => {
 };
 
 export const formatarItemCatalogo = (item: ItemCatalogo): string => {
-  return `[${item.id}] - ${item.nome} - R$ ${item.valor.toFixed(2)}`;
+  return `[${item.id}] - [${item.nome}] - [R$ ${item.valor.toFixed(2)}]`;
 };
