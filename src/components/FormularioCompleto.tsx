@@ -61,26 +61,95 @@ const formularioSchema = z.object({
 
   dataAgendamento: z.string().min(1, 'Agendamento é obrigatório'),
   slotAgendamento: z.number().min(1, 'Slot de agendamento é obrigatório'),
-}).refine((data) => {
+}).superRefine((data, ctx) => {
+  // Validação condicional para Pessoa Física
   if (data.tipoCliente === 'F') {
-    return data.cpf && data.rg && data.dataNascimento;
+    if (!data.cpf || data.cpf.trim() === '') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'CPF é obrigatório para Pessoa Física',
+        path: ['cpf']
+      });
+    }
+    if (!data.rg || data.rg.trim() === '') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'RG é obrigatório para Pessoa Física',
+        path: ['rg']
+      });
+    }
+    if (!data.dataNascimento || data.dataNascimento.trim() === '') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Data de Nascimento é obrigatória para Pessoa Física',
+        path: ['dataNascimento']
+      });
+    }
   }
+  
+  // Validação condicional para Pessoa Jurídica
   if (data.tipoCliente === 'J') {
-    return data.cnpj && data.razaoSocial;
+    if (!data.cnpj || data.cnpj.trim() === '') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'CNPJ é obrigatório para Pessoa Jurídica',
+        path: ['cnpj']
+      });
+    }
+    if (!data.razaoSocial || data.razaoSocial.trim() === '') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Razão Social é obrigatória para Pessoa Jurídica',
+        path: ['razaoSocial']
+      });
+    }
   }
-  return true;
-}, {
-  message: 'Campos obrigatórios para o tipo de cliente selecionado',
-  path: ['tipoCliente']
-}).refine((data) => {
+  
+  // Validação condicional para endereço de instalação diferente
   if (data.instalacaoMesmoEndereco === 'N') {
-    return data.instalacaoRua && data.instalacaoUf && data.instalacaoNumero && 
-           data.instalacaoBairro && data.instalacaoCep && data.instalacaoCidade;
+    if (!data.instalacaoRua || data.instalacaoRua.trim() === '') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Rua é obrigatória para instalação',
+        path: ['instalacaoRua']
+      });
+    }
+    if (!data.instalacaoUf || data.instalacaoUf.trim() === '') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'UF é obrigatória para instalação',
+        path: ['instalacaoUf']
+      });
+    }
+    if (!data.instalacaoNumero || data.instalacaoNumero.trim() === '') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Número é obrigatório para instalação',
+        path: ['instalacaoNumero']
+      });
+    }
+    if (!data.instalacaoBairro || data.instalacaoBairro.trim() === '') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Bairro é obrigatório para instalação',
+        path: ['instalacaoBairro']
+      });
+    }
+    if (!data.instalacaoCep || data.instalacaoCep.trim() === '') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'CEP é obrigatório para instalação',
+        path: ['instalacaoCep']
+      });
+    }
+    if (!data.instalacaoCidade || data.instalacaoCidade.trim() === '') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Cidade é obrigatória para instalação',
+        path: ['instalacaoCidade']
+      });
+    }
   }
-  return true;
-}, {
-  message: 'Dados de instalação obrigatórios quando não é o mesmo endereço',
-  path: ['instalacaoMesmoEndereco']
 });
 
 type FormularioSchema = z.infer<typeof formularioSchema>;
