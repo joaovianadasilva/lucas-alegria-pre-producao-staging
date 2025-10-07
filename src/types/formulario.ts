@@ -47,12 +47,6 @@ export interface FormularioCompleto {
   // Agendamento
   dataAgendamento: string;
   slotAgendamento: number;
-
-  // Documentos
-  fotoDocumentoFrente?: File;
-  fotoDocumentoVerso?: File;
-  fotoSelfieDocumento?: File;
-  fotoComprovanteEndereco?: File;
 }
 
 export const UFS = [

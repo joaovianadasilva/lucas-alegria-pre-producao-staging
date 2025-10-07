@@ -11,11 +11,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Upload, Calendar, Clock } from 'lucide-react';
+import { Loader2, Calendar, Clock } from 'lucide-react';
 import { FormularioCompleto as IFormularioCompleto, UFS, DIAS_VENCIMENTO } from '@/types/formulario';
 import { DateSlotSelector } from './DateSlotSelector';
-
-const MAX_FILE_SIZE = 15 * 1024 * 1024; // 15MB
 
 const formularioSchema = z.object({
   origem: z.string().min(1, 'Origem é obrigatória'),
@@ -59,11 +57,6 @@ const formularioSchema = z.object({
 
   dataAgendamento: z.string().min(1, 'Agendamento é obrigatório'),
   slotAgendamento: z.number().min(1, 'Slot de agendamento é obrigatório'),
-
-  fotoDocumentoFrente: z.instanceof(File).optional(),
-  fotoDocumentoVerso: z.instanceof(File).optional(),
-  fotoSelfieDocumento: z.instanceof(File).optional(),
-  fotoComprovanteEndereco: z.instanceof(File).optional(),
 }).refine((data) => {
   if (data.tipoCliente === 'F') {
     return data.cpf && data.rg && data.dataNascimento;
@@ -117,39 +110,18 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
     form.setValue('slotAgendamento', slot);
   };
 
-  const handleFileChange = (fieldName: keyof FormularioSchema, file: File | undefined) => {
-    if (file && file.size > MAX_FILE_SIZE) {
-      toast({
-        title: "Arquivo muito grande",
-        description: "O arquivo deve ter no máximo 15MB",
-        variant: "destructive",
-      });
-      return;
-    }
-    form.setValue(fieldName, file as any);
-  };
-
   const onSubmit = async (data: FormularioSchema) => {
     setIsSubmitting(true);
     
     try {
-      // Preparar FormData para envio com arquivos
-      const formData = new FormData();
-      
-      // Adicionar todos os campos do formulário
-      Object.entries(data).forEach(([key, value]) => {
-        if (value instanceof File) {
-          formData.append(key, value);
-        } else if (value !== undefined && value !== null) {
-          formData.append(key, String(value));
-        }
-      });
-
       // Enviar para webhook se fornecido
       if (webhookUrl) {
         const webhookResponse = await fetch(webhookUrl, {
           method: 'POST',
-          body: formData,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
         });
 
         if (!webhookResponse.ok) {
@@ -820,92 +792,6 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
                   </div>
                 </div>
               )}
-            </CardContent>
-          </Card>
-
-          {/* Documentos */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Upload className="w-5 h-5" />
-                Documentos do Contratante
-              </CardTitle>
-              <CardDescription>
-                Envie os documentos solicitados (máximo 15MB por arquivo)
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="fotoDocumentoFrente"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Foto - FRENTE do Documento</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="file"
-                        accept="image/*,.pdf"
-                        onChange={(e) => handleFileChange('fotoDocumentoFrente', e.target.files?.[0])}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="fotoDocumentoVerso"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Foto - VERSO do Documento</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="file"
-                        accept="image/*,.pdf"
-                        onChange={(e) => handleFileChange('fotoDocumentoVerso', e.target.files?.[0])}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="fotoSelfieDocumento"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Selfie com Documento</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => handleFileChange('fotoSelfieDocumento', e.target.files?.[0])}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="fotoComprovanteEndereco"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Comprovante de Endereço</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="file"
-                        accept="image/*,.pdf"
-                        onChange={(e) => handleFileChange('fotoComprovanteEndereco', e.target.files?.[0])}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </CardContent>
           </Card>
 
