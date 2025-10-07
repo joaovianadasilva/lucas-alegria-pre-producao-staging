@@ -57,7 +57,6 @@ const formularioSchema = z.object({
   planoContratado: z.string().min(1, 'Plano contratado é obrigatório'),
   adicionaisContratados: z.array(z.string()).optional(),
   diaVencimento: z.string().min(1, 'Dia de vencimento é obrigatório'),
-  previsaoInstalacao: z.string().min(1, 'Previsão de instalação é obrigatória'),
   observacao: z.string().optional(),
 
   dataAgendamento: z.string().min(1, 'Agendamento é obrigatório'),
@@ -833,20 +832,6 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
                         ))}
                       </SelectContent>
                     </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="previsaoInstalacao"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Previsão de Instalação</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

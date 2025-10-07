@@ -41,7 +41,6 @@ export interface FormularioCompleto {
   planoContratado: string;
   adicionaisContratados?: string[];
   diaVencimento: string;
-  previsaoInstalacao: string;
   observacao?: string;
 
   // Agendamento
