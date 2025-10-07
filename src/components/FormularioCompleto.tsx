@@ -106,14 +106,14 @@ const formularioSchema = z.object({
     if (!data.cpf || data.cpf.trim() === '') {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'CPF do responsável é obrigatório para Pessoa Jurídica',
+        message: 'CPF é obrigatório para Pessoa Jurídica',
         path: ['cpf']
       });
     }
     if (!data.rg || data.rg.trim() === '') {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'RG do responsável é obrigatório para Pessoa Jurídica',
+        message: 'RG é obrigatório para Pessoa Jurídica',
         path: ['rg']
       });
     }
@@ -390,9 +390,7 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
                     name="cpf"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>
-                          {tipoCliente === 'J' ? 'CPF do Responsável' : 'CPF'}
-                        </FormLabel>
+                        <FormLabel>CPF</FormLabel>
                         <FormControl>
                           <Input placeholder="000.000.000-00" {...field} />
                         </FormControl>
@@ -406,9 +404,7 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
                     name="rg"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>
-                          {tipoCliente === 'J' ? 'RG do Responsável' : 'RG'}
-                        </FormLabel>
+                        <FormLabel>RG</FormLabel>
                         <FormControl>
                           <Input placeholder="RG" {...field} />
                         </FormControl>
