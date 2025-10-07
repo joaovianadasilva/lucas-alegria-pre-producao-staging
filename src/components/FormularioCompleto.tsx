@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -11,9 +11,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Calendar, Clock } from 'lucide-react';
+import { Loader2, Calendar, Clock, Settings } from 'lucide-react';
 import { FormularioCompleto as IFormularioCompleto, UFS, DIAS_VENCIMENTO } from '@/types/formulario';
 import { DateSlotSelector } from './DateSlotSelector';
+import { ConfiguracaoPlanos } from './ConfiguracaoPlanos';
+import { carregarPlanos, carregarAdicionais, formatarItemCatalogo } from '@/lib/catalogoStorage';
 
 const formularioSchema = z.object({
   origem: z.string().min(1, 'Origem é obrigatória'),
@@ -90,6 +92,9 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [selectedSlot, setSelectedSlot] = useState<number>(0);
+  const [configOpen, setConfigOpen] = useState(false);
+  const [planosOptions, setPlanosOptions] = useState<string[]>([]);
+  const [adicionaisOptions, setAdicionaisOptions] = useState<string[]>([]);
   const { toast } = useToast();
 
   const form = useForm<FormularioSchema>({
@@ -102,6 +107,17 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
 
   const tipoCliente = form.watch('tipoCliente');
   const instalacaoMesmoEndereco = form.watch('instalacaoMesmoEndereco');
+
+  const loadOptions = () => {
+    const planos = carregarPlanos();
+    const adicionais = carregarAdicionais();
+    setPlanosOptions(planos.map(formatarItemCatalogo));
+    setAdicionaisOptions(adicionais.map(formatarItemCatalogo));
+  };
+
+  useEffect(() => {
+    loadOptions();
+  }, []);
 
   const handleSlotSelect = (date: string, slot: number) => {
     setSelectedDate(date);
@@ -678,8 +694,16 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
 
           {/* Informações do Contrato */}
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Informações do Contrato</CardTitle>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setConfigOpen(true)}
+              >
+                <Settings className="h-5 w-5" />
+              </Button>
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
@@ -688,9 +712,26 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Plano Contratado</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Nome do plano" {...field} />
-                    </FormControl>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione um plano" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {planosOptions.length === 0 ? (
+                          <SelectItem value="sem-planos" disabled>
+                            Nenhum plano cadastrado
+                          </SelectItem>
+                        ) : (
+                          planosOptions.map((plano) => (
+                            <SelectItem key={plano} value={plano}>
+                              {plano}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -702,9 +743,26 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Adicionais Contratados</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Adicionais (opcional)" {...field} />
-                    </FormControl>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione adicionais (opcional)" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {adicionaisOptions.length === 0 ? (
+                          <SelectItem value="sem-adicionais" disabled>
+                            Nenhum adicional cadastrado
+                          </SelectItem>
+                        ) : (
+                          adicionaisOptions.map((adicional) => (
+                            <SelectItem key={adicional} value={adicional}>
+                              {adicional}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -815,6 +873,12 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
           </div>
         </form>
       </Form>
+
+      <ConfiguracaoPlanos
+        open={configOpen}
+        onOpenChange={setConfigOpen}
+        onUpdate={loadOptions}
+      />
     </div>
   );
 };
