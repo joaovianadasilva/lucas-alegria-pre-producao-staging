@@ -78,6 +78,7 @@ export const DateSlotSelector = ({ spreadsheetId, onSlotSelect }: DateSlotSelect
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
               {availableDates.map((date) => (
                 <Button
+                  type="button"
                   key={date}
                   variant={selectedDate === date ? "default" : "outline"}
                   onClick={() => setSelectedDate(date)}
@@ -130,6 +131,7 @@ export const DateSlotSelector = ({ spreadsheetId, onSlotSelect }: DateSlotSelect
                 
                 return (
                   <Button
+                    type="button"
                     key={slot}
                     variant="outline"
                     disabled={!isAvailable}
