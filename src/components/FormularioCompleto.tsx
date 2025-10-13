@@ -117,6 +117,20 @@ const formularioSchema = z.object({
         path: ['rg']
       });
     }
+    if (!data.orgaoExpedicao || data.orgaoExpedicao.trim() === '') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Órgão de Expedição é obrigatório para Pessoa Jurídica',
+        path: ['orgaoExpedicao']
+      });
+    }
+    if (!data.dataNascimento || data.dataNascimento.trim() === '') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Data de Nascimento é obrigatória para Pessoa Jurídica',
+        path: ['dataNascimento']
+      });
+    }
   }
   
   // Validação condicional para endereço de instalação diferente
@@ -212,9 +226,7 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
       form.setValue('razaoSocial', undefined);
       form.setValue('inscricaoEstadual', undefined);
     } else if (tipoCliente === 'J') {
-      // Se mudou para Pessoa Jurídica, limpar apenas campos específicos de PF
-      form.setValue('orgaoExpedicao', undefined);
-      form.setValue('dataNascimento', undefined);
+      // Se mudou para Pessoa Jurídica, não limpar campos compartilhados (CPF, RG, Órgão, Data Nascimento)
     } else if (tipoCliente === 'E') {
       // Se mudou para Estrangeiro, limpar ambos
       form.setValue('cpf', undefined);
@@ -413,37 +425,33 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
                     )}
                   />
                   
-                  {tipoCliente === 'F' && (
-                    <>
-                      <FormField
-                        control={form.control}
-                        name="orgaoExpedicao"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Órgão de Expedição</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Ex: SSP/SP" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="dataNascimento"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Data de Nascimento</FormLabel>
-                            <FormControl>
-                              <Input type="date" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </>
-                  )}
+                  <FormField
+                    control={form.control}
+                    name="orgaoExpedicao"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Órgão de Expedição</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Ex: SSP/SP" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="dataNascimento"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Data de Nascimento</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </>
               )}
 
