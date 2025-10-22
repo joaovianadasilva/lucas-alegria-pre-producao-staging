@@ -25,11 +25,10 @@ export const useAgendamentos = (spreadsheetId: string) => {
   const fetchDatesAndSlots = async () => {
     setLoading(true);
     try {
-      console.log('=== HOOK: Chamando edge function ===');
-      const { data, error } = await supabase.functions.invoke('google-sheets-integration', {
+      console.log('=== HOOK: Chamando edge function manage-slots ===');
+      const { data, error } = await supabase.functions.invoke('manage-slots', {
         body: {
-          action: 'getDatesAndSlots',
-          spreadsheetId
+          action: 'getDatesAndSlots'
         }
       });
 
@@ -57,40 +56,18 @@ export const useAgendamentos = (spreadsheetId: string) => {
     }
   };
 
+  // DEPRECATED: Agendamentos agora são criados via manage-contracts
+  // Esta função está mantida para compatibilidade, mas não deve ser usada
   const createAgendamento = async (agendamentoData: AgendamentoData) => {
+    console.warn('createAgendamento está deprecated. Use manage-contracts ao invés.');
     setCreating(true);
     try {
-      const { data, error } = await supabase.functions.invoke('google-sheets-integration', {
-        body: {
-          action: 'createBooking',
-          spreadsheetId,
-          data: agendamentoData
-        }
-      });
-
-      if (error) throw error;
-
-      if (data?.success) {
-        toast({
-          title: "Sucesso!",
-          description: "Agendamento criado com sucesso",
-        });
-        
-        // Refresh data
-        await fetchDatesAndSlots();
-        
-        return data.data;
-      } else {
-        throw new Error(data?.error || 'Erro ao criar agendamento');
-      }
-    } catch (error) {
-      console.error('Error creating agendamento:', error);
       toast({
-        title: "Erro",
-        description: error.message || "Não foi possível criar o agendamento",
+        title: "Aviso",
+        description: "Use o formulário completo para criar contratos",
         variant: "destructive",
       });
-      throw error;
+      throw new Error('Função deprecated');
     } finally {
       setCreating(false);
     }

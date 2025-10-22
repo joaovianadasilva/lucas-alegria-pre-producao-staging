@@ -14,8 +14,9 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Calendar, Clock, Settings, ChevronsUpDown, X } from 'lucide-react';
 import { FormularioCompleto as IFormularioCompleto, UFS, DIAS_VENCIMENTO } from '@/types/formulario';
 import { DateSlotSelector } from './DateSlotSelector';
-import { ConfiguracaoPlanos } from './ConfiguracaoPlanos';
-import { carregarPlanos, carregarAdicionais, formatarItemCatalogo } from '@/lib/catalogoStorage';
+import { ConfiguracaoPlanosSupabase as ConfiguracaoPlanos } from './ConfiguracaoPlanosSupabase';
+import { carregarPlanos, carregarAdicionais, formatarItemCatalogo } from '@/lib/catalogoSupabase';
+import { supabase } from '@/integrations/supabase/client';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
@@ -207,9 +208,9 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
   const tipoCliente = form.watch('tipoCliente');
   const instalacaoMesmoEndereco = form.watch('instalacaoMesmoEndereco');
 
-  const loadOptions = () => {
-    const planos = carregarPlanos();
-    const adicionais = carregarAdicionais();
+  const loadOptions = async () => {
+    const planos = await carregarPlanos();
+    const adicionais = await carregarAdicionais();
     setPlanosOptions(planos.map(formatarItemCatalogo));
     setAdicionaisOptions(adicionais.map(formatarItemCatalogo));
   };
@@ -250,36 +251,63 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
     setIsSubmitting(true);
     
     try {
-      // Enviar para webhook se fornecido
-      if (webhookUrl) {
-        const webhookResponse = await fetch(webhookUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(data),
-        });
+      // 1. Criar contrato no Supabase
+      console.log('Criando contrato via manage-contracts...');
+      const { data: contractResult, error: contractError } = await supabase.functions.invoke('manage-contracts', {
+        body: {
+          action: 'createContract',
+          ...data
+        }
+      });
 
-        if (!webhookResponse.ok) {
-          throw new Error(`Erro no webhook: ${webhookResponse.status}`);
+      if (contractError) {
+        throw new Error(`Erro ao criar contrato: ${contractError.message}`);
+      }
+
+      if (!contractResult?.success) {
+        throw new Error(contractResult?.error || 'Erro ao criar contrato');
+      }
+
+      const { contratoId, numeroContrato } = contractResult;
+
+      // 2. (Opcional) Enviar para webhook externo
+      if (webhookUrl) {
+        try {
+          await fetch(webhookUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              ...data,
+              contratoId,
+              numeroContrato
+            }),
+          });
+        } catch (webhookError) {
+          console.warn('Webhook falhou, mas contrato foi criado:', webhookError);
         }
       }
 
       toast({
-        title: "Sucesso!",
-        description: "Formulário enviado com sucesso",
+        title: "Contrato criado com sucesso!",
+        description: `Número do contrato: ${numeroContrato}`,
       });
 
       // Reset form
-      form.reset();
+      form.reset({
+        tipoCliente: 'F',
+        instalacaoMesmoEndereco: 'S',
+      });
       setSelectedDate('');
       setSelectedSlot(0);
       
     } catch (error) {
       console.error('Erro ao enviar formulário:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
       toast({
-        title: "Erro",
-        description: "Não foi possível enviar o formulário. Tente novamente.",
+        title: "Erro ao criar contrato",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

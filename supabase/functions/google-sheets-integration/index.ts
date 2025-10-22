@@ -61,7 +61,8 @@ function processPemKey(pemKey: string): ArrayBuffer {
     
   } catch (error) {
     console.error('Erro ao processar chave PEM:', error);
-    throw new Error(`Falha ao processar chave PEM: ${error.message}`);
+    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+    throw new Error(`Falha ao processar chave PEM: ${errorMessage}`);
   }
 }
 
@@ -119,9 +120,12 @@ async function generateJWT(clientEmail: string, privateKey: string, scope: strin
     
   } catch (error) {
     console.error('Erro ao gerar JWT:', error);
-    console.error('Tipo de erro:', error.constructor.name);
-    console.error('Mensagem:', error.message);
-    throw new Error(`Falha ao gerar JWT: ${error.message}`);
+    if (error instanceof Error) {
+      console.error('Tipo de erro:', error.constructor.name);
+      console.error('Mensagem:', error.message);
+      throw new Error(`Falha ao gerar JWT: ${error.message}`);
+    }
+    throw new Error('Falha ao gerar JWT: Erro desconhecido');
   }
 }
 
@@ -347,8 +351,9 @@ serve(async (req) => {
     
   } catch (error) {
     console.error('Error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
+      JSON.stringify({ success: false, error: errorMessage }),
       { 
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
