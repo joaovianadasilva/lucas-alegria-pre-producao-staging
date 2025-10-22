@@ -14,8 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      adicionais_contrato: {
+        Row: {
+          adicional_codigo: string
+          adicional_nome: string
+          adicional_valor: number
+          contrato_id: string
+          created_at: string | null
+          id: string
+        }
+        Insert: {
+          adicional_codigo: string
+          adicional_nome: string
+          adicional_valor: number
+          contrato_id: string
+          created_at?: string | null
+          id?: string
+        }
+        Update: {
+          adicional_codigo?: string
+          adicional_nome?: string
+          adicional_valor?: number
+          contrato_id?: string
+          created_at?: string | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "adicionais_contrato_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agendamentos: {
         Row: {
+          contrato_id: string | null
           created_at: string
           data_agendamento: string
           email_cliente: string
@@ -27,6 +63,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          contrato_id?: string | null
           created_at?: string
           data_agendamento: string
           email_cliente: string
@@ -38,6 +75,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          contrato_id?: string | null
           created_at?: string
           data_agendamento?: string
           email_cliente?: string
@@ -47,6 +85,74 @@ export type Database = {
           status?: string
           telefone_cliente?: string | null
           updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agendamentos_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: true
+            referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      catalogo_adicionais: {
+        Row: {
+          ativo: boolean | null
+          codigo: string
+          created_at: string | null
+          id: string
+          nome: string
+          updated_at: string | null
+          valor: number
+        }
+        Insert: {
+          ativo?: boolean | null
+          codigo: string
+          created_at?: string | null
+          id?: string
+          nome: string
+          updated_at?: string | null
+          valor: number
+        }
+        Update: {
+          ativo?: boolean | null
+          codigo?: string
+          created_at?: string | null
+          id?: string
+          nome?: string
+          updated_at?: string | null
+          valor?: number
+        }
+        Relationships: []
+      }
+      catalogo_planos: {
+        Row: {
+          ativo: boolean | null
+          codigo: string
+          created_at: string | null
+          id: string
+          nome: string
+          updated_at: string | null
+          valor: number
+        }
+        Insert: {
+          ativo?: boolean | null
+          codigo: string
+          created_at?: string | null
+          id?: string
+          nome: string
+          updated_at?: string | null
+          valor: number
+        }
+        Update: {
+          ativo?: boolean | null
+          codigo?: string
+          created_at?: string | null
+          id?: string
+          nome?: string
+          updated_at?: string | null
+          valor?: number
         }
         Relationships: []
       }
@@ -104,6 +210,126 @@ export type Database = {
           user_qnto_gasta_viagens?: string | null
           user_quando_viaja?: string | null
           user_quantas_vezes_viaja_ano?: string | null
+        }
+        Relationships: []
+      }
+      contratos: {
+        Row: {
+          celular: string
+          cnpj: string | null
+          cpf: string | null
+          created_at: string | null
+          data_nascimento: string | null
+          dia_vencimento: string
+          email: string
+          id: string
+          inscricao_estadual: string | null
+          instalacao_bairro: string | null
+          instalacao_cep: string | null
+          instalacao_cidade: string | null
+          instalacao_complemento: string | null
+          instalacao_mesmo_endereco: boolean
+          instalacao_numero: string | null
+          instalacao_rua: string | null
+          instalacao_uf: string | null
+          nome_completo: string
+          observacao: string | null
+          orgao_expedicao: string | null
+          origem: string
+          plano_codigo: string
+          plano_nome: string
+          plano_valor: number
+          razao_social: string | null
+          residencia_bairro: string
+          residencia_cep: string
+          residencia_cidade: string
+          residencia_complemento: string | null
+          residencia_numero: string
+          residencia_rua: string
+          residencia_uf: string
+          rg: string | null
+          status: string | null
+          telefone: string
+          tipo_cliente: string
+          updated_at: string | null
+        }
+        Insert: {
+          celular: string
+          cnpj?: string | null
+          cpf?: string | null
+          created_at?: string | null
+          data_nascimento?: string | null
+          dia_vencimento: string
+          email: string
+          id?: string
+          inscricao_estadual?: string | null
+          instalacao_bairro?: string | null
+          instalacao_cep?: string | null
+          instalacao_cidade?: string | null
+          instalacao_complemento?: string | null
+          instalacao_mesmo_endereco: boolean
+          instalacao_numero?: string | null
+          instalacao_rua?: string | null
+          instalacao_uf?: string | null
+          nome_completo: string
+          observacao?: string | null
+          orgao_expedicao?: string | null
+          origem: string
+          plano_codigo: string
+          plano_nome: string
+          plano_valor: number
+          razao_social?: string | null
+          residencia_bairro: string
+          residencia_cep: string
+          residencia_cidade: string
+          residencia_complemento?: string | null
+          residencia_numero: string
+          residencia_rua: string
+          residencia_uf: string
+          rg?: string | null
+          status?: string | null
+          telefone: string
+          tipo_cliente: string
+          updated_at?: string | null
+        }
+        Update: {
+          celular?: string
+          cnpj?: string | null
+          cpf?: string | null
+          created_at?: string | null
+          data_nascimento?: string | null
+          dia_vencimento?: string
+          email?: string
+          id?: string
+          inscricao_estadual?: string | null
+          instalacao_bairro?: string | null
+          instalacao_cep?: string | null
+          instalacao_cidade?: string | null
+          instalacao_complemento?: string | null
+          instalacao_mesmo_endereco?: boolean
+          instalacao_numero?: string | null
+          instalacao_rua?: string | null
+          instalacao_uf?: string | null
+          nome_completo?: string
+          observacao?: string | null
+          orgao_expedicao?: string | null
+          origem?: string
+          plano_codigo?: string
+          plano_nome?: string
+          plano_valor?: number
+          razao_social?: string | null
+          residencia_bairro?: string
+          residencia_cep?: string
+          residencia_cidade?: string
+          residencia_complemento?: string | null
+          residencia_numero?: string
+          residencia_rua?: string
+          residencia_uf?: string
+          rg?: string | null
+          status?: string | null
+          telefone?: string
+          tipo_cliente?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -167,67 +393,62 @@ export type Database = {
         }
         Relationships: []
       }
+      slots_disponiveis: {
+        Row: {
+          created_at: string | null
+          data_disponivel: string
+          id: string
+          slot_1: string | null
+          slot_10: string | null
+          slot_2: string | null
+          slot_3: string | null
+          slot_4: string | null
+          slot_5: string | null
+          slot_6: string | null
+          slot_7: string | null
+          slot_8: string | null
+          slot_9: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          data_disponivel: string
+          id?: string
+          slot_1?: string | null
+          slot_10?: string | null
+          slot_2?: string | null
+          slot_3?: string | null
+          slot_4?: string | null
+          slot_5?: string | null
+          slot_6?: string | null
+          slot_7?: string | null
+          slot_8?: string | null
+          slot_9?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          data_disponivel?: string
+          id?: string
+          slot_1?: string | null
+          slot_10?: string | null
+          slot_2?: string | null
+          slot_3?: string | null
+          slot_4?: string | null
+          slot_5?: string | null
+          slot_6?: string | null
+          slot_7?: string | null
+          slot_8?: string | null
+          slot_9?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      binary_quantize: {
-        Args: { "": string } | { "": unknown }
-        Returns: unknown
-      }
-      halfvec_avg: {
-        Args: { "": number[] }
-        Returns: unknown
-      }
-      halfvec_out: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      halfvec_send: {
-        Args: { "": unknown }
-        Returns: string
-      }
-      halfvec_typmod_in: {
-        Args: { "": unknown[] }
-        Returns: number
-      }
-      hnsw_bit_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      hnsw_halfvec_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      hnsw_sparsevec_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      hnswhandler: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      ivfflat_bit_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      ivfflat_halfvec_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      ivfflathandler: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      l2_norm: {
-        Args: { "": unknown } | { "": unknown }
-        Returns: number
-      }
-      l2_normalize: {
-        Args: { "": string } | { "": unknown } | { "": unknown }
-        Returns: string
-      }
       match_documents: {
         Args: { filter?: Json; match_count?: number; query_embedding: string }
         Returns: {
@@ -236,42 +457,6 @@ export type Database = {
           metadata: Json
           similarity: number
         }[]
-      }
-      sparsevec_out: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      sparsevec_send: {
-        Args: { "": unknown }
-        Returns: string
-      }
-      sparsevec_typmod_in: {
-        Args: { "": unknown[] }
-        Returns: number
-      }
-      vector_avg: {
-        Args: { "": number[] }
-        Returns: string
-      }
-      vector_dims: {
-        Args: { "": string } | { "": unknown }
-        Returns: number
-      }
-      vector_norm: {
-        Args: { "": string }
-        Returns: number
-      }
-      vector_out: {
-        Args: { "": string }
-        Returns: unknown
-      }
-      vector_send: {
-        Args: { "": string }
-        Returns: string
-      }
-      vector_typmod_in: {
-        Args: { "": unknown[] }
-        Returns: number
       }
     }
     Enums: {
