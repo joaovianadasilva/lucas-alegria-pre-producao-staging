@@ -2,3 +2,12 @@ project_id = "vvvtmsykjeyrevjmofhq"
 
 [functions.google-sheets-integration]
 verify_jwt = false
+
+[functions.manage-catalog]
+verify_jwt = false
+
+[functions.manage-slots]
+verify_jwt = false
+
+[functions.manage-contracts]
+verify_jwt = false
