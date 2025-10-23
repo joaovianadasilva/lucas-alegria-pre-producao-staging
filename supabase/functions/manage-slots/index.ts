@@ -28,7 +28,7 @@ serve(async (req) => {
         if (error) throw error;
 
         // Transformar para o formato esperado pelo frontend
-        const datesWithSlots: { [key: string]: { [key: number]: string } } = {};
+        const datesWithSlots: { [key: string]: { [key: number]: string | null } } = {};
         
         for (const row of data || []) {
           const date = row.data_disponivel;
@@ -36,7 +36,7 @@ serve(async (req) => {
           
           for (let i = 1; i <= 10; i++) {
             const slotValue = row[`slot_${i}`];
-            datesWithSlots[date][i] = slotValue || '';
+            datesWithSlots[date][i] = slotValue; // Manter null como null para slots disponíveis
           }
         }
 
