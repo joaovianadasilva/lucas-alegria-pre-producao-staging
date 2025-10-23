@@ -22,7 +22,7 @@ serve(async (req) => {
     switch (action) {
       case 'createContract': {
         const {
-          origem, tipoVenda, representanteVendas, tipoCliente, nomeCompleto, cpf, rg, orgaoExpedicao,
+          codigoCliente, origem, tipoVenda, representanteVendas, tipoCliente, nomeCompleto, cpf, rg, orgaoExpedicao,
           dataNascimento, telefone, celular, email,
           residenciaRua, residenciaNumero, residenciaBairro, residenciaComplemento,
           residenciaCep, residenciaCidade, residenciaUf,
@@ -107,6 +107,7 @@ serve(async (req) => {
         const { data: contratoData, error: contratoError } = await supabase
           .from('contratos')
           .insert({
+            codigo_cliente: codigoCliente,
             origem,
             tipo_venda: tipoVenda,
             representante_vendas: representanteVendas,
@@ -183,7 +184,8 @@ serve(async (req) => {
             nome_cliente: nomeCompleto,
             email_cliente: email,
             telefone_cliente: telefone,
-            status: 'confirmado'
+            status: 'pendente',
+            confirmacao: 'pre-agendado'
           });
 
         if (agendamentoError) {

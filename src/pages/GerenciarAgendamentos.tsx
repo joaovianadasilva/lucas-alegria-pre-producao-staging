@@ -18,16 +18,28 @@ import { ptBR } from 'date-fns/locale';
 
 const STATUS_COLORS = {
   pendente: 'bg-yellow-500',
-  confirmado: 'bg-blue-500',
-  realizado: 'bg-green-500',
+  concluido: 'bg-green-500',
+  reprogramado: 'bg-blue-500',
   cancelado: 'bg-red-500',
 };
 
 const STATUS_LABELS = {
   pendente: 'Pendente',
-  confirmado: 'Confirmado',
-  realizado: 'Realizado',
+  concluido: 'Concluído',
+  reprogramado: 'Reprogramado',
   cancelado: 'Cancelado',
+};
+
+const CONFIRMACAO_COLORS = {
+  'confirmado': 'bg-green-500',
+  'pre-agendado': 'bg-yellow-500',
+  'cancelado': 'bg-red-500',
+};
+
+const CONFIRMACAO_LABELS = {
+  'confirmado': 'Confirmado',
+  'pre-agendado': 'Pré-Agendado',
+  'cancelado': 'Cancelado',
 };
 
 const TIPO_LABELS = {
@@ -53,6 +65,7 @@ export default function GerenciarAgendamentos() {
   const [selectedAgendamento, setSelectedAgendamento] = useState<any>(null);
   const [novoStatus, setNovoStatus] = useState('');
   const [novoTecnico, setNovoTecnico] = useState('');
+  const [novaConfirmacao, setNovaConfirmacao] = useState('');
 
   const { data: agendamentosData, isLoading, refetch } = useQuery({
     queryKey: ['agendamentos', filtroStatus, filtroTipo, filtroTecnico, dataInicio, dataFim],
@@ -79,6 +92,7 @@ export default function GerenciarAgendamentos() {
     setSelectedAgendamento(agendamento);
     setNovoStatus(agendamento.status);
     setNovoTecnico(agendamento.tecnico_responsavel_id || '');
+    setNovaConfirmacao(agendamento.confirmacao || 'pre-agendado');
     setEditDialog(true);
   };
 
@@ -93,6 +107,7 @@ export default function GerenciarAgendamentos() {
           updates: {
             status: novoStatus,
             tecnico_responsavel_id: novoTecnico || null,
+            confirmacao: novaConfirmacao,
           }
         }
       });
@@ -181,8 +196,8 @@ export default function GerenciarAgendamentos() {
                   <SelectContent>
                     <SelectItem value="all">Todos</SelectItem>
                     <SelectItem value="pendente">Pendente</SelectItem>
-                    <SelectItem value="confirmado">Confirmado</SelectItem>
-                    <SelectItem value="realizado">Realizado</SelectItem>
+                    <SelectItem value="concluido">Concluído</SelectItem>
+                    <SelectItem value="reprogramado">Reprogramado</SelectItem>
                     <SelectItem value="cancelado">Cancelado</SelectItem>
                   </SelectContent>
                 </Select>
@@ -243,8 +258,10 @@ export default function GerenciarAgendamentos() {
                     <TableRow>
                       <TableHead>Data/Horário</TableHead>
                       <TableHead>Tipo</TableHead>
+                      <TableHead>ID Cliente</TableHead>
                       <TableHead>Cliente</TableHead>
                       <TableHead>Contato</TableHead>
+                      <TableHead>Confirmação</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Técnico</TableHead>
                       <TableHead>Ações</TableHead>
@@ -265,6 +282,11 @@ export default function GerenciarAgendamentos() {
                             {TIPO_LABELS[agendamento.tipo as keyof typeof TIPO_LABELS]}
                           </Badge>
                         </TableCell>
+                        <TableCell>
+                          {agendamento.contrato?.codigo_cliente || (
+                            <span className="text-muted-foreground text-sm">Não vinculado</span>
+                          )}
+                        </TableCell>
                         <TableCell>{agendamento.nome_cliente}</TableCell>
                         <TableCell className="text-sm">
                           {agendamento.email_cliente}
@@ -274,6 +296,11 @@ export default function GerenciarAgendamentos() {
                               {agendamento.telefone_cliente}
                             </>
                           )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={CONFIRMACAO_COLORS[agendamento.confirmacao as keyof typeof CONFIRMACAO_COLORS]}>
+                            {CONFIRMACAO_LABELS[agendamento.confirmacao as keyof typeof CONFIRMACAO_LABELS]}
+                          </Badge>
                         </TableCell>
                         <TableCell>
                           <Badge className={STATUS_COLORS[agendamento.status as keyof typeof STATUS_COLORS]}>
@@ -335,6 +362,20 @@ export default function GerenciarAgendamentos() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
+              <Label>Confirmação</Label>
+              <Select value={novaConfirmacao} onValueChange={setNovaConfirmacao}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pre-agendado">Pré-Agendado</SelectItem>
+                  <SelectItem value="confirmado">Confirmado</SelectItem>
+                  <SelectItem value="cancelado">Cancelado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
               <Label>Status</Label>
               <Select value={novoStatus} onValueChange={setNovoStatus}>
                 <SelectTrigger>
@@ -342,8 +383,8 @@ export default function GerenciarAgendamentos() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="pendente">Pendente</SelectItem>
-                  <SelectItem value="confirmado">Confirmado</SelectItem>
-                  <SelectItem value="realizado">Realizado</SelectItem>
+                  <SelectItem value="concluido">Concluído</SelectItem>
+                  <SelectItem value="reprogramado">Reprogramado</SelectItem>
                   <SelectItem value="cancelado">Cancelado</SelectItem>
                 </SelectContent>
               </Select>

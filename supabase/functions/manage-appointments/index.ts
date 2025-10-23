@@ -78,6 +78,7 @@ serve(async (req) => {
             telefone_cliente: telefoneCliente,
             tecnico_responsavel_id: tecnicoResponsavelId,
             status: 'pendente',
+            confirmacao: 'pre-agendado',
             contrato_id: null
           })
           .select()
@@ -126,7 +127,7 @@ serve(async (req) => {
           .select(`
             *,
             tecnico:profiles!tecnico_responsavel_id(id, nome, sobrenome, telefone),
-            contrato:contratos(id, plano_nome)
+            contrato:contratos(id, plano_nome, codigo_cliente)
           `, { count: 'exact' })
           .order('data_agendamento', { ascending: true })
           .order('slot_numero', { ascending: true })
@@ -158,6 +159,14 @@ serve(async (req) => {
 
         if (!agendamentoId) {
           throw new Error('ID do agendamento é obrigatório');
+        }
+
+        // Validar confirmacao se presente
+        if (updates.confirmacao) {
+          const confirmacoesValidas = ['confirmado', 'pre-agendado', 'cancelado'];
+          if (!confirmacoesValidas.includes(updates.confirmacao)) {
+            throw new Error('Valor de confirmação inválido');
+          }
         }
 
         console.log('Updating appointment:', agendamentoId, updates);

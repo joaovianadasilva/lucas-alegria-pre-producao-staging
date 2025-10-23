@@ -51,6 +51,7 @@ export type Database = {
       }
       agendamentos: {
         Row: {
+          confirmacao: string
           contrato_id: string | null
           created_at: string
           data_agendamento: string
@@ -64,6 +65,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          confirmacao?: string
           contrato_id?: string | null
           created_at?: string
           data_agendamento: string
@@ -77,6 +79,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          confirmacao?: string
           contrato_id?: string | null
           created_at?: string
           data_agendamento?: string
@@ -278,6 +281,7 @@ export type Database = {
         Row: {
           celular: string
           cnpj: string | null
+          codigo_cliente: string
           cpf: string | null
           created_at: string | null
           data_nascimento: string | null
@@ -319,6 +323,7 @@ export type Database = {
         Insert: {
           celular: string
           cnpj?: string | null
+          codigo_cliente: string
           cpf?: string | null
           created_at?: string | null
           data_nascimento?: string | null
@@ -360,6 +365,7 @@ export type Database = {
         Update: {
           celular?: string
           cnpj?: string | null
+          codigo_cliente?: string
           cpf?: string | null
           created_at?: string | null
           data_nascimento?: string | null
