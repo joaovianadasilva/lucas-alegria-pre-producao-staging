@@ -13,7 +13,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { action, codigo, nome, valor, uf, id } = body;
+    const { action, codigo, nome, valor, uf, id, planId, addOnId } = body;
     
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -296,6 +296,194 @@ serve(async (req) => {
 
         if (error) throw error;
 
+        return new Response(
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // English aliases for Plans
+      case 'listPlans': {
+        const { data, error } = await supabase
+          .from('catalogo_planos')
+          .select('*')
+          .eq('ativo', true)
+          .order('codigo', { ascending: true });
+        
+        if (error) throw error;
+        
+        return new Response(
+          JSON.stringify({ success: true, plans: data }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'createPlan': {
+        if (!codigo || !nome || valor === undefined) {
+          throw new Error('Código, nome e valor são obrigatórios');
+        }
+
+        // Verificar duplicidade
+        const { data: existing } = await supabase
+          .from('catalogo_planos')
+          .select('codigo')
+          .eq('codigo', codigo)
+          .single();
+
+        if (existing) {
+          throw new Error('Código já existe');
+        }
+
+        const { data, error } = await supabase
+          .from('catalogo_planos')
+          .insert({
+            codigo,
+            nome,
+            valor: parseFloat(valor),
+            ativo: true
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        return new Response(
+          JSON.stringify({ success: true, plan: data }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'updatePlan': {
+        if (!planId) {
+          throw new Error('ID do plano é obrigatório');
+        }
+
+        const updateData: any = {};
+        if (codigo !== undefined) updateData.codigo = codigo;
+        if (nome !== undefined) updateData.nome = nome;
+        if (valor !== undefined) updateData.valor = parseFloat(valor);
+
+        const { data, error } = await supabase
+          .from('catalogo_planos')
+          .update(updateData)
+          .eq('id', planId)
+          .select()
+          .single();
+        
+        if (error) throw error;
+        
+        return new Response(
+          JSON.stringify({ success: true, plan: data }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'deletePlan': {
+        if (!planId) {
+          throw new Error('ID do plano é obrigatório');
+        }
+
+        const { error } = await supabase
+          .from('catalogo_planos')
+          .update({ ativo: false })
+          .eq('id', planId);
+        
+        if (error) throw error;
+        
+        return new Response(
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // English aliases for Add-ons
+      case 'listAddOns': {
+        const { data, error } = await supabase
+          .from('catalogo_adicionais')
+          .select('*')
+          .eq('ativo', true)
+          .order('codigo', { ascending: true });
+        
+        if (error) throw error;
+        
+        return new Response(
+          JSON.stringify({ success: true, addOns: data }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'createAddOn': {
+        if (!codigo || !nome || valor === undefined) {
+          throw new Error('Código, nome e valor são obrigatórios');
+        }
+
+        // Verificar duplicidade
+        const { data: existing } = await supabase
+          .from('catalogo_adicionais')
+          .select('codigo')
+          .eq('codigo', codigo)
+          .single();
+
+        if (existing) {
+          throw new Error('Código já existe');
+        }
+
+        const { data, error } = await supabase
+          .from('catalogo_adicionais')
+          .insert({
+            codigo,
+            nome,
+            valor: parseFloat(valor),
+            ativo: true
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        return new Response(
+          JSON.stringify({ success: true, addOn: data }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'updateAddOn': {
+        if (!addOnId) {
+          throw new Error('ID do adicional é obrigatório');
+        }
+
+        const updateData: any = {};
+        if (codigo !== undefined) updateData.codigo = codigo;
+        if (nome !== undefined) updateData.nome = nome;
+        if (valor !== undefined) updateData.valor = parseFloat(valor);
+
+        const { data, error } = await supabase
+          .from('catalogo_adicionais')
+          .update(updateData)
+          .eq('id', addOnId)
+          .select()
+          .single();
+        
+        if (error) throw error;
+        
+        return new Response(
+          JSON.stringify({ success: true, addOn: data }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'deleteAddOn': {
+        if (!addOnId) {
+          throw new Error('ID do adicional é obrigatório');
+        }
+
+        const { error } = await supabase
+          .from('catalogo_adicionais')
+          .update({ ativo: false })
+          .eq('id', addOnId);
+        
+        if (error) throw error;
+        
         return new Response(
           JSON.stringify({ success: true }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
