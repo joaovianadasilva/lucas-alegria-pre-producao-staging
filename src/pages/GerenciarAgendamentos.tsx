@@ -66,6 +66,8 @@ export default function GerenciarAgendamentos() {
   const [novoStatus, setNovoStatus] = useState('');
   const [novoTecnico, setNovoTecnico] = useState('');
   const [novaConfirmacao, setNovaConfirmacao] = useState('');
+  const [novaOrigem, setNovaOrigem] = useState('');
+  const [novoRepresentante, setNovoRepresentante] = useState('');
 
   const { data: agendamentosData, isLoading, refetch } = useQuery({
     queryKey: ['agendamentos', filtroStatus, filtroTipo, filtroTecnico, dataInicio, dataFim],
@@ -93,6 +95,8 @@ export default function GerenciarAgendamentos() {
     setNovoStatus(agendamento.status);
     setNovoTecnico(agendamento.tecnico_responsavel_id || '');
     setNovaConfirmacao(agendamento.confirmacao || 'pre-agendado');
+    setNovaOrigem(agendamento.origem || '');
+    setNovoRepresentante(agendamento.representante_vendas || '');
     setEditDialog(true);
   };
 
@@ -108,6 +112,8 @@ export default function GerenciarAgendamentos() {
             status: novoStatus,
             tecnico_responsavel_id: novoTecnico || null,
             confirmacao: novaConfirmacao,
+            origem: novaOrigem || null,
+            representante_vendas: novoRepresentante || null,
           }
         }
       });
@@ -261,6 +267,8 @@ export default function GerenciarAgendamentos() {
                       <TableHead>ID Cliente</TableHead>
                       <TableHead>Cliente</TableHead>
                       <TableHead>Contato</TableHead>
+                      <TableHead>Origem</TableHead>
+                      <TableHead>Representante</TableHead>
                       <TableHead>Confirmação</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Técnico</TableHead>
@@ -295,6 +303,16 @@ export default function GerenciarAgendamentos() {
                               <br />
                               {agendamento.telefone_cliente}
                             </>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {agendamento.origem || (
+                            <span className="text-muted-foreground text-sm">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {agendamento.representante_vendas || (
+                            <span className="text-muted-foreground text-sm">-</span>
                           )}
                         </TableCell>
                         <TableCell>

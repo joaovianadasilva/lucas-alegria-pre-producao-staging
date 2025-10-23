@@ -107,7 +107,7 @@ serve(async (req) => {
         const { data: contratoData, error: contratoError } = await supabase
           .from('contratos')
           .insert({
-            codigo_cliente: codigoCliente,
+            codigo_cliente: null,
             origem,
             tipo_venda: tipoVenda,
             representante_vendas: representanteVendas,

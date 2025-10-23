@@ -22,7 +22,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 
 const formularioSchema = z.object({
-  codigoCliente: z.string().min(1, 'Código do cliente é obrigatório'),
+  codigoCliente: z.string().optional(),
   origem: z.string().min(1, 'Origem é obrigatória'),
   tipoVenda: z.enum(['Adicional Avulso', 'Contrato Ordinário'], { required_error: 'Tipo de venda é obrigatório' }),
   representanteVendas: z.string().min(1, 'Representante de vendas é obrigatório'),
@@ -351,20 +351,6 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
               <CardTitle>Informações Básicas da Venda</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <FormField
-                control={form.control}
-                name="codigoCliente"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Código do Cliente *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ex: CLI-001" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
               <FormField
                 control={form.control}
                 name="origem"

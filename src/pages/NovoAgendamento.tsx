@@ -34,6 +34,25 @@ export default function NovoAgendamento() {
   const [observacao, setObservacao] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
+  const [origem, setOrigem] = useState('');
+  const [representanteVendas, setRepresentanteVendas] = useState('');
+  const [representantesOptions, setRepresentantesOptions] = useState<{id: string, nome: string}[]>([]);
+
+  React.useEffect(() => {
+    const loadRepresentantes = async () => {
+      const { data, error } = await supabase
+        .from('catalogo_representantes')
+        .select('id, nome')
+        .eq('ativo', true)
+        .order('nome');
+      
+      if (data && !error) {
+        setRepresentantesOptions(data);
+      }
+    };
+    
+    loadRepresentantes();
+  }, []);
 
   const handleSlotSelect = (date: string, slot: number) => {
     setSelectedDate(date);
@@ -66,6 +85,8 @@ export default function NovoAgendamento() {
           telefoneCliente: telefoneCliente || null,
           tecnicoResponsavelId: tecnicoResponsavel || null,
           observacao: observacao || null,
+          origem: origem || null,
+          representanteVendas: representanteVendas || null,
         }
       });
 
@@ -159,6 +180,58 @@ export default function NovoAgendamento() {
                   onChange={(e) => setTelefoneCliente(e.target.value)}
                   placeholder="(00) 00000-0000"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="origem">Origem da Venda</Label>
+                <Select value={origem} onValueChange={setOrigem}>
+                  <SelectTrigger id="origem">
+                    <SelectValue placeholder="Selecione a origem (opcional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="indicacao">Indicação</SelectItem>
+                    <SelectItem value="ex-cliente">Ex-cliente</SelectItem>
+                    <SelectItem value="panfleto">Panfleto</SelectItem>
+                    <SelectItem value="cartaz-banner-outdoor">Cartaz/Banner/Outdoor</SelectItem>
+                    <SelectItem value="google">Google</SelectItem>
+                    <SelectItem value="facebook">Facebook</SelectItem>
+                    <SelectItem value="instagram">Instagram</SelectItem>
+                    <SelectItem value="internet">Internet</SelectItem>
+                    <SelectItem value="anuncio-parede-placa">Anúncio na parede / Placa</SelectItem>
+                    <SelectItem value="carro-veiculos-empresa">Carro/Veículos da empresa</SelectItem>
+                    <SelectItem value="anuncio-avenida">Anúncio na avenida</SelectItem>
+                    <SelectItem value="caixa-poste">Caixa no poste</SelectItem>
+                    <SelectItem value="via-tecnico">Via Técnico</SelectItem>
+                    <SelectItem value="propaganda">Propaganda</SelectItem>
+                    <SelectItem value="mora-proximo">Mora próximo</SelectItem>
+                    <SelectItem value="condominio">Condomínio</SelectItem>
+                    <SelectItem value="ja-cliente">Já é cliente</SelectItem>
+                    <SelectItem value="via-vendedor">Via Vendedor</SelectItem>
+                    <SelectItem value="nao-informado">Não informado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="representante">Representante de Vendas</Label>
+                <Select value={representanteVendas} onValueChange={setRepresentanteVendas}>
+                  <SelectTrigger id="representante">
+                    <SelectValue placeholder="Selecione o representante (opcional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {representantesOptions.length === 0 ? (
+                      <SelectItem value="sem-representantes" disabled>
+                        Nenhum representante cadastrado
+                      </SelectItem>
+                    ) : (
+                      representantesOptions.map((rep) => (
+                        <SelectItem key={rep.id} value={rep.nome}>
+                          {rep.nome}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
 
               <TecnicoSelector

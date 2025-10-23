@@ -59,6 +59,8 @@ export type Database = {
           id: string
           nome_cliente: string
           observacao: string | null
+          origem: string | null
+          representante_vendas: string | null
           slot_numero: number
           status: string
           tecnico_responsavel_id: string | null
@@ -75,6 +77,8 @@ export type Database = {
           id?: string
           nome_cliente: string
           observacao?: string | null
+          origem?: string | null
+          representante_vendas?: string | null
           slot_numero: number
           status?: string
           tecnico_responsavel_id?: string | null
@@ -91,6 +95,8 @@ export type Database = {
           id?: string
           nome_cliente?: string
           observacao?: string | null
+          origem?: string | null
+          representante_vendas?: string | null
           slot_numero?: number
           status?: string
           tecnico_responsavel_id?: string | null
@@ -287,7 +293,7 @@ export type Database = {
         Row: {
           celular: string
           cnpj: string | null
-          codigo_cliente: string
+          codigo_cliente: string | null
           cpf: string | null
           created_at: string | null
           data_nascimento: string | null
@@ -329,7 +335,7 @@ export type Database = {
         Insert: {
           celular: string
           cnpj?: string | null
-          codigo_cliente: string
+          codigo_cliente?: string | null
           cpf?: string | null
           created_at?: string | null
           data_nascimento?: string | null
@@ -371,7 +377,7 @@ export type Database = {
         Update: {
           celular?: string
           cnpj?: string | null
-          codigo_cliente?: string
+          codigo_cliente?: string | null
           cpf?: string | null
           created_at?: string | null
           data_nascimento?: string | null

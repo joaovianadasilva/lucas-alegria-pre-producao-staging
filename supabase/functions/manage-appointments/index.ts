@@ -31,7 +31,9 @@ serve(async (req) => {
           emailCliente,
           telefoneCliente,
           tecnicoResponsavelId,
-          observacao
+          observacao,
+          origem,
+          representanteVendas
         } = requestBody;
 
         console.log('Creating appointment:', { tipo, dataAgendamento, slotNumero });
@@ -77,6 +79,9 @@ serve(async (req) => {
             email_cliente: emailCliente,
             telefone_cliente: telefoneCliente,
             tecnico_responsavel_id: tecnicoResponsavelId,
+            observacao,
+            origem,
+            representante_vendas: representanteVendas,
             status: 'pendente',
             confirmacao: 'pre-agendado',
             contrato_id: null
