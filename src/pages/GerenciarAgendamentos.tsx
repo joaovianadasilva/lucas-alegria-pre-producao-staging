@@ -43,9 +43,9 @@ export default function GerenciarAgendamentos() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const [filtroStatus, setFiltroStatus] = useState('');
-  const [filtroTipo, setFiltroTipo] = useState('');
-  const [filtroTecnico, setFiltroTecnico] = useState('');
+  const [filtroStatus, setFiltroStatus] = useState('all');
+  const [filtroTipo, setFiltroTipo] = useState('all');
+  const [filtroTecnico, setFiltroTecnico] = useState('all');
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
 
@@ -60,9 +60,9 @@ export default function GerenciarAgendamentos() {
       const { data, error } = await supabase.functions.invoke('manage-appointments', {
         body: {
           action: 'listAppointments',
-          status: filtroStatus || undefined,
-          tipo: filtroTipo || undefined,
-          tecnicoId: filtroTecnico || undefined,
+          status: filtroStatus !== 'all' ? filtroStatus : undefined,
+          tipo: filtroTipo !== 'all' ? filtroTipo : undefined,
+          tecnicoId: filtroTecnico !== 'all' ? filtroTecnico : undefined,
           dataInicio: dataInicio || undefined,
           dataFim: dataFim || undefined,
         }
@@ -179,7 +179,7 @@ export default function GerenciarAgendamentos() {
                     <SelectValue placeholder="Todos" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos</SelectItem>
+                    <SelectItem value="all">Todos</SelectItem>
                     <SelectItem value="pendente">Pendente</SelectItem>
                     <SelectItem value="confirmado">Confirmado</SelectItem>
                     <SelectItem value="realizado">Realizado</SelectItem>
@@ -195,7 +195,7 @@ export default function GerenciarAgendamentos() {
                     <SelectValue placeholder="Todos" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos</SelectItem>
+                    <SelectItem value="all">Todos</SelectItem>
                     <SelectItem value="contrato">Contrato</SelectItem>
                     <SelectItem value="instalacao">Instalação</SelectItem>
                     <SelectItem value="manutencao">Manutenção</SelectItem>
