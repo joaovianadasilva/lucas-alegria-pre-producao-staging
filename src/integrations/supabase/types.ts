@@ -58,10 +58,12 @@ export type Database = {
           email_cliente: string
           id: string
           nome_cliente: string
+          observacao: string | null
           slot_numero: number
           status: string
           tecnico_responsavel_id: string | null
           telefone_cliente: string | null
+          tipo: string
           updated_at: string
         }
         Insert: {
@@ -72,10 +74,12 @@ export type Database = {
           email_cliente: string
           id?: string
           nome_cliente: string
+          observacao?: string | null
           slot_numero: number
           status?: string
           tecnico_responsavel_id?: string | null
           telefone_cliente?: string | null
+          tipo?: string
           updated_at?: string
         }
         Update: {
@@ -86,10 +90,12 @@ export type Database = {
           email_cliente?: string
           id?: string
           nome_cliente?: string
+          observacao?: string | null
           slot_numero?: number
           status?: string
           tecnico_responsavel_id?: string | null
           telefone_cliente?: string | null
+          tipo?: string
           updated_at?: string
         }
         Relationships: [
