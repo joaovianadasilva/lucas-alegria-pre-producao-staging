@@ -15,7 +15,6 @@ import { Loader2, Calendar, Clock, Settings, ChevronsUpDown, X } from 'lucide-re
 import { FormularioCompleto as IFormularioCompleto, UFS, DIAS_VENCIMENTO } from '@/types/formulario';
 import { DateSlotSelector } from './DateSlotSelector';
 import { ConfiguracaoPlanosSupabase as ConfiguracaoPlanos } from './ConfiguracaoPlanosSupabase';
-import { AdminSlots } from './AdminSlots';
 import { carregarPlanos, carregarAdicionais, formatarItemCatalogo } from '@/lib/catalogoSupabase';
 import { supabase } from '@/integrations/supabase/client';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -194,7 +193,6 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [selectedSlot, setSelectedSlot] = useState<number>(0);
   const [configOpen, setConfigOpen] = useState(false);
-  const [adminSlotsOpen, setAdminSlotsOpen] = useState(false);
   const [planosOptions, setPlanosOptions] = useState<string[]>([]);
   const [adicionaisOptions, setAdicionaisOptions] = useState<string[]>([]);
   const { toast } = useToast();
@@ -331,15 +329,6 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
           >
             <Settings className="h-4 w-4 mr-2" />
             Configurar Planos
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setAdminSlotsOpen(true)}
-          >
-            <Calendar className="h-4 w-4 mr-2" />
-            Gerenciar Datas
           </Button>
         </div>
       </div>
@@ -1078,11 +1067,6 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
         open={configOpen}
         onOpenChange={setConfigOpen}
         onUpdate={loadOptions}
-      />
-      
-      <AdminSlots
-        open={adminSlotsOpen}
-        onClose={() => setAdminSlotsOpen(false)}
       />
     </div>
   );
