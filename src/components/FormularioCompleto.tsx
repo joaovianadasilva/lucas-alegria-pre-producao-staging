@@ -15,7 +15,7 @@ import { Loader2, Calendar, Clock, Settings, ChevronsUpDown, X } from 'lucide-re
 import { FormularioCompleto as IFormularioCompleto, UFS, DIAS_VENCIMENTO } from '@/types/formulario';
 import { DateSlotSelector } from './DateSlotSelector';
 import { ConfiguracaoPlanosSupabase as ConfiguracaoPlanos } from './ConfiguracaoPlanosSupabase';
-import { carregarPlanos, carregarAdicionais, formatarItemCatalogo } from '@/lib/catalogoSupabase';
+import { carregarPlanos, carregarAdicionais, formatarItemCatalogo, carregarCidades, carregarRepresentantes, ItemCidade, ItemRepresentante } from '@/lib/catalogoSupabase';
 import { supabase } from '@/integrations/supabase/client';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -23,6 +23,8 @@ import { Badge } from '@/components/ui/badge';
 
 const formularioSchema = z.object({
   origem: z.string().min(1, 'Origem é obrigatória'),
+  tipoVenda: z.enum(['Adicional Avulso', 'Contrato Ordinário'], { required_error: 'Tipo de venda é obrigatório' }),
+  representanteVendas: z.string().min(1, 'Representante de vendas é obrigatório'),
   tipoCliente: z.enum(['F', 'J', 'E'], { required_error: 'Tipo de cliente é obrigatório' }),
   
   nomeCompleto: z.string().min(1, 'Nome completo é obrigatório'),
@@ -195,6 +197,8 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
   const [configOpen, setConfigOpen] = useState(false);
   const [planosOptions, setPlanosOptions] = useState<string[]>([]);
   const [adicionaisOptions, setAdicionaisOptions] = useState<string[]>([]);
+  const [cidadesOptions, setCidadesOptions] = useState<ItemCidade[]>([]);
+  const [representantesOptions, setRepresentantesOptions] = useState<ItemRepresentante[]>([]);
   const { toast } = useToast();
 
   const form = useForm<FormularioSchema>({
@@ -211,8 +215,12 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
   const loadOptions = async () => {
     const planos = await carregarPlanos();
     const adicionais = await carregarAdicionais();
+    const cidades = await carregarCidades();
+    const representantes = await carregarRepresentantes();
     setPlanosOptions(planos.map(formatarItemCatalogo));
     setAdicionaisOptions(adicionais.map(formatarItemCatalogo));
+    setCidadesOptions(cidades);
+    setRepresentantesOptions(representantes);
   };
 
   useEffect(() => {
@@ -374,6 +382,59 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
                         <SelectItem value="ja-cliente">Já é cliente</SelectItem>
                         <SelectItem value="via-vendedor">Via Vendedor</SelectItem>
                         <SelectItem value="nao-informado">Não informado</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="tipoVenda"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tipo de Venda</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o tipo de venda" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="Adicional Avulso">Adicional Avulso</SelectItem>
+                        <SelectItem value="Contrato Ordinário">Contrato Ordinário</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="representanteVendas"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Representante de Vendas</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o representante" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {representantesOptions.length === 0 ? (
+                          <SelectItem value="sem-representantes" disabled>
+                            Nenhum representante cadastrado
+                          </SelectItem>
+                        ) : (
+                          representantesOptions.map((rep) => (
+                            <SelectItem key={rep.id} value={rep.nome}>
+                              {rep.nome}
+                            </SelectItem>
+                          ))
+                        )}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -544,6 +605,7 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
               <CardTitle>Dados de Endereço Residencial</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Rua */}
               <FormField
                 control={form.control}
                 name="residenciaRua"
@@ -551,36 +613,14 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
                   <FormItem className="md:col-span-2">
                     <FormLabel>Rua/Avenida</FormLabel>
                     <FormControl>
-                      <Input placeholder="Rua/Avenida" {...field} />
+                      <Input placeholder="Nome da rua" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
               
-              <FormField
-                control={form.control}
-                name="residenciaUf"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>UF</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione o estado" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {UFS.map((uf) => (
-                          <SelectItem key={uf} value={uf}>{uf}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
+              {/* Número */}
               <FormField
                 control={form.control}
                 name="residenciaNumero"
@@ -588,13 +628,29 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
                   <FormItem>
                     <FormLabel>Número</FormLabel>
                     <FormControl>
-                      <Input placeholder="123" {...field} />
+                      <Input placeholder="Nº" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
               
+              {/* Complemento */}
+              <FormField
+                control={form.control}
+                name="residenciaComplemento"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Complemento (Opcional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Apto, Bloco, etc." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              {/* Bairro */}
               <FormField
                 control={form.control}
                 name="residenciaBairro"
@@ -609,20 +665,67 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
                 )}
               />
               
+              {/* Cidade (Select com catálogo) */}
               <FormField
                 control={form.control}
-                name="residenciaComplemento"
+                name="residenciaCidade"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Complemento</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Apto, casa, etc." {...field} />
-                    </FormControl>
+                    <FormLabel>Cidade</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione a cidade" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {cidadesOptions.length === 0 ? (
+                          <SelectItem value="sem-cidades" disabled>
+                            Nenhuma cidade cadastrada
+                          </SelectItem>
+                        ) : (
+                          cidadesOptions
+                            .filter(c => !form.watch('residenciaUf') || c.uf === form.watch('residenciaUf'))
+                            .map((cidade) => (
+                              <SelectItem key={cidade.id} value={cidade.nome}>
+                                {cidade.nome}
+                              </SelectItem>
+                            ))
+                        )}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
               />
               
+              {/* UF */}
+              <FormField
+                control={form.control}
+                name="residenciaUf"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>UF</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="UF" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {UFS.map((uf) => (
+                          <SelectItem key={uf} value={uf}>
+                            {uf}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              {/* CEP */}
               <FormField
                 control={form.control}
                 name="residenciaCep"
@@ -631,20 +734,6 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
                     <FormLabel>CEP</FormLabel>
                     <FormControl>
                       <Input placeholder="00000-000" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="residenciaCidade"
-                render={({ field }) => (
-                  <FormItem className="md:col-span-2">
-                    <FormLabel>Cidade</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Cidade" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -688,6 +777,7 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
 
               {instalacaoMesmoEndereco === 'N' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  {/* Rua */}
                   <FormField
                     control={form.control}
                     name="instalacaoRua"
@@ -695,36 +785,14 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
                       <FormItem className="md:col-span-2">
                         <FormLabel>Rua/Avenida</FormLabel>
                         <FormControl>
-                          <Input placeholder="Rua/Avenida" {...field} />
+                          <Input placeholder="Nome da rua" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                   
-                  <FormField
-                    control={form.control}
-                    name="instalacaoUf"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>UF</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione o estado" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {UFS.map((uf) => (
-                              <SelectItem key={uf} value={uf}>{uf}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
+                  {/* Número */}
                   <FormField
                     control={form.control}
                     name="instalacaoNumero"
@@ -732,13 +800,29 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
                       <FormItem>
                         <FormLabel>Número</FormLabel>
                         <FormControl>
-                          <Input placeholder="123" {...field} />
+                          <Input placeholder="Nº" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                   
+                  {/* Complemento */}
+                  <FormField
+                    control={form.control}
+                    name="instalacaoComplemento"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Complemento (Opcional)</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Apto, Bloco, etc." {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  {/* Bairro */}
                   <FormField
                     control={form.control}
                     name="instalacaoBairro"
@@ -753,20 +837,67 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
                     )}
                   />
                   
+                  {/* Cidade (Select com catálogo) */}
                   <FormField
                     control={form.control}
-                    name="instalacaoComplemento"
+                    name="instalacaoCidade"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Complemento</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Apto, casa, etc." {...field} />
-                        </FormControl>
+                        <FormLabel>Cidade</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione a cidade" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {cidadesOptions.length === 0 ? (
+                              <SelectItem value="sem-cidades" disabled>
+                                Nenhuma cidade cadastrada
+                              </SelectItem>
+                            ) : (
+                              cidadesOptions
+                                .filter(c => !form.watch('instalacaoUf') || c.uf === form.watch('instalacaoUf'))
+                                .map((cidade) => (
+                                  <SelectItem key={cidade.id} value={cidade.nome}>
+                                    {cidade.nome}
+                                  </SelectItem>
+                                ))
+                            )}
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                   
+                  {/* UF */}
+                  <FormField
+                    control={form.control}
+                    name="instalacaoUf"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>UF</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="UF" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {UFS.map((uf) => (
+                              <SelectItem key={uf} value={uf}>
+                                {uf}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  {/* CEP */}
                   <FormField
                     control={form.control}
                     name="instalacaoCep"
@@ -775,20 +906,6 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
                         <FormLabel>CEP</FormLabel>
                         <FormControl>
                           <Input placeholder="00000-000" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="instalacaoCidade"
-                    render={({ field }) => (
-                      <FormItem className="md:col-span-2">
-                        <FormLabel>Cidade</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Cidade" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>

@@ -22,7 +22,7 @@ serve(async (req) => {
     switch (action) {
       case 'createContract': {
         const {
-          origem, tipoCliente, nomeCompleto, cpf, rg, orgaoExpedicao,
+          origem, tipoVenda, representanteVendas, tipoCliente, nomeCompleto, cpf, rg, orgaoExpedicao,
           dataNascimento, telefone, celular, email,
           residenciaRua, residenciaNumero, residenciaBairro, residenciaComplemento,
           residenciaCep, residenciaCidade, residenciaUf,
@@ -108,6 +108,8 @@ serve(async (req) => {
           .from('contratos')
           .insert({
             origem,
+            tipo_venda: tipoVenda,
+            representante_vendas: representanteVendas,
             tipo_cliente: tipoCliente,
             nome_completo: nomeCompleto,
             cpf,

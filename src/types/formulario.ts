@@ -1,6 +1,8 @@
 export interface FormularioCompleto {
   // Informações Básicas da Venda
   origem: string;
+  tipoVenda: 'Adicional Avulso' | 'Contrato Ordinário';
+  representanteVendas: string;
   tipoCliente: 'F' | 'J' | 'E';
 
   // Informações Básicas do Cliente

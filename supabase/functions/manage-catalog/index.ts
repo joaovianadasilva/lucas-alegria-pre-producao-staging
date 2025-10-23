@@ -12,7 +12,8 @@ serve(async (req) => {
   }
 
   try {
-    const { action, codigo, nome, valor } = await req.json();
+    const body = await req.json();
+    const { action, codigo, nome, valor, uf, id } = body;
     
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -148,6 +149,150 @@ serve(async (req) => {
           .from('catalogo_adicionais')
           .update({ ativo: false })
           .eq('codigo', codigo);
+
+        if (error) throw error;
+
+        return new Response(
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'listCidades': {
+        let query = supabase
+          .from('catalogo_cidades')
+          .select('id, nome, uf')
+          .eq('ativo', true)
+          .order('nome', { ascending: true });
+        
+        if (uf) {
+          query = query.eq('uf', uf);
+        }
+        
+        const { data, error } = await query;
+        
+        if (error) throw error;
+        
+        return new Response(
+          JSON.stringify({ success: true, data }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'addCidade': {
+        if (!nome) {
+          throw new Error('Nome e UF são obrigatórios');
+        }
+        const cidade_uf = body.uf;
+        if (!cidade_uf) {
+          throw new Error('UF é obrigatória');
+        }
+
+        // Verificar duplicidade
+        const { data: existing } = await supabase
+          .from('catalogo_cidades')
+          .select('id')
+          .eq('nome', nome)
+          .eq('uf', cidade_uf)
+          .single();
+
+        if (existing) {
+          throw new Error('Cidade já existe para esta UF');
+        }
+
+        const { data, error } = await supabase
+          .from('catalogo_cidades')
+          .insert({
+            nome,
+            uf: cidade_uf,
+            ativo: true
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        return new Response(
+          JSON.stringify({ success: true, cidade: data }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'removeCidade': {
+        if (!id) {
+          throw new Error('ID é obrigatório');
+        }
+
+        const { error } = await supabase
+          .from('catalogo_cidades')
+          .update({ ativo: false })
+          .eq('id', id);
+
+        if (error) throw error;
+
+        return new Response(
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'listRepresentantes': {
+        const { data, error } = await supabase
+          .from('catalogo_representantes')
+          .select('id, nome')
+          .eq('ativo', true)
+          .order('nome', { ascending: true });
+        
+        if (error) throw error;
+        
+        return new Response(
+          JSON.stringify({ success: true, data }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'addRepresentante': {
+        if (!nome) {
+          throw new Error('Nome é obrigatório');
+        }
+
+        // Verificar duplicidade
+        const { data: existing } = await supabase
+          .from('catalogo_representantes')
+          .select('id')
+          .eq('nome', nome)
+          .single();
+
+        if (existing) {
+          throw new Error('Representante já existe');
+        }
+
+        const { data, error } = await supabase
+          .from('catalogo_representantes')
+          .insert({
+            nome,
+            ativo: true
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        return new Response(
+          JSON.stringify({ success: true, representante: data }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'removeRepresentante': {
+        if (!id) {
+          throw new Error('ID é obrigatório');
+        }
+
+        const { error } = await supabase
+          .from('catalogo_representantes')
+          .update({ ativo: false })
+          .eq('id', id);
 
         if (error) throw error;
 

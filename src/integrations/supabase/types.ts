@@ -136,6 +136,33 @@ export type Database = {
         }
         Relationships: []
       }
+      catalogo_cidades: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          id: string
+          nome: string
+          uf: string
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          id?: string
+          nome: string
+          uf: string
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          id?: string
+          nome?: string
+          uf?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       catalogo_planos: {
         Row: {
           ativo: boolean | null
@@ -163,6 +190,30 @@ export type Database = {
           nome?: string
           updated_at?: string | null
           valor?: number
+        }
+        Relationships: []
+      }
+      catalogo_representantes: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          id: string
+          nome: string
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          id?: string
+          nome: string
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          id?: string
+          nome?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -250,6 +301,7 @@ export type Database = {
           plano_nome: string
           plano_valor: number
           razao_social: string | null
+          representante_vendas: string | null
           residencia_bairro: string
           residencia_cep: string
           residencia_cidade: string
@@ -261,6 +313,7 @@ export type Database = {
           status: string | null
           telefone: string
           tipo_cliente: string
+          tipo_venda: string | null
           updated_at: string | null
         }
         Insert: {
@@ -289,6 +342,7 @@ export type Database = {
           plano_nome: string
           plano_valor: number
           razao_social?: string | null
+          representante_vendas?: string | null
           residencia_bairro: string
           residencia_cep: string
           residencia_cidade: string
@@ -300,6 +354,7 @@ export type Database = {
           status?: string | null
           telefone: string
           tipo_cliente: string
+          tipo_venda?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -328,6 +383,7 @@ export type Database = {
           plano_nome?: string
           plano_valor?: number
           razao_social?: string | null
+          representante_vendas?: string | null
           residencia_bairro?: string
           residencia_cep?: string
           residencia_cidade?: string
@@ -339,6 +395,7 @@ export type Database = {
           status?: string | null
           telefone?: string
           tipo_cliente?: string
+          tipo_venda?: string | null
           updated_at?: string | null
         }
         Relationships: []
