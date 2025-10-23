@@ -59,6 +59,7 @@ export type Database = {
           nome_cliente: string
           slot_numero: number
           status: string
+          tecnico_responsavel_id: string | null
           telefone_cliente: string | null
           updated_at: string
         }
@@ -71,6 +72,7 @@ export type Database = {
           nome_cliente: string
           slot_numero: number
           status?: string
+          tecnico_responsavel_id?: string | null
           telefone_cliente?: string | null
           updated_at?: string
         }
@@ -83,6 +85,7 @@ export type Database = {
           nome_cliente?: string
           slot_numero?: number
           status?: string
+          tecnico_responsavel_id?: string | null
           telefone_cliente?: string | null
           updated_at?: string
         }
@@ -92,6 +95,13 @@ export type Database = {
             columns: ["contrato_id"]
             isOneToOne: true
             referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agendamentos_tecnico_responsavel_id_fkey"
+            columns: ["tecnico_responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -393,6 +403,39 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          email: string
+          id: string
+          nome: string
+          sobrenome: string
+          telefone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          email: string
+          id: string
+          nome: string
+          sobrenome: string
+          telefone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          email?: string
+          id?: string
+          nome?: string
+          sobrenome?: string
+          telefone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       slots_disponiveis: {
         Row: {
           created_at: string | null
@@ -444,11 +487,44 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       match_documents: {
         Args: { filter?: Json; match_count?: number; query_embedding: string }
         Returns: {
@@ -460,7 +536,7 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "tecnico" | "vendedor" | "atendente"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -587,6 +663,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "tecnico", "vendedor", "atendente"],
+    },
   },
 } as const

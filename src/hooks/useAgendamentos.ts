@@ -73,6 +73,12 @@ export const useAgendamentos = (spreadsheetId: string) => {
     }
   };
 
+  // Helper function to check if a value is a UUID
+  const isUUID = (value: string): boolean => {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(value);
+  };
+
   const getAvailableSlots = (date: string) => {
     const slots = datesWithSlots[date] || {};
     const availableSlots: number[] = [];
@@ -113,7 +119,11 @@ export const useAgendamentos = (spreadsheetId: string) => {
       status = 'available';
     } else if (defaultValue === '-') {
       status = 'blocked';
+    } else if (isUUID(defaultValue)) {
+      // UUID = agendamento ocupado
+      status = 'occupied';
     } else {
+      // String antiga (compatibilidade) = ocupado
       status = 'occupied';
     }
     
