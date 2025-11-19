@@ -463,6 +463,102 @@ export type Database = {
         }
         Relationships: []
       }
+      historico_adicionais_contrato: {
+        Row: {
+          adicional_codigo: string
+          adicional_nome: string
+          adicional_valor: number
+          contrato_id: string
+          created_at: string | null
+          id: string
+          tipo_acao: string
+          usuario_id: string | null
+        }
+        Insert: {
+          adicional_codigo: string
+          adicional_nome: string
+          adicional_valor: number
+          contrato_id: string
+          created_at?: string | null
+          id?: string
+          tipo_acao: string
+          usuario_id?: string | null
+        }
+        Update: {
+          adicional_codigo?: string
+          adicional_nome?: string
+          adicional_valor?: number
+          contrato_id?: string
+          created_at?: string | null
+          id?: string
+          tipo_acao?: string
+          usuario_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "historico_adicionais_contrato_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "historico_adicionais_contrato_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      historico_contratos: {
+        Row: {
+          campo_alterado: string | null
+          contrato_id: string
+          created_at: string | null
+          id: string
+          tipo_acao: string
+          usuario_id: string | null
+          valor_anterior: string | null
+          valor_novo: string | null
+        }
+        Insert: {
+          campo_alterado?: string | null
+          contrato_id: string
+          created_at?: string | null
+          id?: string
+          tipo_acao: string
+          usuario_id?: string | null
+          valor_anterior?: string | null
+          valor_novo?: string | null
+        }
+        Update: {
+          campo_alterado?: string | null
+          contrato_id?: string
+          created_at?: string | null
+          id?: string
+          tipo_acao?: string
+          usuario_id?: string | null
+          valor_anterior?: string | null
+          valor_novo?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "historico_contratos_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "historico_contratos_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       historico_edicoes_agendamentos: {
         Row: {
           agendamento_id: string
