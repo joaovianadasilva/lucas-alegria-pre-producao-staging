@@ -65,6 +65,7 @@ export default function GerenciarAgendamentos() {
   const [editDialog, setEditDialog] = useState(false);
   const [selectedAgendamento, setSelectedAgendamento] = useState<any>(null);
   const [novoStatus, setNovoStatus] = useState('');
+  const [novoTipo, setNovoTipo] = useState('');
   const [novoTecnico, setNovoTecnico] = useState('');
   const [novaConfirmacao, setNovaConfirmacao] = useState('');
   const [novaOrigem, setNovaOrigem] = useState('');
@@ -100,6 +101,7 @@ export default function GerenciarAgendamentos() {
   const handleEdit = (agendamento: any) => {
     setSelectedAgendamento(agendamento);
     setNovoStatus(agendamento.status);
+    setNovoTipo(agendamento.tipo);
     setNovoTecnico(agendamento.tecnico_responsavel_id || '');
     setNovaConfirmacao(agendamento.confirmacao || 'pre-agendado');
     setNovaOrigem(agendamento.origem || '');
@@ -116,6 +118,7 @@ export default function GerenciarAgendamentos() {
           action: 'updateAppointment',
           agendamentoId: selectedAgendamento.id,
           updates: {
+            tipo: novoTipo,
             status: novoStatus,
             tecnico_responsavel_id: novoTecnico || null,
             confirmacao: novaConfirmacao,
@@ -479,6 +482,21 @@ export default function GerenciarAgendamentos() {
                   <SelectItem value="pre-agendado">Pré-Agendado</SelectItem>
                   <SelectItem value="confirmado">Confirmado</SelectItem>
                   <SelectItem value="cancelado">Cancelado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Tipo de Agendamento</Label>
+              <Select value={novoTipo} onValueChange={setNovoTipo}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="instalacao">Instalação</SelectItem>
+                  <SelectItem value="manutencao">Manutenção</SelectItem>
+                  <SelectItem value="visita_tecnica">Visita Técnica</SelectItem>
+                  <SelectItem value="suporte">Suporte</SelectItem>
                 </SelectContent>
               </Select>
             </div>
