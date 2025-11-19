@@ -21,6 +21,23 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 
+// Função para calcular idade a partir da data de nascimento
+const calcularIdade = (dataNascimento: string): number => {
+  const hoje = new Date();
+  const nascimento = new Date(dataNascimento);
+  
+  let idade = hoje.getFullYear() - nascimento.getFullYear();
+  const mesAtual = hoje.getMonth();
+  const mesNascimento = nascimento.getMonth();
+  
+  // Ajustar se ainda não fez aniversário este ano
+  if (mesAtual < mesNascimento || (mesAtual === mesNascimento && hoje.getDate() < nascimento.getDate())) {
+    idade--;
+  }
+  
+  return idade;
+};
+
 const formularioSchema = z.object({
   codigoCliente: z.string().optional(),
   origem: z.string().min(1, 'Origem é obrigatória'),
@@ -89,6 +106,26 @@ const formularioSchema = z.object({
         path: ['dataNascimento']
       });
     }
+    
+    // Validação de idade mínima para Pessoa Física
+    if (data.dataNascimento && data.dataNascimento.trim() !== '') {
+      try {
+        const idade = calcularIdade(data.dataNascimento);
+        if (idade < 18) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'O cliente deve ter pelo menos 18 anos de idade',
+            path: ['dataNascimento']
+          });
+        }
+      } catch (error) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Data de nascimento inválida',
+          path: ['dataNascimento']
+        });
+      }
+    }
   }
   
   // Validação condicional para Pessoa Jurídica
@@ -134,6 +171,26 @@ const formularioSchema = z.object({
         message: 'Data de Nascimento é obrigatória para Pessoa Jurídica',
         path: ['dataNascimento']
       });
+    }
+    
+    // Validação de idade mínima para Pessoa Jurídica
+    if (data.dataNascimento && data.dataNascimento.trim() !== '') {
+      try {
+        const idade = calcularIdade(data.dataNascimento);
+        if (idade < 18) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'O representante legal deve ter pelo menos 18 anos de idade',
+            path: ['dataNascimento']
+          });
+        }
+      } catch (error) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Data de nascimento inválida',
+          path: ['dataNascimento']
+        });
+      }
     }
   }
   
