@@ -58,7 +58,7 @@ const formularioSchema = z.object({
   razaoSocial: z.string().optional(),
   inscricaoEstadual: z.string().optional(),
 
-  planoContratado: z.string().min(1, 'Plano contratado é obrigatório'),
+  planoContratado: z.string().optional(),
   adicionaisContratados: z.array(z.string()).optional(),
   diaVencimento: z.string().min(1, 'Dia de vencimento é obrigatório'),
   observacao: z.string().optional(),
@@ -179,6 +179,27 @@ const formularioSchema = z.object({
         code: z.ZodIssueCode.custom,
         message: 'Cidade é obrigatória para instalação',
         path: ['instalacaoCidade']
+      });
+    }
+  }
+  
+  // Validação condicional baseada no Tipo de Venda
+  if (data.tipoVenda === 'Contrato Ordinário') {
+    // Para Contrato Ordinário, plano é obrigatório
+    if (!data.planoContratado || data.planoContratado.trim() === '') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Plano contratado é obrigatório para Contrato Ordinário',
+        path: ['planoContratado']
+      });
+    }
+  } else if (data.tipoVenda === 'Adicional Avulso') {
+    // Para Adicional Avulso, adicionais são obrigatórios
+    if (!data.adicionaisContratados || data.adicionaisContratados.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Pelo menos um adicional deve ser selecionado para Adicional Avulso',
+        path: ['adicionaisContratados']
       });
     }
   }
