@@ -334,7 +334,6 @@ serve(async (req) => {
           .update({
             data_agendamento: novaData,
             slot_numero: novoSlot,
-            status: 'reprogramado',
             updated_at: new Date().toISOString()
           })
           .eq('id', agendamentoId);
