@@ -1011,7 +1011,7 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
                   <FormItem>
                     <FormLabel>Plano Contratado</FormLabel>
                     <div className="flex gap-2">
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value || ""}>
                         <FormControl>
                           <SelectTrigger className="flex-1">
                             <SelectValue placeholder="Selecione um plano" />
@@ -1037,7 +1037,7 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
                           variant="ghost"
                           size="icon"
                           className="shrink-0"
-                          onClick={() => field.onChange(undefined)}
+                          onClick={() => field.onChange("")}
                           title="Limpar seleção"
                         >
                           <X className="h-4 w-4" />
