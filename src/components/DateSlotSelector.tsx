@@ -5,12 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Calendar, Clock, CheckCircle, XCircle, Lock } from 'lucide-react';
 import { useAgendamentos } from '@/hooks/useAgendamentos';
 import { cn } from '@/lib/utils';
-
-// Helper function to convert ISO date string to local date without timezone issues
-const parseISODateLocal = (isoDateString: string): Date => {
-  const [year, month, day] = isoDateString.split('-').map(Number);
-  return new Date(year, month - 1, day); // month is 0-indexed in JavaScript
-};
+import { parseLocalDate } from '@/lib/dateUtils';
 
 interface DateSlotSelectorProps {
   spreadsheetId: string;
@@ -85,14 +80,14 @@ export const DateSlotSelector = ({ spreadsheetId, onSlotSelect }: DateSlotSelect
                   className="h-auto p-3 flex flex-col items-center gap-1"
                 >
                   <span className="font-medium">
-                    {parseISODateLocal(date).toLocaleDateString('pt-BR', { 
+                    {parseLocalDate(date).toLocaleDateString('pt-BR', { 
                       day: '2-digit', 
                       month: '2-digit',
                       year: 'numeric'
                     })}
                   </span>
                   <span className="text-xs opacity-75">
-                    {parseISODateLocal(date).toLocaleDateString('pt-BR', { 
+                    {parseLocalDate(date).toLocaleDateString('pt-BR', { 
                       weekday: 'short' 
                     })}
                   </span>
@@ -115,7 +110,7 @@ export const DateSlotSelector = ({ spreadsheetId, onSlotSelect }: DateSlotSelect
               Selecione um Horário
             </CardTitle>
             <p className="text-sm text-muted-foreground">
-              Data selecionada: {parseISODateLocal(selectedDate).toLocaleDateString('pt-BR', { 
+              Data selecionada: {parseLocalDate(selectedDate).toLocaleDateString('pt-BR', { 
                 weekday: 'long', 
                 year: 'numeric', 
                 month: 'long', 
