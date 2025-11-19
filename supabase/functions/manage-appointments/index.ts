@@ -202,6 +202,70 @@ serve(async (req) => {
         );
       }
 
+      case 'getEditHistory': {
+        const { agendamentoId } = requestBody;
+        
+        if (!agendamentoId) {
+          throw new Error('ID do agendamento é obrigatório');
+        }
+
+        console.log('Fetching edit history for:', agendamentoId);
+
+        // Buscar histórico de edições genéricas
+        const { data: historicoEdicoes, error: histEdicoesError } = await supabase
+          .from('historico_edicoes_agendamentos')
+          .select(`
+            id,
+            campo_alterado,
+            valor_anterior,
+            valor_novo,
+            created_at,
+            usuario:profiles(id, nome, sobrenome)
+          `)
+          .eq('agendamento_id', agendamentoId)
+          .order('created_at', { ascending: false });
+
+        if (histEdicoesError) {
+          console.error('Erro ao buscar histórico de edições:', histEdicoesError);
+          throw histEdicoesError;
+        }
+
+        // Buscar histórico de reagendamentos (tabela separada)
+        const { data: historicoReagendamentos, error: histReagendError } = await supabase
+          .from('historico_reagendamentos')
+          .select(`
+            id,
+            data_anterior,
+            slot_anterior,
+            data_nova,
+            slot_novo,
+            motivo,
+            created_at,
+            usuario:profiles(id, nome, sobrenome)
+          `)
+          .eq('agendamento_id', agendamentoId)
+          .order('created_at', { ascending: false });
+
+        if (histReagendError) {
+          console.error('Erro ao buscar histórico de reagendamentos:', histReagendError);
+          throw histReagendError;
+        }
+
+        console.log('Edit history fetched:', {
+          edicoes: historicoEdicoes?.length || 0,
+          reagendamentos: historicoReagendamentos?.length || 0
+        });
+
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            edicoes: historicoEdicoes || [],
+            reagendamentos: historicoReagendamentos || []
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       case 'cancelAppointment': {
         const { agendamentoId } = requestBody;
 
