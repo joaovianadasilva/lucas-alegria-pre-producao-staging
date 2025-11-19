@@ -13,8 +13,7 @@ import { TecnicoSelector } from '@/components/TecnicoSelector';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Edit, XCircle, Filter } from 'lucide-react';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { formatLocalDate } from '@/lib/dateUtils';
 
 const STATUS_COLORS = {
   pendente: 'bg-yellow-500',
@@ -279,7 +278,7 @@ export default function GerenciarAgendamentos() {
                     {agendamentosData?.agendamentos?.map((agendamento: any) => (
                       <TableRow key={agendamento.id}>
                         <TableCell className="font-medium">
-                          {format(new Date(agendamento.data_agendamento), 'dd/MM/yyyy', { locale: ptBR })}
+                          {formatLocalDate(agendamento.data_agendamento)}
                           <br />
                           <span className="text-sm text-muted-foreground">
                             Slot {agendamento.slot_numero}
