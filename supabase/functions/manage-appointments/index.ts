@@ -241,6 +241,138 @@ serve(async (req) => {
         );
       }
 
+      case 'rescheduleAppointment': {
+        const { agendamentoId, novaData, novoSlot, motivo, usuarioId } = requestBody;
+
+        console.log('Rescheduling appointment:', agendamentoId, 'to', novaData, 'slot', novoSlot);
+
+        // 1. Buscar agendamento atual
+        const { data: agendamento, error: getError } = await supabase
+          .from('agendamentos')
+          .select('*')
+          .eq('id', agendamentoId)
+          .single();
+
+        if (getError || !agendamento) {
+          console.error('Fetch error:', getError);
+          throw new Error('Agendamento não encontrado');
+        }
+
+        // Validar que não está cancelado
+        if (agendamento.status === 'cancelado') {
+          throw new Error('Não é possível reagendar um agendamento cancelado');
+        }
+
+        const dataAnterior = agendamento.data_agendamento;
+        const slotAnterior = agendamento.slot_numero;
+
+        // Validar que não está reagendando para o mesmo slot
+        if (dataAnterior === novaData && slotAnterior === novoSlot) {
+          throw new Error('Selecione uma data/horário diferente do atual');
+        }
+
+        // 2. Validar novo slot está disponível
+        const { data: novoSlotData, error: novoSlotError } = await supabase
+          .from('slots_disponiveis')
+          .select('*')
+          .eq('data_disponivel', novaData)
+          .single();
+
+        if (novoSlotError || !novoSlotData) {
+          console.error('Novo slot error:', novoSlotError);
+          throw new Error('Nova data não disponível no sistema');
+        }
+
+        const novoSlotColumn = `slot_${novoSlot}`;
+        const novoSlotValue = novoSlotData[novoSlotColumn];
+
+        if (novoSlotValue && novoSlotValue.trim() !== '' && novoSlotValue !== '-') {
+          throw new Error('Novo horário já está ocupado');
+        }
+
+        if (novoSlotValue === '-') {
+          throw new Error('Novo horário está bloqueado');
+        }
+
+        // 3. Registrar no histórico
+        const { error: historicoError } = await supabase
+          .from('historico_reagendamentos')
+          .insert({
+            agendamento_id: agendamentoId,
+            data_anterior: dataAnterior,
+            slot_anterior: slotAnterior,
+            data_nova: novaData,
+            slot_novo: novoSlot,
+            motivo: motivo || null,
+            usuario_id: usuarioId || null
+          });
+
+        if (historicoError) {
+          console.error('Erro ao registrar histórico:', historicoError);
+          throw new Error('Erro ao registrar histórico de reagendamento');
+        }
+
+        console.log('Histórico registrado com sucesso');
+
+        // 4. Liberar slot antigo
+        const slotAntigoColumn = `slot_${slotAnterior}`;
+        const { error: liberarSlotError } = await supabase
+          .from('slots_disponiveis')
+          .update({ [slotAntigoColumn]: null })
+          .eq('data_disponivel', dataAnterior);
+
+        if (liberarSlotError) {
+          console.error('Erro ao liberar slot antigo:', liberarSlotError);
+          throw new Error('Erro ao liberar horário anterior');
+        }
+
+        console.log('Slot antigo liberado');
+
+        // 5. Atualizar agendamento
+        const { error: atualizarError } = await supabase
+          .from('agendamentos')
+          .update({
+            data_agendamento: novaData,
+            slot_numero: novoSlot,
+            status: 'reprogramado',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', agendamentoId);
+
+        if (atualizarError) {
+          console.error('Erro ao atualizar agendamento:', atualizarError);
+          throw new Error('Erro ao atualizar agendamento');
+        }
+
+        console.log('Agendamento atualizado');
+
+        // 6. Ocupar novo slot
+        const { error: ocuparSlotError } = await supabase
+          .from('slots_disponiveis')
+          .update({ [novoSlotColumn]: agendamentoId })
+          .eq('data_disponivel', novaData);
+
+        if (ocuparSlotError) {
+          console.error('Erro ao ocupar novo slot:', ocuparSlotError);
+          throw new Error('Erro ao reservar novo horário');
+        }
+
+        console.log('Novo slot ocupado com sucesso');
+
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            message: 'Agendamento reagendado com sucesso',
+            agendamento: {
+              id: agendamentoId,
+              data_agendamento: novaData,
+              slot_numero: novoSlot
+            }
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       default:
         throw new Error('Ação inválida');
     }

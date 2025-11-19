@@ -8,11 +8,13 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { TecnicoSelector } from '@/components/TecnicoSelector';
+import { SlotSelectorForDate } from '@/components/SlotSelectorForDate';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Edit, XCircle, Filter } from 'lucide-react';
+import { ArrowLeft, Edit, XCircle, Filter, Calendar } from 'lucide-react';
 import { formatLocalDate } from '@/lib/dateUtils';
 
 const STATUS_COLORS = {
@@ -67,6 +69,12 @@ export default function GerenciarAgendamentos() {
   const [novaConfirmacao, setNovaConfirmacao] = useState('');
   const [novaOrigem, setNovaOrigem] = useState('');
   const [novoRepresentante, setNovoRepresentante] = useState('');
+
+  // Estados para reagendamento
+  const [reagendarDialog, setReagendarDialog] = useState(false);
+  const [motivoReagendamento, setMotivoReagendamento] = useState('');
+  const [novaDataReagendamento, setNovaDataReagendamento] = useState('');
+  const [novoSlotReagendamento, setNovoSlotReagendamento] = useState<number | null>(null);
 
   const { data: agendamentosData, isLoading, refetch } = useQuery({
     queryKey: ['agendamentos', filtroStatus, filtroTipo, filtroTecnico, dataInicio, dataFim],
@@ -167,6 +175,80 @@ export default function GerenciarAgendamentos() {
         variant: "destructive",
       });
     }
+  };
+
+  // Query para buscar histórico de reagendamentos
+  const { data: historicoData } = useQuery({
+    queryKey: ['historico-reagendamento', selectedAgendamento?.id],
+    queryFn: async () => {
+      if (!selectedAgendamento?.id) return [];
+      
+      const { data, error } = await supabase
+        .from('historico_reagendamentos')
+        .select('*, usuario:profiles(nome, sobrenome, email)')
+        .eq('agendamento_id', selectedAgendamento.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!selectedAgendamento?.id
+  });
+
+  const handleReagendar = async () => {
+    if (!selectedAgendamento || !novaDataReagendamento || !novoSlotReagendamento) {
+      toast({ 
+        title: 'Erro', 
+        description: 'Preencha a nova data e horário', 
+        variant: 'destructive' 
+      });
+      return;
+    }
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      const { data, error } = await supabase.functions.invoke('manage-appointments', {
+        body: {
+          action: 'rescheduleAppointment',
+          agendamentoId: selectedAgendamento.id,
+          novaData: novaDataReagendamento,
+          novoSlot: novoSlotReagendamento,
+          motivo: motivoReagendamento || null,
+          usuarioId: user?.id
+        }
+      });
+
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Erro ao reagendar');
+
+      toast({ 
+        title: 'Sucesso', 
+        description: 'Agendamento reagendado com sucesso!' 
+      });
+      
+      setReagendarDialog(false);
+      setMotivoReagendamento('');
+      setNovaDataReagendamento('');
+      setNovoSlotReagendamento(null);
+      refetch();
+      queryClient.invalidateQueries({ queryKey: ['agendamentos'] });
+    } catch (error: any) {
+      console.error('Erro ao reagendar:', error);
+      toast({ 
+        title: 'Erro', 
+        description: error.message || 'Erro ao reagendar agendamento', 
+        variant: 'destructive' 
+      });
+    }
+  };
+
+  const openReagendarDialog = (agendamento: any) => {
+    setSelectedAgendamento(agendamento);
+    setMotivoReagendamento('');
+    setNovaDataReagendamento('');
+    setNovoSlotReagendamento(null);
+    setReagendarDialog(true);
   };
 
   return (
@@ -351,13 +433,22 @@ export default function GerenciarAgendamentos() {
                               <Edit className="h-4 w-4" />
                             </Button>
                             {agendamento.status !== 'cancelado' && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleCancel(agendamento)}
-                              >
-                                <XCircle className="h-4 w-4" />
-                              </Button>
+                              <>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => openReagendarDialog(agendamento)}
+                                >
+                                  <Calendar className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleCancel(agendamento)}
+                                >
+                                  <XCircle className="h-4 w-4" />
+                                </Button>
+                              </>
                             )}
                           </div>
                         </TableCell>
@@ -408,6 +499,26 @@ export default function GerenciarAgendamentos() {
             </div>
 
             <TecnicoSelector value={novoTecnico} onValueChange={setNovoTecnico} />
+
+            {/* Exibir histórico de reagendamentos */}
+            {historicoData && historicoData.length > 0 && (
+              <div className="mt-4 border-t pt-4">
+                <h4 className="font-semibold mb-2 text-sm">Histórico de Reagendamentos</h4>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {historicoData.map((item: any) => (
+                    <div key={item.id} className="text-sm p-2 bg-muted rounded">
+                      <p><strong>De:</strong> {formatLocalDate(item.data_anterior)} - Slot {item.slot_anterior}</p>
+                      <p><strong>Para:</strong> {formatLocalDate(item.data_nova)} - Slot {item.slot_novo}</p>
+                      {item.motivo && <p><strong>Motivo:</strong> {item.motivo}</p>}
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {formatLocalDate(item.created_at)}
+                        {item.usuario && ` - por ${item.usuario.nome} ${item.usuario.sobrenome}`}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditDialog(false)}>
@@ -415,6 +526,81 @@ export default function GerenciarAgendamentos() {
             </Button>
             <Button onClick={handleSaveEdit}>
               Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de Reagendamento */}
+      <Dialog open={reagendarDialog} onOpenChange={setReagendarDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Reagendar Agendamento</DialogTitle>
+            <DialogDescription>
+              Selecione a nova data e horário para o agendamento
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {selectedAgendamento && (
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-sm font-semibold">Agendamento Atual:</p>
+                <p className="text-sm">
+                  {formatLocalDate(selectedAgendamento.data_agendamento)} - Slot {selectedAgendamento.slot_numero}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Cliente: {selectedAgendamento.nome_cliente}
+                </p>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label>Nova Data</Label>
+              <Input
+                type="date"
+                value={novaDataReagendamento}
+                onChange={(e) => {
+                  setNovaDataReagendamento(e.target.value);
+                  setNovoSlotReagendamento(null); // Reset slot ao mudar data
+                }}
+                min={new Date().toISOString().split('T')[0]}
+              />
+            </div>
+
+            {novaDataReagendamento && (
+              <SlotSelectorForDate
+                selectedDate={novaDataReagendamento}
+                selectedSlot={novoSlotReagendamento}
+                onSlotSelect={setNovoSlotReagendamento}
+              />
+            )}
+
+            <div className="space-y-2">
+              <Label>Motivo do Reagendamento (opcional)</Label>
+              <Textarea
+                placeholder="Ex: Cliente solicitou alteração, técnico indisponível, etc."
+                value={motivoReagendamento}
+                onChange={(e) => setMotivoReagendamento(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setReagendarDialog(false);
+                setMotivoReagendamento('');
+                setNovaDataReagendamento('');
+                setNovoSlotReagendamento(null);
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleReagendar}
+              disabled={!novaDataReagendamento || !novoSlotReagendamento}
+            >
+              Confirmar Reagendamento
             </Button>
           </DialogFooter>
         </DialogContent>
