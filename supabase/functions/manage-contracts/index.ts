@@ -33,25 +33,43 @@ serve(async (req) => {
           dataAgendamento, slotAgendamento
         } = requestBody;
 
-        // Extrair código do plano (formato: "[10001] - [Fibra 100MB] - [R$ 79.90]")
-        const planoMatch = planoContratado.match(/\[(\d+)\]\s*-\s*\[([^\]]+)\]\s*-\s*\[R\$\s*([\d,.]+)\]/);
-        if (!planoMatch) {
-          throw new Error('Formato de plano inválido');
+        // Validar que existe plano OU adicionais
+        const temPlano = planoContratado && planoContratado.trim() !== '';
+        const temAdicionais = adicionaisContratados && adicionaisContratados.length > 0;
+        
+        if (!temPlano && !temAdicionais) {
+          throw new Error('É necessário selecionar pelo menos um plano ou adicional');
         }
-        const planoCodigo = planoMatch[1];
-        const planoNome = planoMatch[2];
-        const planoValor = parseFloat(planoMatch[3].replace(',', '.'));
 
-        // Buscar detalhes do plano no catálogo (para validação)
-        const { data: planoData, error: planoError } = await supabase
-          .from('catalogo_planos')
-          .select('*')
-          .eq('codigo', planoCodigo)
-          .eq('ativo', true)
-          .single();
+        // Processar plano (se fornecido)
+        let planoCodigo, planoNome, planoValor;
+        
+        if (temPlano) {
+          // Extrair código do plano (formato: "[10001] - [Fibra 100MB] - [R$ 79.90]")
+          const planoMatch = planoContratado.match(/\[(\d+)\]\s*-\s*\[([^\]]+)\]\s*-\s*\[R\$\s*([\d,.]+)\]/);
+          if (!planoMatch) {
+            throw new Error('Formato de plano inválido');
+          }
+          planoCodigo = planoMatch[1];
+          planoNome = planoMatch[2];
+          planoValor = parseFloat(planoMatch[3].replace(',', '.'));
 
-        if (planoError || !planoData) {
-          throw new Error('Plano não encontrado ou inativo');
+          // Buscar detalhes do plano no catálogo (para validação)
+          const { data: planoData, error: planoError } = await supabase
+            .from('catalogo_planos')
+            .select('*')
+            .eq('codigo', planoCodigo)
+            .eq('ativo', true)
+            .single();
+
+          if (planoError || !planoData) {
+            throw new Error('Plano não encontrado ou inativo');
+          }
+        } else {
+          // Se não tem plano, usar valores padrão para indicar "sem plano"
+          planoCodigo = '';
+          planoNome = 'Sem plano base';
+          planoValor = 0;
         }
 
         // Processar adicionais contratados
