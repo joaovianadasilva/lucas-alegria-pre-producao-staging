@@ -14,8 +14,9 @@ import { TecnicoSelector } from '@/components/TecnicoSelector';
 import { SlotSelectorForDate } from '@/components/SlotSelectorForDate';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Edit, XCircle, Filter, Calendar } from 'lucide-react';
+import { ArrowLeft, Edit, XCircle, Filter, Calendar, Clock, User } from 'lucide-react';
 import { formatLocalDate } from '@/lib/dateUtils';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const STATUS_COLORS = {
   pendente: 'bg-yellow-500',
@@ -76,6 +77,12 @@ export default function GerenciarAgendamentos() {
   const [motivoReagendamento, setMotivoReagendamento] = useState('');
   const [novaDataReagendamento, setNovaDataReagendamento] = useState('');
   const [novoSlotReagendamento, setNovoSlotReagendamento] = useState<number | null>(null);
+  
+  // Estado para histórico completo
+  const [historicoCompleto, setHistoricoCompleto] = useState<{
+    edicoes: any[];
+    reagendamentos: any[];
+  }>({ edicoes: [], reagendamentos: [] });
 
   const { data: agendamentosData, isLoading, refetch } = useQuery({
     queryKey: ['agendamentos', filtroStatus, filtroTipo, filtroTecnico, dataInicio, dataFim],
@@ -98,6 +105,142 @@ export default function GerenciarAgendamentos() {
     },
   });
 
+  // Função para buscar histórico completo
+  const fetchHistoricoCompleto = async (agendamentoId: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('manage-appointments', {
+        body: {
+          action: 'getEditHistory',
+          agendamentoId: agendamentoId
+        }
+      });
+
+      if (error) throw error;
+      if (data?.success) {
+        setHistoricoCompleto({
+          edicoes: data.edicoes || [],
+          reagendamentos: data.reagendamentos || []
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao buscar histórico:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar o histórico",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Funções auxiliares para formatação
+  const formatarNomeCampo = (campo: string) => {
+    const nomes: Record<string, string> = {
+      'tipo': 'Tipo de Agendamento',
+      'status': 'Status',
+      'confirmacao': 'Confirmação',
+      'tecnico_responsavel_id': 'Técnico Responsável',
+      'origem': 'Origem',
+      'representante_vendas': 'Representante de Vendas',
+      'reagendamento': 'Data/Horário'
+    };
+    return nomes[campo] || campo;
+  };
+
+  const formatarValor = (campo: string, valor: string) => {
+    if (valor === 'null') return 'Não definido';
+    
+    if (campo === 'tipo') {
+      return TIPO_LABELS[valor as keyof typeof TIPO_LABELS] || valor;
+    }
+    if (campo === 'status') {
+      return STATUS_LABELS[valor as keyof typeof STATUS_LABELS] || valor;
+    }
+    if (campo === 'confirmacao') {
+      return CONFIRMACAO_LABELS[valor as keyof typeof CONFIRMACAO_LABELS] || valor;
+    }
+    
+    return valor;
+  };
+
+  // Componentes de Timeline
+  const TimelineItem = ({ item, isLast }: { item: any; isLast: boolean }) => (
+    <div className="flex gap-3 pb-4">
+      <div className="flex flex-col items-center">
+        <div className="w-2 h-2 bg-primary rounded-full mt-2" />
+        {!isLast && <div className="w-0.5 h-full bg-border mt-1" />}
+      </div>
+      <div className="flex-1 pb-2">
+        <div className="flex items-start justify-between gap-2 mb-1">
+          <p className="font-semibold text-sm">
+            {formatarNomeCampo(item.campo_alterado)}
+          </p>
+          <p className="text-xs text-muted-foreground whitespace-nowrap">
+            {new Date(item.created_at).toLocaleString('pt-BR')}
+          </p>
+        </div>
+        <div className="space-y-1 text-sm">
+          <p className="text-muted-foreground">
+            <span className="line-through">
+              {formatarValor(item.campo_alterado, item.valor_anterior)}
+            </span>
+            {' → '}
+            <span className="text-foreground font-medium">
+              {formatarValor(item.campo_alterado, item.valor_novo)}
+            </span>
+          </p>
+          {item.usuario && (
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <User className="h-3 w-3" />
+              {item.usuario.nome} {item.usuario.sobrenome}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  const TimelineItemReagendamento = ({ item, isLast }: { item: any; isLast: boolean }) => (
+    <div className="flex gap-3 pb-4">
+      <div className="flex flex-col items-center">
+        <div className="w-2 h-2 bg-blue-500 rounded-full mt-2" />
+        {!isLast && <div className="w-0.5 h-full bg-border mt-1" />}
+      </div>
+      <div className="flex-1 pb-2">
+        <div className="flex items-start justify-between gap-2 mb-1">
+          <p className="font-semibold text-sm flex items-center gap-1">
+            <Calendar className="h-4 w-4" />
+            Reagendamento
+          </p>
+          <p className="text-xs text-muted-foreground whitespace-nowrap">
+            {new Date(item.created_at).toLocaleString('pt-BR')}
+          </p>
+        </div>
+        <div className="space-y-1 text-sm">
+          <p className="text-muted-foreground">
+            <span className="line-through">
+              {formatLocalDate(item.data_anterior)} - Slot {item.slot_anterior}
+            </span>
+            {' → '}
+            <span className="text-foreground font-medium">
+              {formatLocalDate(item.data_nova)} - Slot {item.slot_novo}
+            </span>
+          </p>
+          {item.motivo && (
+            <p className="text-xs italic bg-muted p-2 rounded">
+              <strong>Motivo:</strong> {item.motivo}
+            </p>
+          )}
+          {item.usuario && (
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <User className="h-3 w-3" />
+              {item.usuario.nome} {item.usuario.sobrenome}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
   const handleEdit = (agendamento: any) => {
     setSelectedAgendamento(agendamento);
     setNovoStatus(agendamento.status);
@@ -106,6 +249,10 @@ export default function GerenciarAgendamentos() {
     setNovaConfirmacao(agendamento.confirmacao || 'pre-agendado');
     setNovaOrigem(agendamento.origem || '');
     setNovoRepresentante(agendamento.representante_vendas || '');
+    
+    // Buscar histórico completo
+    fetchHistoricoCompleto(agendamento.id);
+    
     setEditDialog(true);
   };
 
@@ -179,24 +326,6 @@ export default function GerenciarAgendamentos() {
       });
     }
   };
-
-  // Query para buscar histórico de reagendamentos
-  const { data: historicoData } = useQuery({
-    queryKey: ['historico-reagendamento', selectedAgendamento?.id],
-    queryFn: async () => {
-      if (!selectedAgendamento?.id) return [];
-      
-      const { data, error } = await supabase
-        .from('historico_reagendamentos')
-        .select('*, usuario:profiles(nome, sobrenome, email)')
-        .eq('agendamento_id', selectedAgendamento.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!selectedAgendamento?.id
-  });
 
   const handleReagendar = async () => {
     if (!selectedAgendamento || !novaDataReagendamento || !novoSlotReagendamento) {
@@ -466,84 +595,124 @@ export default function GerenciarAgendamentos() {
       </div>
 
       <Dialog open={editDialog} onOpenChange={setEditDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Editar Agendamento</DialogTitle>
-            <DialogDescription>Atualize o status ou o técnico responsável</DialogDescription>
+            <DialogTitle>Gerenciar Agendamento</DialogTitle>
+            <DialogDescription>
+              Edite as informações ou visualize o histórico completo de mudanças
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Confirmação</Label>
-              <Select value={novaConfirmacao} onValueChange={setNovaConfirmacao}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pre-agendado">Pré-Agendado</SelectItem>
-                  <SelectItem value="confirmado">Confirmado</SelectItem>
-                  <SelectItem value="cancelado">Cancelado</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Tipo de Agendamento</Label>
-              <Select value={novoTipo} onValueChange={setNovoTipo}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="instalacao">Instalação</SelectItem>
-                  <SelectItem value="manutencao">Manutenção</SelectItem>
-                  <SelectItem value="visita_tecnica">Visita Técnica</SelectItem>
-                  <SelectItem value="suporte">Suporte</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Status</Label>
-              <Select value={novoStatus} onValueChange={setNovoStatus}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pendente">Pendente</SelectItem>
-                  <SelectItem value="concluido">Concluído</SelectItem>
-                  <SelectItem value="reprogramado">Reprogramado</SelectItem>
-                  <SelectItem value="cancelado">Cancelado</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <TecnicoSelector value={novoTecnico} onValueChange={setNovoTecnico} />
-
-            {/* Exibir histórico de reagendamentos */}
-            {historicoData && historicoData.length > 0 && (
-              <div className="mt-4 border-t pt-4">
-                <h4 className="font-semibold mb-2 text-sm">Histórico de Reagendamentos</h4>
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {historicoData.map((item: any) => (
-                    <div key={item.id} className="text-sm p-2 bg-muted rounded">
-                      <p><strong>De:</strong> {formatLocalDate(item.data_anterior)} - Slot {item.slot_anterior}</p>
-                      <p><strong>Para:</strong> {formatLocalDate(item.data_nova)} - Slot {item.slot_novo}</p>
-                      {item.motivo && <p><strong>Motivo:</strong> {item.motivo}</p>}
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {formatLocalDate(item.created_at)}
-                        {item.usuario && ` - por ${item.usuario.nome} ${item.usuario.sobrenome}`}
-                      </p>
-                    </div>
-                  ))}
-                </div>
+          
+          <Tabs defaultValue="editar" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="editar">Editar</TabsTrigger>
+              <TabsTrigger value="historico">Histórico</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="editar" className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Confirmação</Label>
+                <Select value={novaConfirmacao} onValueChange={setNovaConfirmacao}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pre-agendado">Pré-Agendado</SelectItem>
+                    <SelectItem value="confirmado">Confirmado</SelectItem>
+                    <SelectItem value="cancelado">Cancelado</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            )}
-          </div>
+
+              <div className="space-y-2">
+                <Label>Tipo de Agendamento</Label>
+                <Select value={novoTipo} onValueChange={setNovoTipo}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="instalacao">Instalação</SelectItem>
+                    <SelectItem value="manutencao">Manutenção</SelectItem>
+                    <SelectItem value="visita_tecnica">Visita Técnica</SelectItem>
+                    <SelectItem value="suporte">Suporte</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <Select value={novoStatus} onValueChange={setNovoStatus}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pendente">Pendente</SelectItem>
+                    <SelectItem value="concluido">Concluído</SelectItem>
+                    <SelectItem value="reprogramado">Reprogramado</SelectItem>
+                    <SelectItem value="cancelado">Cancelado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <TecnicoSelector value={novoTecnico} onValueChange={setNovoTecnico} />
+
+              <div className="space-y-2">
+                <Label>Origem</Label>
+                <Input 
+                  value={novaOrigem} 
+                  onChange={(e) => setNovaOrigem(e.target.value)}
+                  placeholder="Origem do agendamento"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Representante de Vendas</Label>
+                <Input 
+                  value={novoRepresentante} 
+                  onChange={(e) => setNovoRepresentante(e.target.value)}
+                  placeholder="Nome do representante"
+                />
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="historico" className="py-4">
+              {historicoCompleto.edicoes.length === 0 && historicoCompleto.reagendamentos.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Clock className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p>Nenhuma alteração registrada ainda</p>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  <h4 className="font-semibold text-sm mb-4 flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    Linha do Tempo de Alterações
+                  </h4>
+                  
+                  {[
+                    ...historicoCompleto.edicoes.map(e => ({ ...e, tipo: 'edicao' })),
+                    ...historicoCompleto.reagendamentos.map(r => ({ ...r, tipo: 'reagendamento' }))
+                  ]
+                    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                    .map((item, index, array) => (
+                      <React.Fragment key={`${item.tipo}-${item.id}`}>
+                        {item.tipo === 'edicao' ? (
+                          <TimelineItem item={item} isLast={index === array.length - 1} />
+                        ) : (
+                          <TimelineItemReagendamento item={item} isLast={index === array.length - 1} />
+                        )}
+                      </React.Fragment>
+                    ))}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+          
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditDialog(false)}>
-              Cancelar
+              Fechar
             </Button>
             <Button onClick={handleSaveEdit}>
-              Salvar
+              Salvar Alterações
             </Button>
           </DialogFooter>
         </DialogContent>

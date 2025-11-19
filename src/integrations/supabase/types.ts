@@ -460,6 +460,51 @@ export type Database = {
         }
         Relationships: []
       }
+      historico_edicoes_agendamentos: {
+        Row: {
+          agendamento_id: string
+          campo_alterado: string
+          created_at: string | null
+          id: string
+          usuario_id: string | null
+          valor_anterior: string | null
+          valor_novo: string | null
+        }
+        Insert: {
+          agendamento_id: string
+          campo_alterado: string
+          created_at?: string | null
+          id?: string
+          usuario_id?: string | null
+          valor_anterior?: string | null
+          valor_novo?: string | null
+        }
+        Update: {
+          agendamento_id?: string
+          campo_alterado?: string
+          created_at?: string | null
+          id?: string
+          usuario_id?: string | null
+          valor_anterior?: string | null
+          valor_novo?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "historico_edicoes_agendamentos_agendamento_id_fkey"
+            columns: ["agendamento_id"]
+            isOneToOne: false
+            referencedRelation: "agendamentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "historico_edicoes_agendamentos_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       historico_reagendamentos: {
         Row: {
           agendamento_id: string
