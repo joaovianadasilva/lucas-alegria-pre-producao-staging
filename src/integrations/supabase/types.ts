@@ -51,6 +51,7 @@ export type Database = {
       }
       agendamentos: {
         Row: {
+          codigo_cliente: string | null
           confirmacao: string
           contrato_id: string | null
           created_at: string
@@ -69,6 +70,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          codigo_cliente?: string | null
           confirmacao?: string
           contrato_id?: string | null
           created_at?: string
@@ -87,6 +89,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          codigo_cliente?: string | null
           confirmacao?: string
           contrato_id?: string | null
           created_at?: string
