@@ -27,6 +27,7 @@ export default function NovoAgendamento() {
   const [loading, setLoading] = useState(false);
 
   const [tipo, setTipo] = useState('');
+  const [codigoCliente, setCodigoCliente] = useState('');
   const [nomeCliente, setNomeCliente] = useState('');
   const [emailCliente, setEmailCliente] = useState('');
   const [telefoneCliente, setTelefoneCliente] = useState('');
@@ -87,6 +88,7 @@ export default function NovoAgendamento() {
           observacao: observacao || null,
           origem: origem || null,
           representanteVendas: representanteVendas || null,
+          codigoCliente: codigoCliente || null,
         }
       });
 
@@ -147,6 +149,16 @@ export default function NovoAgendamento() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="codigo-cliente">Código do Cliente</Label>
+                <Input
+                  id="codigo-cliente"
+                  value={codigoCliente}
+                  onChange={(e) => setCodigoCliente(e.target.value)}
+                  placeholder="Código único do cliente (opcional)"
+                />
               </div>
 
               <div className="grid md:grid-cols-2 gap-4">
