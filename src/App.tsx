@@ -10,6 +10,7 @@ import Auth from "./pages/Auth";
 import CadastroVenda from "./pages/CadastroVenda";
 import NovoAgendamento from "./pages/NovoAgendamento";
 import GerenciarAgendamentos from "./pages/GerenciarAgendamentos";
+import Historico from "./pages/Historico";
 import ConfigurarPlanos from "./pages/ConfigurarPlanos";
 import ConfigurarAdicionais from "./pages/ConfigurarAdicionais";
 import GerenciarUsuarios from "./pages/GerenciarUsuarios";
@@ -35,6 +36,7 @@ const App = () => (
               <Route path="/cadastro-venda" element={<CadastroVenda />} />
               <Route path="/agendamentos/novo" element={<NovoAgendamento />} />
               <Route path="/agendamentos/gerenciar" element={<GerenciarAgendamentos />} />
+              <Route path="/historico" element={<Historico />} />
               
               {/* Configurações - apenas para admins */}
               <Route element={<ProtectedRoute requiredRole="admin" />}>

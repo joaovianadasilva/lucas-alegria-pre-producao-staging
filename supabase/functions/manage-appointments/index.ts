@@ -34,7 +34,8 @@ serve(async (req) => {
           observacao,
           origem,
           representanteVendas,
-          codigoCliente
+          codigoCliente,
+          usuarioId
         } = requestBody;
 
         console.log('Creating appointment:', { tipo, dataAgendamento, slotNumero, codigoCliente });
@@ -108,6 +109,17 @@ serve(async (req) => {
           console.error('Slot update error:', slotUpdateError);
           await supabase.from('agendamentos').delete().eq('id', agendamentoData.id);
           throw new Error(`Erro ao atualizar slot: ${slotUpdateError.message}`);
+        }
+
+        // Registrar histórico de criação do agendamento
+        if (usuarioId) {
+          await supabase.from('historico_edicoes_agendamentos').insert({
+            agendamento_id: agendamentoData.id,
+            campo_alterado: 'criacao',
+            valor_anterior: null,
+            valor_novo: 'Agendamento criado',
+            usuario_id: usuarioId
+          });
         }
 
         return new Response(

@@ -28,6 +28,7 @@ const mainMenuItems = [
   { title: 'Cadastro de Venda', url: '/cadastro-venda', icon: FileText },
   { title: 'Registro de Agendamentos', url: '/agendamentos/novo', icon: Calendar },
   { title: 'Gerenciar Agenda', url: '/agendamentos/gerenciar', icon: ListChecks },
+  { title: 'Histórico', url: '/historico', icon: Clock },
 ];
 
 const configMenuItems = [

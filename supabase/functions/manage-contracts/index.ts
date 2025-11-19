@@ -30,7 +30,7 @@ serve(async (req) => {
           instalacaoComplemento, instalacaoCep, instalacaoCidade, instalacaoUf,
           cnpj, razaoSocial, inscricaoEstadual,
           planoContratado, adicionaisContratados, diaVencimento, observacao,
-          dataAgendamento, slotAgendamento
+          dataAgendamento, slotAgendamento, usuarioId
         } = requestBody;
 
         // Validar que existe plano OU adicionais
@@ -222,6 +222,37 @@ serve(async (req) => {
           // Rollback: deletar contrato (cascade deleta agendamento e adicionais)
           await supabase.from('contratos').delete().eq('id', contratoId);
           throw new Error(`Erro ao atualizar slot: ${slotUpdateError.message}`);
+        }
+
+        // 5. Registrar histórico de criação do contrato
+        await supabase.from('historico_contratos').insert({
+          contrato_id: contratoId,
+          tipo_acao: 'criacao',
+          campo_alterado: null,
+          valor_anterior: null,
+          valor_novo: JSON.stringify({
+            tipo_cliente: tipoCliente,
+            nome_completo: nomeCompleto,
+            origem,
+            tipo_venda: tipoVenda,
+            plano: planoNome,
+            valor_total: planoValor
+          }),
+          usuario_id: usuarioId || null
+        });
+
+        // 6. Registrar histórico de adicionais
+        if (adicionaisProcessados.length > 0) {
+          const historicoAdicionais = adicionaisProcessados.map(adic => ({
+            contrato_id: contratoId,
+            adicional_codigo: adic.codigo,
+            adicional_nome: adic.nome,
+            adicional_valor: adic.valor,
+            tipo_acao: 'adicao',
+            usuario_id: usuarioId || null
+          }));
+
+          await supabase.from('historico_adicionais_contrato').insert(historicoAdicionais);
         }
 
         // Sucesso!
