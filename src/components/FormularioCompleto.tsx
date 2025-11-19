@@ -1010,26 +1010,40 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Plano Contratado</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione um plano" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {planosOptions.length === 0 ? (
-                          <SelectItem value="sem-planos" disabled>
-                            Nenhum plano cadastrado
-                          </SelectItem>
-                        ) : (
-                          planosOptions.map((plano) => (
-                            <SelectItem key={plano} value={plano}>
-                              {plano}
+                    <div className="flex gap-2">
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="flex-1">
+                            <SelectValue placeholder="Selecione um plano" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {planosOptions.length === 0 ? (
+                            <SelectItem value="sem-planos" disabled>
+                              Nenhum plano cadastrado
                             </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
+                          ) : (
+                            planosOptions.map((plano) => (
+                              <SelectItem key={plano} value={plano}>
+                                {plano}
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                      {field.value && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="shrink-0"
+                          onClick={() => field.onChange(undefined)}
+                          title="Limpar seleção"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
