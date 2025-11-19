@@ -26,12 +26,17 @@ export const TecnicoSelector: React.FC<TecnicoSelectorProps> = ({
           <SelectValue placeholder={isLoading ? "Carregando..." : "Selecione um técnico"} />
         </SelectTrigger>
         <SelectContent>
-          {tecnicos?.map((tecnico) => (
-            <SelectItem key={tecnico.id} value={tecnico.id}>
-              {tecnico.nome} {tecnico.sobrenome}
-              {tecnico.telefone && ` - ${tecnico.telefone}`}
-            </SelectItem>
-          ))}
+          {tecnicos?.map((tecnico) => {
+            const nomeCompleto = `${tecnico.nome} ${tecnico.sobrenome}`.trim();
+            const displayName = nomeCompleto || tecnico.email;
+            
+            return (
+              <SelectItem key={tecnico.id} value={tecnico.id}>
+                {displayName}
+                {tecnico.telefone && ` - ${tecnico.telefone}`}
+              </SelectItem>
+            );
+          })}
           {tecnicos?.length === 0 && (
             <div className="p-2 text-sm text-muted-foreground">
               Nenhum técnico disponível
