@@ -460,6 +460,57 @@ export type Database = {
         }
         Relationships: []
       }
+      historico_reagendamentos: {
+        Row: {
+          agendamento_id: string
+          created_at: string | null
+          data_anterior: string
+          data_nova: string
+          id: string
+          motivo: string | null
+          slot_anterior: number
+          slot_novo: number
+          usuario_id: string | null
+        }
+        Insert: {
+          agendamento_id: string
+          created_at?: string | null
+          data_anterior: string
+          data_nova: string
+          id?: string
+          motivo?: string | null
+          slot_anterior: number
+          slot_novo: number
+          usuario_id?: string | null
+        }
+        Update: {
+          agendamento_id?: string
+          created_at?: string | null
+          data_anterior?: string
+          data_nova?: string
+          id?: string
+          motivo?: string | null
+          slot_anterior?: number
+          slot_novo?: number
+          usuario_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "historico_reagendamentos_agendamento_id_fkey"
+            columns: ["agendamento_id"]
+            isOneToOne: false
+            referencedRelation: "agendamentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "historico_reagendamentos_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       n8n_chat_histories: {
         Row: {
           id: number
