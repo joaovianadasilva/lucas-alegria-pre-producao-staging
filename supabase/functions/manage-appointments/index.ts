@@ -33,10 +33,11 @@ serve(async (req) => {
           tecnicoResponsavelId,
           observacao,
           origem,
-          representanteVendas
+          representanteVendas,
+          codigoCliente
         } = requestBody;
 
-        console.log('Creating appointment:', { tipo, dataAgendamento, slotNumero });
+        console.log('Creating appointment:', { tipo, dataAgendamento, slotNumero, codigoCliente });
 
         // Validar tipo
         const tiposValidos = ['instalacao', 'manutencao', 'visita_tecnica', 'suporte'];
@@ -82,6 +83,7 @@ serve(async (req) => {
             observacao,
             origem,
             representante_vendas: representanteVendas,
+            codigo_cliente: codigoCliente,
             status: 'pendente',
             confirmacao: 'pre-agendado',
             contrato_id: null
