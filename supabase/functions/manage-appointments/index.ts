@@ -166,6 +166,14 @@ serve(async (req) => {
           throw new Error('ID do agendamento é obrigatório');
         }
 
+        // Validar tipo se presente
+        if (updates.tipo) {
+          const tiposValidos = ['instalacao', 'manutencao', 'visita_tecnica', 'suporte'];
+          if (!tiposValidos.includes(updates.tipo)) {
+            throw new Error('Tipo de agendamento inválido');
+          }
+        }
+
         // Validar confirmacao se presente
         if (updates.confirmacao) {
           const confirmacoesValidas = ['confirmado', 'pre-agendado', 'cancelado'];
