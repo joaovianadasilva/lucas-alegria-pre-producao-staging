@@ -31,10 +31,10 @@ export function SlotSelectorForDate({ selectedDate, selectedSlot, onSlotSelect }
       if (!selectedDate) return null;
 
       const { data, error } = await supabase
-        .from('slots_disponiveis')
+        .from('slots')
         .select('*')
         .eq('data_disponivel', selectedDate)
-        .single();
+        .order('slot_numero', { ascending: true });
 
       if (error) throw error;
       return data;
@@ -58,7 +58,7 @@ export function SlotSelectorForDate({ selectedDate, selectedSlot, onSlotSelect }
     );
   }
 
-  if (!slotsData) {
+  if (!slotsData || slotsData.length === 0) {
     return (
       <div className="text-sm text-destructive">
         Não há slots configurados para esta data
@@ -67,18 +67,23 @@ export function SlotSelectorForDate({ selectedDate, selectedSlot, onSlotSelect }
   }
 
   const getSlotStatus = (slotNum: number): 'available' | 'occupied' | 'blocked' => {
-    const slotValue = slotsData[`slot_${slotNum}` as keyof typeof slotsData];
+    const slot = slotsData.find(s => s.slot_numero === slotNum);
     
-    if (!slotValue || slotValue === null) return 'available';
-    if (slotValue === '-') return 'blocked';
+    if (!slot) return 'blocked'; // Slot não existe = bloqueado
+    if (slot.status === 'disponivel') return 'available';
+    if (slot.status === 'bloqueado') return 'blocked';
     return 'occupied';
   };
+
+  // Obter todos os números de slots disponíveis
+  const slotNumbers = slotsData.map(s => s.slot_numero).sort((a, b) => a - b);
+  const maxSlot = Math.max(...slotNumbers, 10); // Garantir mínimo de 10
 
   return (
     <div className="space-y-2">
       <Label>Selecione o horário</Label>
       <div className="grid grid-cols-2 gap-2">
-        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((slotNum) => {
+        {Array.from({ length: maxSlot }, (_, i) => i + 1).map((slotNum) => {
           const status = getSlotStatus(slotNum);
           const isSelected = selectedSlot === slotNum;
           const isDisabled = status !== 'available';
