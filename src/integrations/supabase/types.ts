@@ -706,7 +706,48 @@ export type Database = {
         }
         Relationships: []
       }
-      slots_disponiveis: {
+      slots: {
+        Row: {
+          agendamento_id: string | null
+          created_at: string | null
+          data_disponivel: string
+          id: string
+          observacao: string | null
+          slot_numero: number
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          agendamento_id?: string | null
+          created_at?: string | null
+          data_disponivel: string
+          id?: string
+          observacao?: string | null
+          slot_numero: number
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          agendamento_id?: string | null
+          created_at?: string | null
+          data_disponivel?: string
+          id?: string
+          observacao?: string | null
+          slot_numero?: number
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "slots_agendamento_id_fkey"
+            columns: ["agendamento_id"]
+            isOneToOne: false
+            referencedRelation: "agendamentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      slots_disponiveis_backup: {
         Row: {
           created_at: string | null
           data_disponivel: string
@@ -788,6 +829,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_slots_statistics: { Args: never; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
