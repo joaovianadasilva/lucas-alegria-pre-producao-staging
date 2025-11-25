@@ -684,12 +684,12 @@ export default function GerenciarAgendamentos() {
 
               <div className="space-y-2">
                 <Label>Origem</Label>
-                <Select value={novaOrigem} onValueChange={setNovaOrigem}>
+                <Select value={novaOrigem || 'none'} onValueChange={(val) => setNovaOrigem(val === 'none' ? '' : val)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione a origem (opcional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhuma</SelectItem>
+                    <SelectItem value="none">Nenhuma</SelectItem>
                     <SelectItem value="indicacao">Indicação</SelectItem>
                     <SelectItem value="ex-cliente">Ex-cliente</SelectItem>
                     <SelectItem value="panfleto">Panfleto</SelectItem>
@@ -715,12 +715,12 @@ export default function GerenciarAgendamentos() {
 
               <div className="space-y-2">
                 <Label>Representante de Vendas</Label>
-                <Select value={novoRepresentante} onValueChange={setNovoRepresentante}>
+                <Select value={novoRepresentante || 'none'} onValueChange={(val) => setNovoRepresentante(val === 'none' ? '' : val)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o representante (opcional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhum</SelectItem>
+                    <SelectItem value="none">Nenhum</SelectItem>
                     {representantesOptions.length === 0 ? (
                       <SelectItem value="sem-representantes" disabled>
                         Nenhum representante cadastrado
