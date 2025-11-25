@@ -260,6 +260,9 @@ export default function GerenciarAgendamentos() {
     if (!selectedAgendamento) return;
 
     try {
+      // Obter usuário logado
+      const { data: { user } } = await supabase.auth.getUser();
+      
       const { data, error } = await supabase.functions.invoke('manage-appointments', {
         body: {
           action: 'updateAppointment',
@@ -271,7 +274,8 @@ export default function GerenciarAgendamentos() {
             confirmacao: novaConfirmacao,
             origem: novaOrigem || null,
             representante_vendas: novoRepresentante || null,
-          }
+          },
+          usuarioId: user?.id
         }
       });
 
@@ -300,10 +304,14 @@ export default function GerenciarAgendamentos() {
     if (!confirm('Deseja realmente cancelar este agendamento?')) return;
 
     try {
+      // Obter usuário logado
+      const { data: { user } } = await supabase.auth.getUser();
+      
       const { data, error } = await supabase.functions.invoke('manage-appointments', {
         body: {
           action: 'cancelAppointment',
           agendamentoId: agendamento.id,
+          usuarioId: user?.id
         }
       });
 

@@ -179,7 +179,7 @@ serve(async (req) => {
       }
 
       case 'updateAppointment': {
-        const { agendamentoId, updates } = requestBody;
+        const { agendamentoId, updates, usuarioId } = requestBody;
 
         if (!agendamentoId) {
           throw new Error('ID do agendamento é obrigatório');
@@ -201,6 +201,18 @@ serve(async (req) => {
           }
         }
 
+        // Buscar dados atuais ANTES do update para comparar
+        const { data: dadosAtuais, error: fetchError } = await supabase
+          .from('agendamentos')
+          .select('tipo, status, confirmacao, tecnico_responsavel_id, origem, representante_vendas')
+          .eq('id', agendamentoId)
+          .single();
+
+        if (fetchError) {
+          console.error('Erro ao buscar dados atuais:', fetchError);
+          throw new Error('Erro ao buscar agendamento');
+        }
+
         console.log('Updating appointment:', agendamentoId, updates);
 
         const { data, error } = await supabase
@@ -213,6 +225,33 @@ serve(async (req) => {
         if (error) {
           console.error('Update error:', error);
           throw error;
+        }
+
+        // Registrar histórico para cada campo alterado
+        const camposParaVerificar = ['tipo', 'status', 'confirmacao', 'tecnico_responsavel_id', 'origem', 'representante_vendas'];
+        
+        for (const campo of camposParaVerificar) {
+          const valorAntigo = dadosAtuais[campo];
+          const valorNovo = updates[campo];
+          
+          // Só registra se o campo foi enviado no update E é diferente do valor anterior
+          if (valorNovo !== undefined && String(valorAntigo || 'null') !== String(valorNovo || 'null')) {
+            console.log(`Campo ${campo} alterado: ${valorAntigo} -> ${valorNovo}`);
+            
+            const { error: histError } = await supabase
+              .from('historico_edicoes_agendamentos')
+              .insert({
+                agendamento_id: agendamentoId,
+                campo_alterado: campo,
+                valor_anterior: valorAntigo?.toString() || null,
+                valor_novo: valorNovo?.toString() || null,
+                usuario_id: usuarioId || null
+              });
+            
+            if (histError) {
+              console.error(`Erro ao registrar histórico de ${campo}:`, histError);
+            }
+          }
         }
 
         return new Response(
@@ -286,7 +325,7 @@ serve(async (req) => {
       }
 
       case 'cancelAppointment': {
-        const { agendamentoId } = requestBody;
+        const { agendamentoId, usuarioId } = requestBody;
 
         console.log('Canceling appointment:', agendamentoId);
 
@@ -302,6 +341,8 @@ serve(async (req) => {
           throw new Error('Agendamento não encontrado');
         }
 
+        const statusAnterior = agendamento.status;
+
         // Atualizar status para cancelado
         const { error: updateError } = await supabase
           .from('agendamentos')
@@ -311,6 +352,23 @@ serve(async (req) => {
         if (updateError) {
           console.error('Cancel error:', updateError);
           throw updateError;
+        }
+
+        // Registrar no histórico
+        if (statusAnterior !== 'cancelado') {
+          const { error: histError } = await supabase
+            .from('historico_edicoes_agendamentos')
+            .insert({
+              agendamento_id: agendamentoId,
+              campo_alterado: 'status',
+              valor_anterior: statusAnterior,
+              valor_novo: 'cancelado',
+              usuario_id: usuarioId || null
+            });
+          
+          if (histError) {
+            console.error('Erro ao registrar histórico de cancelamento:', histError);
+          }
         }
 
         // Liberar slot

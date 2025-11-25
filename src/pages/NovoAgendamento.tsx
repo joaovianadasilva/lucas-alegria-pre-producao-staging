@@ -73,6 +73,9 @@ export default function NovoAgendamento() {
     setLoading(true);
 
     try {
+      // Obter usuário logado
+      const { data: { user } } = await supabase.auth.getUser();
+      
       const { data, error } = await supabase.functions.invoke('manage-appointments', {
         body: {
           action: 'createAppointment',
@@ -87,6 +90,7 @@ export default function NovoAgendamento() {
           origem: origem || null,
           representanteVendas: representanteVendas || null,
           codigoCliente: codigoCliente || null,
+          usuarioId: user?.id
         }
       });
 
