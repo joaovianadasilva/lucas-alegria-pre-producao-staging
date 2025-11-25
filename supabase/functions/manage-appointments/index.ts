@@ -46,28 +46,29 @@ serve(async (req) => {
           throw new Error('Tipo de agendamento inválido');
         }
 
-        // Verificar disponibilidade do slot
+        // Verificar disponibilidade do slot na nova tabela
         const { data: slotData, error: slotError } = await supabase
-          .from('slots_disponiveis')
+          .from('slots')
           .select('*')
           .eq('data_disponivel', dataAgendamento)
-          .single();
+          .eq('slot_numero', slotNumero)
+          .maybeSingle();
 
-        if (slotError || !slotData) {
+        if (slotError) {
           console.error('Slot error:', slotError);
-          throw new Error('Data não disponível');
+          throw new Error('Erro ao verificar slot');
         }
 
-        const slotColumn = `slot_${slotNumero}`;
-        const slotValue = slotData[slotColumn];
-        
+        if (!slotData) {
+          throw new Error('Slot não existe para esta data');
+        }
+
         // Verificar se slot está livre
-        if (slotValue && slotValue.trim() !== '' && slotValue !== '-') {
+        if (slotData.status !== 'disponivel') {
+          if (slotData.status === 'bloqueado') {
+            throw new Error('Slot bloqueado');
+          }
           throw new Error('Slot já ocupado');
-        }
-
-        if (slotValue === '-') {
-          throw new Error('Slot bloqueado');
         }
 
         // Criar agendamento
@@ -99,11 +100,15 @@ serve(async (req) => {
 
         console.log('Agendamento criado:', agendamentoData.id);
 
-        // Atualizar slot com UUID do agendamento
+        // Atualizar slot com UUID do agendamento e status ocupado
         const { error: slotUpdateError } = await supabase
-          .from('slots_disponiveis')
-          .update({ [slotColumn]: agendamentoData.id })
-          .eq('data_disponivel', dataAgendamento);
+          .from('slots')
+          .update({ 
+            status: 'ocupado',
+            agendamento_id: agendamentoData.id 
+          })
+          .eq('data_disponivel', dataAgendamento)
+          .eq('slot_numero', slotNumero);
 
         if (slotUpdateError) {
           console.error('Slot update error:', slotUpdateError);
@@ -309,11 +314,14 @@ serve(async (req) => {
         }
 
         // Liberar slot
-        const slotColumn = `slot_${agendamento.slot_numero}`;
         const { error: slotError } = await supabase
-          .from('slots_disponiveis')
-          .update({ [slotColumn]: null })
-          .eq('data_disponivel', agendamento.data_agendamento);
+          .from('slots')
+          .update({ 
+            status: 'disponivel',
+            agendamento_id: null 
+          })
+          .eq('data_disponivel', agendamento.data_agendamento)
+          .eq('slot_numero', agendamento.slot_numero);
 
         if (slotError) {
           console.error('Erro ao liberar slot:', slotError);
@@ -359,14 +367,26 @@ serve(async (req) => {
 
         // 2. Validar novo slot está disponível
         const { data: novoSlotData, error: novoSlotError } = await supabase
-          .from('slots_disponiveis')
+          .from('slots')
           .select('*')
           .eq('data_disponivel', novaData)
-          .single();
+          .eq('slot_numero', novoSlot)
+          .maybeSingle();
 
-        if (novoSlotError || !novoSlotData) {
+        if (novoSlotError) {
           console.error('Novo slot error:', novoSlotError);
-          throw new Error('Nova data não disponível no sistema');
+          throw new Error('Erro ao verificar novo slot');
+        }
+
+        if (!novoSlotData) {
+          throw new Error('Slot não existe para a nova data');
+        }
+
+        if (novoSlotData.status !== 'disponivel') {
+          if (novoSlotData.status === 'bloqueado') {
+            throw new Error('Novo slot está bloqueado');
+          }
+          throw new Error('Novo slot já está ocupado');
         }
 
         const novoSlotColumn = `slot_${novoSlot}`;
@@ -401,11 +421,14 @@ serve(async (req) => {
         console.log('Histórico registrado com sucesso');
 
         // 4. Liberar slot antigo
-        const slotAntigoColumn = `slot_${slotAnterior}`;
         const { error: liberarSlotError } = await supabase
-          .from('slots_disponiveis')
-          .update({ [slotAntigoColumn]: null })
-          .eq('data_disponivel', dataAnterior);
+          .from('slots')
+          .update({ 
+            status: 'disponivel',
+            agendamento_id: null 
+          })
+          .eq('data_disponivel', dataAnterior)
+          .eq('slot_numero', slotAnterior);
 
         if (liberarSlotError) {
           console.error('Erro ao liberar slot antigo:', liberarSlotError);
@@ -434,9 +457,13 @@ serve(async (req) => {
 
         // 6. Ocupar novo slot
         const { error: ocuparSlotError } = await supabase
-          .from('slots_disponiveis')
-          .update({ [novoSlotColumn]: agendamentoId })
-          .eq('data_disponivel', novaData);
+          .from('slots')
+          .update({ 
+            status: 'ocupado',
+            agendamento_id: agendamentoId 
+          })
+          .eq('data_disponivel', novaData)
+          .eq('slot_numero', novoSlot);
 
         if (ocuparSlotError) {
           console.error('Erro ao ocupar novo slot:', ocuparSlotError);
