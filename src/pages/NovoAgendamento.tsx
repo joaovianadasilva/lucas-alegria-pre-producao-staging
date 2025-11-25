@@ -6,13 +6,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { DateSlotSelector } from '@/components/DateSlotSelector';
+import { CalendarSlotPicker } from '@/components/CalendarSlotPicker';
 import { TecnicoSelector } from '@/components/TecnicoSelector';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft } from 'lucide-react';
-
-const SPREADSHEET_ID = "1S1NnfgjwQnvQcyptU2OUf-oxHOb-NPuP_DY-hc7Oovg";
 
 const TIPOS_AGENDAMENTO = [
   { value: 'instalacao', label: 'Instalação' },
@@ -263,9 +261,10 @@ export default function NovoAgendamento() {
             </CardContent>
           </Card>
 
-          <DateSlotSelector
-            spreadsheetId={SPREADSHEET_ID}
+          <CalendarSlotPicker
             onSlotSelect={handleSlotSelect}
+            selectedDate={selectedDate}
+            selectedSlot={selectedSlot}
           />
 
           <div className="flex gap-4">
