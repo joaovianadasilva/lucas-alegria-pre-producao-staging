@@ -11,10 +11,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Calendar, Clock, Settings, ChevronsUpDown, X } from 'lucide-react';
+import { Loader2, Calendar, Clock, ChevronsUpDown, X } from 'lucide-react';
 import { FormularioCompleto as IFormularioCompleto, UFS, DIAS_VENCIMENTO } from '@/types/formulario';
 import { CalendarSlotPicker } from './CalendarSlotPicker';
-import { ConfiguracaoPlanosSupabase as ConfiguracaoPlanos } from './ConfiguracaoPlanosSupabase';
 import { carregarPlanos, carregarAdicionais, formatarItemCatalogo, carregarCidades, carregarRepresentantes, ItemCidade, ItemRepresentante } from '@/lib/catalogoSupabase';
 import { supabase } from '@/integrations/supabase/client';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -273,7 +272,6 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [selectedSlot, setSelectedSlot] = useState<number>(0);
-  const [configOpen, setConfigOpen] = useState(false);
   const [planosOptions, setPlanosOptions] = useState<string[]>([]);
   const [adicionaisOptions, setAdicionaisOptions] = useState<string[]>([]);
   const [cidadesOptions, setCidadesOptions] = useState<ItemCidade[]>([]);
@@ -407,17 +405,6 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold text-foreground mb-2">Formulário de Contratação</h1>
         <p className="text-muted-foreground">Preencha todos os dados para finalizar sua contratação</p>
-        <div className="flex justify-center gap-2 mt-4">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setConfigOpen(true)}
-          >
-            <Settings className="h-4 w-4 mr-2" />
-            Configurar Planos
-          </Button>
-        </div>
       </div>
 
       <Form {...form}>
@@ -1049,16 +1036,8 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
 
           {/* Informações do Contrato */}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader>
               <CardTitle>Informações do Contrato</CardTitle>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() => setConfigOpen(true)}
-              >
-                <Settings className="h-5 w-5" />
-              </Button>
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
@@ -1260,12 +1239,6 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
           </div>
         </form>
       </Form>
-
-      <ConfiguracaoPlanos
-        open={configOpen}
-        onOpenChange={setConfigOpen}
-        onUpdate={loadOptions}
-      />
     </div>
   );
 };
