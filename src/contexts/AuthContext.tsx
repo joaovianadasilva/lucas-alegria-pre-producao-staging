@@ -20,7 +20,6 @@ interface AuthContextType {
   roles: string[];
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, userData: { nome: string; sobrenome: string; telefone?: string }) => Promise<void>;
   signOut: () => Promise<void>;
   hasRole: (role: string) => boolean;
 }
@@ -119,43 +118,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const signUp = async (
-    email: string,
-    password: string,
-    userData: { nome: string; sobrenome: string; telefone?: string }
-  ) => {
-    try {
-      const redirectUrl = `${window.location.origin}/`;
-
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: redirectUrl,
-          data: {
-            nome: userData.nome,
-            sobrenome: userData.sobrenome,
-            telefone: userData.telefone,
-          },
-        },
-      });
-
-      if (error) throw error;
-
-      if (data.user) {
-        toast.success('Cadastro realizado com sucesso! Verifique seu email para confirmar.');
-      }
-    } catch (error: any) {
-      console.error('Erro no cadastro:', error);
-      if (error.message.includes('User already registered')) {
-        toast.error('Este email já está cadastrado');
-      } else {
-        toast.error('Erro ao cadastrar: ' + error.message);
-      }
-      throw error;
-    }
-  };
-
   const signOut = async () => {
     try {
       const { error } = await supabase.auth.signOut();
@@ -188,7 +150,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         roles,
         loading,
         signIn,
-        signUp,
         signOut,
         hasRole,
       }}

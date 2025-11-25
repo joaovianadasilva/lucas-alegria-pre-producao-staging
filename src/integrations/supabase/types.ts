@@ -235,63 +235,6 @@ export type Database = {
         }
         Relationships: []
       }
-      contatos_agente: {
-        Row: {
-          agente: string | null
-          created_at: string | null
-          email: string | null
-          id: number
-          interesse_duvida: string | null
-          role: string | null
-          status: string | null
-          user_como_paga_viagens: string | null
-          user_deal_id: string | null
-          user_moment: string | null
-          user_name: string | null
-          user_number: string | null
-          user_profile: string | null
-          user_qnto_gasta_viagens: string | null
-          user_quando_viaja: string | null
-          user_quantas_vezes_viaja_ano: string | null
-        }
-        Insert: {
-          agente?: string | null
-          created_at?: string | null
-          email?: string | null
-          id?: number
-          interesse_duvida?: string | null
-          role?: string | null
-          status?: string | null
-          user_como_paga_viagens?: string | null
-          user_deal_id?: string | null
-          user_moment?: string | null
-          user_name?: string | null
-          user_number?: string | null
-          user_profile?: string | null
-          user_qnto_gasta_viagens?: string | null
-          user_quando_viaja?: string | null
-          user_quantas_vezes_viaja_ano?: string | null
-        }
-        Update: {
-          agente?: string | null
-          created_at?: string | null
-          email?: string | null
-          id?: number
-          interesse_duvida?: string | null
-          role?: string | null
-          status?: string | null
-          user_como_paga_viagens?: string | null
-          user_deal_id?: string | null
-          user_moment?: string | null
-          user_name?: string | null
-          user_number?: string | null
-          user_profile?: string | null
-          user_qnto_gasta_viagens?: string | null
-          user_quando_viaja?: string | null
-          user_quantas_vezes_viaja_ano?: string | null
-        }
-        Relationships: []
-      }
       contratos: {
         Row: {
           celular: string
@@ -418,48 +361,6 @@ export type Database = {
           tipo_cliente?: string
           tipo_venda?: string | null
           updated_at?: string | null
-        }
-        Relationships: []
-      }
-      documents: {
-        Row: {
-          content: string | null
-          embedding: string | null
-          id: number
-          metadata: Json | null
-        }
-        Insert: {
-          content?: string | null
-          embedding?: string | null
-          id?: number
-          metadata?: Json | null
-        }
-        Update: {
-          content?: string | null
-          embedding?: string | null
-          id?: number
-          metadata?: Json | null
-        }
-        Relationships: []
-      }
-      follow_up: {
-        Row: {
-          created_at: string | null
-          id: number
-          last_message: string | null
-          user_number: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: number
-          last_message?: string | null
-          user_number?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: number
-          last_message?: string | null
-          user_number?: string | null
         }
         Relationships: []
       }
@@ -655,24 +556,6 @@ export type Database = {
           },
         ]
       }
-      n8n_chat_histories: {
-        Row: {
-          id: number
-          message: Json
-          session_id: string
-        }
-        Insert: {
-          id?: number
-          message: Json
-          session_id: string
-        }
-        Update: {
-          id?: number
-          message?: Json
-          session_id?: string
-        }
-        Relationships: []
-      }
       profiles: {
         Row: {
           ativo: boolean | null
@@ -746,57 +629,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      slots_disponiveis_backup: {
-        Row: {
-          created_at: string | null
-          data_disponivel: string
-          id: string
-          slot_1: string | null
-          slot_10: string | null
-          slot_2: string | null
-          slot_3: string | null
-          slot_4: string | null
-          slot_5: string | null
-          slot_6: string | null
-          slot_7: string | null
-          slot_8: string | null
-          slot_9: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          data_disponivel: string
-          id?: string
-          slot_1?: string | null
-          slot_10?: string | null
-          slot_2?: string | null
-          slot_3?: string | null
-          slot_4?: string | null
-          slot_5?: string | null
-          slot_6?: string | null
-          slot_7?: string | null
-          slot_8?: string | null
-          slot_9?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          data_disponivel?: string
-          id?: string
-          slot_1?: string | null
-          slot_10?: string | null
-          slot_2?: string | null
-          slot_3?: string | null
-          slot_4?: string | null
-          slot_5?: string | null
-          slot_6?: string | null
-          slot_7?: string | null
-          slot_8?: string | null
-          slot_9?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
       }
       user_roles: {
         Row: {
