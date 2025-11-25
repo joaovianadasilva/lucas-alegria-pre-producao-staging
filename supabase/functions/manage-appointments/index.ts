@@ -231,8 +231,8 @@ serve(async (req) => {
         const camposParaVerificar = ['tipo', 'status', 'confirmacao', 'tecnico_responsavel_id', 'origem', 'representante_vendas'];
         
         for (const campo of camposParaVerificar) {
-          const valorAntigo = dadosAtuais[campo];
-          const valorNovo = updates[campo];
+          const valorAntigo = (dadosAtuais as any)[campo];
+          const valorNovo = (updates as any)[campo];
           
           // Só registra se o campo foi enviado no update E é diferente do valor anterior
           if (valorNovo !== undefined && String(valorAntigo || 'null') !== String(valorNovo || 'null')) {
