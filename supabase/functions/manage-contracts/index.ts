@@ -103,19 +103,17 @@ serve(async (req) => {
 
         // Verificar disponibilidade do slot
         const { data: slotData, error: slotError } = await supabase
-          .from('slots_disponiveis')
+          .from('slots')
           .select('*')
           .eq('data_disponivel', dataAgendamento)
+          .eq('slot_numero', slotAgendamento)
           .single();
 
         if (slotError || !slotData) {
-          throw new Error('Data de agendamento não encontrada');
+          throw new Error('Slot não encontrado para a data selecionada');
         }
 
-        const slotColumn = `slot_${slotAgendamento}`;
-        const slotValue = slotData[slotColumn];
-        
-        if (slotValue && slotValue.trim() !== '') {
+        if (slotData.status !== 'disponivel') {
           throw new Error('Slot não está disponível');
         }
 
@@ -193,7 +191,7 @@ serve(async (req) => {
         }
 
         // 3. Criar agendamento vinculado ao contrato
-        const { error: agendamentoError } = await supabase
+        const { data: agendamentoData, error: agendamentoError } = await supabase
           .from('agendamentos')
           .insert({
             contrato_id: contratoId,
@@ -204,7 +202,9 @@ serve(async (req) => {
             telefone_cliente: telefone,
             status: 'pendente',
             confirmacao: 'pre-agendado'
-          });
+          })
+          .select()
+          .single();
 
         if (agendamentoError) {
           // Rollback: deletar contrato (cascade deleta adicionais)
@@ -212,11 +212,15 @@ serve(async (req) => {
           throw new Error(`Erro ao criar agendamento: ${agendamentoError.message}`);
         }
 
-        // 4. Atualizar slot como ocupado
+        // 4. Atualizar slot para vincular o agendamento
         const { error: slotUpdateError } = await supabase
-          .from('slots_disponiveis')
-          .update({ [slotColumn]: `${nomeCompleto} - ${email}` })
-          .eq('data_disponivel', dataAgendamento);
+          .from('slots')
+          .update({ 
+            status: 'ocupado',
+            agendamento_id: agendamentoData.id
+          })
+          .eq('data_disponivel', dataAgendamento)
+          .eq('slot_numero', slotAgendamento);
 
         if (slotUpdateError) {
           // Rollback: deletar contrato (cascade deleta agendamento e adicionais)
