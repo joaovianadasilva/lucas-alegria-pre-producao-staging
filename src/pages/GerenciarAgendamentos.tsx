@@ -71,6 +71,7 @@ export default function GerenciarAgendamentos() {
   const [novaConfirmacao, setNovaConfirmacao] = useState('');
   const [novaOrigem, setNovaOrigem] = useState('');
   const [novoRepresentante, setNovoRepresentante] = useState('');
+  const [representantesOptions, setRepresentantesOptions] = useState<{id: string, nome: string}[]>([]);
 
   // Estados para reagendamento
   const [reagendarDialog, setReagendarDialog] = useState(false);
@@ -83,6 +84,23 @@ export default function GerenciarAgendamentos() {
     edicoes: any[];
     reagendamentos: any[];
   }>({ edicoes: [], reagendamentos: [] });
+
+  // Carregar representantes de vendas
+  React.useEffect(() => {
+    const loadRepresentantes = async () => {
+      const { data, error } = await supabase
+        .from('catalogo_representantes')
+        .select('id, nome')
+        .eq('ativo', true)
+        .order('nome');
+      
+      if (data && !error) {
+        setRepresentantesOptions(data);
+      }
+    };
+    
+    loadRepresentantes();
+  }, []);
 
   const { data: agendamentosData, isLoading, refetch } = useQuery({
     queryKey: ['agendamentos', filtroStatus, filtroTipo, filtroTecnico, dataInicio, dataFim],
@@ -666,20 +684,56 @@ export default function GerenciarAgendamentos() {
 
               <div className="space-y-2">
                 <Label>Origem</Label>
-                <Input 
-                  value={novaOrigem} 
-                  onChange={(e) => setNovaOrigem(e.target.value)}
-                  placeholder="Origem do agendamento"
-                />
+                <Select value={novaOrigem} onValueChange={setNovaOrigem}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a origem (opcional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Nenhuma</SelectItem>
+                    <SelectItem value="indicacao">Indicação</SelectItem>
+                    <SelectItem value="ex-cliente">Ex-cliente</SelectItem>
+                    <SelectItem value="panfleto">Panfleto</SelectItem>
+                    <SelectItem value="cartaz-banner-outdoor">Cartaz/Banner/Outdoor</SelectItem>
+                    <SelectItem value="google">Google</SelectItem>
+                    <SelectItem value="facebook">Facebook</SelectItem>
+                    <SelectItem value="instagram">Instagram</SelectItem>
+                    <SelectItem value="internet">Internet</SelectItem>
+                    <SelectItem value="anuncio-parede-placa">Anúncio na parede / Placa</SelectItem>
+                    <SelectItem value="carro-veiculos-empresa">Carro/Veículos da empresa</SelectItem>
+                    <SelectItem value="anuncio-avenida">Anúncio na avenida</SelectItem>
+                    <SelectItem value="caixa-poste">Caixa no poste</SelectItem>
+                    <SelectItem value="via-tecnico">Via Técnico</SelectItem>
+                    <SelectItem value="propaganda">Propaganda</SelectItem>
+                    <SelectItem value="mora-proximo">Mora próximo</SelectItem>
+                    <SelectItem value="condominio">Condomínio</SelectItem>
+                    <SelectItem value="ja-cliente">Já é cliente</SelectItem>
+                    <SelectItem value="via-vendedor">Via Vendedor</SelectItem>
+                    <SelectItem value="nao-informado">Não informado</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
                 <Label>Representante de Vendas</Label>
-                <Input 
-                  value={novoRepresentante} 
-                  onChange={(e) => setNovoRepresentante(e.target.value)}
-                  placeholder="Nome do representante"
-                />
+                <Select value={novoRepresentante} onValueChange={setNovoRepresentante}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o representante (opcional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Nenhum</SelectItem>
+                    {representantesOptions.length === 0 ? (
+                      <SelectItem value="sem-representantes" disabled>
+                        Nenhum representante cadastrado
+                      </SelectItem>
+                    ) : (
+                      representantesOptions.map((rep) => (
+                        <SelectItem key={rep.id} value={rep.nome}>
+                          {rep.nome}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
             </TabsContent>
             
