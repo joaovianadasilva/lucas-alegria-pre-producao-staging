@@ -13,7 +13,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Calendar, Clock, Settings, ChevronsUpDown, X } from 'lucide-react';
 import { FormularioCompleto as IFormularioCompleto, UFS, DIAS_VENCIMENTO } from '@/types/formulario';
-import { DateSlotSelector } from './DateSlotSelector';
+import { CalendarSlotPicker } from './CalendarSlotPicker';
 import { ConfiguracaoPlanosSupabase as ConfiguracaoPlanos } from './ConfiguracaoPlanosSupabase';
 import { carregarPlanos, carregarAdicionais, formatarItemCatalogo, carregarCidades, carregarRepresentantes, ItemCidade, ItemRepresentante } from '@/lib/catalogoSupabase';
 import { supabase } from '@/integrations/supabase/client';
@@ -1232,23 +1232,11 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <DateSlotSelector
-                spreadsheetId={spreadsheetId}
+              <CalendarSlotPicker
                 onSlotSelect={handleSlotSelect}
+                selectedDate={selectedDate}
+                selectedSlot={selectedSlot}
               />
-              
-              {selectedDate && selectedSlot > 0 && (
-                <div className="mt-4 p-4 bg-muted rounded-lg">
-                  <div className="flex items-center gap-2 text-sm font-medium">
-                    <Calendar className="w-4 h-4" />
-                    Data selecionada: {selectedDate}
-                  </div>
-                  <div className="flex items-center gap-2 text-sm font-medium mt-1">
-                    <Clock className="w-4 h-4" />
-                    Horário: Slot {selectedSlot}
-                  </div>
-                </div>
-              )}
             </CardContent>
           </Card>
 
