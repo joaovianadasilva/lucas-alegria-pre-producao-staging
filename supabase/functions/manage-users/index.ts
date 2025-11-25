@@ -19,24 +19,29 @@ serve(async (req) => {
     // Cliente com permissões de serviço (admin)
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
     
-    // Cliente com permissões normais (para validar o usuário atual)
-    const authHeader = req.headers.get('Authorization')!;
-    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
+    // Extrair o token JWT do header Authorization
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Não autorizado - Token ausente' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
-    // Verificar se o usuário está autenticado
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    const token = authHeader.replace('Bearer ', '');
+    
+    // Verificar se o usuário está autenticado usando o token
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
     if (authError || !user) {
       console.error('Erro de autenticação:', authError);
       return new Response(
-        JSON.stringify({ error: 'Não autorizado' }),
+        JSON.stringify({ error: 'Não autorizado - Token inválido' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     // Verificar se o usuário é admin
-    const { data: userRoles } = await supabaseClient
+    const { data: userRoles } = await supabaseAdmin
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id);
