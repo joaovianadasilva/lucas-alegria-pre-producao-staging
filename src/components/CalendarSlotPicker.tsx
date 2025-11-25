@@ -142,16 +142,21 @@ export function CalendarSlotPicker({ onSlotSelect, selectedDate, selectedSlot }:
               {day}
             </span>
             {hasSlots && (
-              <div className="flex flex-col gap-0.5 text-xs">
+              <div className="flex flex-wrap gap-1 mt-auto">
                 {counts.disponivel > 0 && (
-                  <Badge variant="default" className="text-xs py-0 h-5">
-                    {counts.disponivel} livre{counts.disponivel !== 1 ? 's' : ''}
-                  </Badge>
+                  <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-500 text-white">
+                    {counts.disponivel}
+                  </span>
                 )}
                 {counts.ocupado > 0 && (
-                  <Badge variant="destructive" className="text-xs py-0 h-5">
-                    {counts.ocupado} ocupado{counts.ocupado !== 1 ? 's' : ''}
-                  </Badge>
+                  <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-yellow-500 text-black">
+                    {counts.ocupado}
+                  </span>
+                )}
+                {counts.bloqueado > 0 && (
+                  <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-900 text-white">
+                    {counts.bloqueado}
+                  </span>
                 )}
               </div>
             )}
@@ -205,23 +210,33 @@ export function CalendarSlotPicker({ onSlotSelect, selectedDate, selectedSlot }:
                 return (
                   <Button
                     key={slot.id}
-                    variant={isSelected ? 'default' : 'outline'}
-                    disabled={!isAvailable}
-                    onClick={() => isAvailable && handleSlotClick(viewingDate, slot.slot_numero)}
+                    variant={slot.status === 'disponivel' && !isSelected ? "outline" : "default"}
+                    disabled={slot.status !== 'disponivel'}
+                    onClick={() => handleSlotClick(viewingDate, slot.slot_numero)}
                     className={cn(
                       "h-auto py-3 flex flex-col gap-1",
-                      isAvailable && "hover:bg-primary/10",
-                      !isAvailable && "opacity-40 cursor-not-allowed"
+                      slot.status === 'disponivel' && !isSelected && "border-green-500 border-2 hover:bg-green-50",
+                      slot.status === 'disponivel' && isSelected && "bg-green-500 text-white hover:bg-green-600",
+                      slot.status === 'ocupado' && "bg-yellow-500 text-black hover:bg-yellow-500 cursor-not-allowed",
+                      slot.status === 'bloqueado' && "bg-gray-900 text-white hover:bg-gray-900 cursor-not-allowed"
                     )}
                   >
                     {isSelected && <CheckCircle className="h-4 w-4" />}
                     <span className="font-semibold">Slot {slot.slot_numero}</span>
                     <span className="text-xs">{SLOT_LABELS[slot.slot_numero - 1]}</span>
-                    <span className="text-xs">
+                    <Badge 
+                      variant="secondary"
+                      className={cn(
+                        "text-[10px] px-2 py-0",
+                        slot.status === 'disponivel' && "bg-green-100 text-green-800",
+                        slot.status === 'ocupado' && "bg-yellow-100 text-yellow-800",
+                        slot.status === 'bloqueado' && "bg-gray-700 text-white"
+                      )}
+                    >
                       {slot.status === 'disponivel' && 'Disponível'}
                       {slot.status === 'ocupado' && 'Ocupado'}
                       {slot.status === 'bloqueado' && 'Bloqueado'}
-                    </span>
+                    </Badge>
                   </Button>
                 );
               })}
@@ -261,9 +276,25 @@ export function CalendarSlotPicker({ onSlotSelect, selectedDate, selectedSlot }:
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
-          <p className="text-sm text-muted-foreground text-center mt-2">
-            Clique em um dia com horários disponíveis
-          </p>
+          <div className="space-y-2 mt-2">
+            <p className="text-sm text-muted-foreground text-center">
+              Clique em um dia com horários disponíveis
+            </p>
+            <div className="flex items-center justify-center gap-4 text-xs">
+              <span className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded bg-green-500"></span>
+                <span>Disponível</span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded bg-yellow-500"></span>
+                <span>Ocupado</span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded bg-gray-900"></span>
+                <span>Bloqueado</span>
+              </span>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>{renderMonthView()}</CardContent>
       </Card>
