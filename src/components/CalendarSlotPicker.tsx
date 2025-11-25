@@ -56,8 +56,10 @@ export function CalendarSlotPicker({ onSlotSelect, selectedDate, selectedSlot }:
       const { data, error } = await supabase.functions.invoke('manage-slots', {
         body: {
           action: 'getCalendarSlots',
-          dataInicio: dateRange.startDate,
-          dataFim: dateRange.endDate,
+          data: {
+            dataInicio: dateRange.startDate,
+            dataFim: dateRange.endDate,
+          },
         },
       });
 
