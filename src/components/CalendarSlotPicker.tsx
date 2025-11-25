@@ -22,18 +22,6 @@ interface Slot {
   agendamento_id: string | null;
 }
 
-const SLOT_LABELS = [
-  '8:00 - 9:00',
-  '9:00 - 10:00',
-  '10:00 - 11:00',
-  '11:00 - 12:00',
-  '13:00 - 14:00',
-  '14:00 - 15:00',
-  '15:00 - 16:00',
-  '16:00 - 17:00',
-  '17:00 - 18:00',
-  '18:00 - 19:00',
-];
 
 export function CalendarSlotPicker({ onSlotSelect, selectedDate, selectedSlot }: CalendarSlotPickerProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -223,8 +211,7 @@ export function CalendarSlotPicker({ onSlotSelect, selectedDate, selectedSlot }:
                   >
                     {isSelected && <CheckCircle className="h-4 w-4" />}
                     <span className="font-semibold">Slot {slot.slot_numero}</span>
-                    <span className="text-xs">{SLOT_LABELS[slot.slot_numero - 1]}</span>
-                    <Badge 
+                    <Badge
                       variant="secondary"
                       className={cn(
                         "text-[10px] px-2 py-0",
@@ -310,7 +297,7 @@ export function CalendarSlotPicker({ onSlotSelect, selectedDate, selectedSlot }:
                 <div>
                   <p className="font-semibold">Agendamento selecionado</p>
                   <p className="text-sm text-muted-foreground">
-                    {formatLocalDate(selectedDate)} - Slot {selectedSlot} ({SLOT_LABELS[selectedSlot - 1]})
+                    {formatLocalDate(selectedDate)} - Slot {selectedSlot}
                   </p>
                 </div>
               </div>

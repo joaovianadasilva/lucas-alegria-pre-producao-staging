@@ -11,18 +11,6 @@ interface SlotSelectorForDateProps {
   onSlotSelect: (slot: number) => void;
 }
 
-const SLOT_LABELS = [
-  '8:00 - 9:00',
-  '9:00 - 10:00',
-  '10:00 - 11:00',
-  '11:00 - 12:00',
-  '13:00 - 14:00',
-  '14:00 - 15:00',
-  '15:00 - 16:00',
-  '16:00 - 17:00',
-  '17:00 - 18:00',
-  '18:00 - 19:00',
-];
 
 export function SlotSelectorForDate({ selectedDate, selectedSlot, onSlotSelect }: SlotSelectorForDateProps) {
   const { data: slotsData, isLoading } = useQuery({
@@ -104,9 +92,6 @@ export function SlotSelectorForDate({ selectedDate, selectedSlot, onSlotSelect }
             >
               <div className="text-center">
                 <div className="font-semibold">Slot {slotNum}</div>
-                <div className="text-xs">
-                  {SLOT_LABELS[slotNum - 1]}
-                </div>
                 {status === 'occupied' && (
                   <div className="text-xs text-muted-foreground">Ocupado</div>
                 )}
