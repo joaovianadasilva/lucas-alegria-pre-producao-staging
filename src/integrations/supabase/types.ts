@@ -181,33 +181,93 @@ export type Database = {
         }
         Relationships: []
       }
+      catalogo_grupos_mensagem: {
+        Row: {
+          created_at: string
+          grupo: string
+          id: number
+          image_url: string | null
+          message: string | null
+          order: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          grupo: string
+          id?: number
+          image_url?: string | null
+          message?: string | null
+          order: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          grupo?: string
+          id?: number
+          image_url?: string | null
+          message?: string | null
+          order?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       catalogo_planos: {
         Row: {
+          acompanha_W2A_educa: boolean | null
           ativo: boolean | null
           codigo: string
+          contrato_fidelidade: string | null
           created_at: string | null
           id: string
           nome: string
+          taxa_instalacao: string | null
+          taxa_instalacao_especal: string | null
+          taxa_instalacao_negociavel: string | null
+          taxa_instalacao_padrao: string | null
           updated_at: string | null
           valor: number
+          valor_pos_vencimento: string | null
+          velocidade: string | null
+          velocidade_download: string | null
+          velocidade_upload: string | null
         }
         Insert: {
+          acompanha_W2A_educa?: boolean | null
           ativo?: boolean | null
           codigo: string
+          contrato_fidelidade?: string | null
           created_at?: string | null
           id?: string
           nome: string
+          taxa_instalacao?: string | null
+          taxa_instalacao_especal?: string | null
+          taxa_instalacao_negociavel?: string | null
+          taxa_instalacao_padrao?: string | null
           updated_at?: string | null
           valor: number
+          valor_pos_vencimento?: string | null
+          velocidade?: string | null
+          velocidade_download?: string | null
+          velocidade_upload?: string | null
         }
         Update: {
+          acompanha_W2A_educa?: boolean | null
           ativo?: boolean | null
           codigo?: string
+          contrato_fidelidade?: string | null
           created_at?: string | null
           id?: string
           nome?: string
+          taxa_instalacao?: string | null
+          taxa_instalacao_especal?: string | null
+          taxa_instalacao_negociavel?: string | null
+          taxa_instalacao_padrao?: string | null
           updated_at?: string | null
           valor?: number
+          valor_pos_vencimento?: string | null
+          velocidade?: string | null
+          velocidade_download?: string | null
+          velocidade_upload?: string | null
         }
         Relationships: []
       }
