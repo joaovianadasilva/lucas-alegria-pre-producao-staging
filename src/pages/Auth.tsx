@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import logoW2A from '@/assets/logo_W2A.svg';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -59,9 +60,12 @@ export default function Auth() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-2xl text-center">Sistema de Agendamentos</CardTitle>
-          <CardDescription className="text-center">
+        <CardHeader className="text-center">
+          <div className="flex justify-center mb-4">
+            <img src={logoW2A} alt="W2A Telecomunicações" className="h-16" />
+          </div>
+          <CardTitle className="text-2xl">Sistema de Agendamentos</CardTitle>
+          <CardDescription>
             Entre com sua conta
           </CardDescription>
         </CardHeader>
