@@ -210,7 +210,7 @@ export function CalendarSlotPicker({ onSlotSelect, selectedDate, selectedSlot }:
                     )}
                   >
                     {isSelected && <CheckCircle className="h-4 w-4" />}
-                    <span className="font-semibold">Slot {slot.slot_numero}</span>
+                    <span className="font-semibold">Vaga {slot.slot_numero}</span>
                     <Badge
                       variant="secondary"
                       className={cn(
@@ -297,7 +297,7 @@ export function CalendarSlotPicker({ onSlotSelect, selectedDate, selectedSlot }:
                 <div>
                   <p className="font-semibold">Agendamento selecionado</p>
                   <p className="text-sm text-muted-foreground">
-                    {formatLocalDate(selectedDate)} - Slot {selectedSlot}
+                    {formatLocalDate(selectedDate)} - Vaga {selectedSlot}
                   </p>
                 </div>
               </div>

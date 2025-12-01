@@ -47,14 +47,14 @@ export function CreateSlotsDialog({ open, onOpenChange, onSuccess }: CreateSlots
       if (error) throw error;
       if (!data.success) throw new Error(data.error);
 
-      toast.success(`${quantidade} slots criados com sucesso!`);
+      toast.success(`${quantidade} vagas criadas com sucesso!`);
       onSuccess();
       onOpenChange(false);
       setSelectedDate(undefined);
       setQuantidade(10);
     } catch (error: any) {
       console.error('Error creating slots:', error);
-      toast.error(error.message || 'Erro ao criar slots');
+      toast.error(error.message || 'Erro ao criar vagas');
     } finally {
       setIsCreating(false);
     }
@@ -64,7 +64,7 @@ export function CreateSlotsDialog({ open, onOpenChange, onSuccess }: CreateSlots
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Criar Slots em Massa</DialogTitle>
+          <DialogTitle>Criar Vagas em Massa</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -82,12 +82,12 @@ export function CreateSlotsDialog({ open, onOpenChange, onSuccess }: CreateSlots
               className="rounded-md border"
             />
             <p className="text-xs text-muted-foreground mt-2">
-              Você pode criar slots para até 30 dias no futuro
+              Você pode criar vagas para até 30 dias no futuro
             </p>
           </div>
 
           <div>
-            <Label htmlFor="quantidade">Quantidade de Slots</Label>
+            <Label htmlFor="quantidade">Quantidade de Vagas</Label>
             <Input
               id="quantidade"
               type="number"
@@ -98,7 +98,7 @@ export function CreateSlotsDialog({ open, onOpenChange, onSuccess }: CreateSlots
               className="mt-1"
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Os novos slots serão adicionados após os existentes para esta data
+              As novas vagas serão adicionadas após as existentes para esta data
             </p>
           </div>
 
@@ -108,7 +108,7 @@ export function CreateSlotsDialog({ open, onOpenChange, onSuccess }: CreateSlots
                 📅 {format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
               </p>
               <p className="text-sm text-muted-foreground mt-1">
-                {quantidade} {quantidade === 1 ? 'slot será criado' : 'slots serão criados'}
+                {quantidade} {quantidade === 1 ? 'vaga será criada' : 'vagas serão criadas'}
               </p>
             </div>
           )}
@@ -126,7 +126,7 @@ export function CreateSlotsDialog({ open, onOpenChange, onSuccess }: CreateSlots
             ) : (
               <>
                 <Plus className="h-4 w-4 mr-2" />
-                Criar {quantidade} Slots
+                Criar {quantidade} Vagas
               </>
             )}
           </Button>
