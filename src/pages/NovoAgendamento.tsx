@@ -61,7 +61,7 @@ export default function NovoAgendamento() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!tipo || !nomeCliente || !emailCliente || !selectedDate || !selectedSlot) {
+    if (!tipo || !nomeCliente || !selectedDate || !selectedSlot) {
       toast({
         title: "Erro",
         description: "Preencha todos os campos obrigatórios",
@@ -83,7 +83,7 @@ export default function NovoAgendamento() {
           dataAgendamento: selectedDate,
           slotNumero: selectedSlot,
           nomeCliente,
-          emailCliente,
+          emailCliente: emailCliente || null,
           telefoneCliente: telefoneCliente || null,
           tecnicoResponsavelId: tecnicoResponsavel || null,
           observacao: observacao || null,
@@ -175,13 +175,13 @@ export default function NovoAgendamento() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email do Cliente <span className="text-destructive">*</span></Label>
+                  <Label htmlFor="email">Email do Cliente</Label>
                   <Input
                     id="email"
                     type="email"
                     value={emailCliente}
                     onChange={(e) => setEmailCliente(e.target.value)}
-                    required
+                    placeholder="email@exemplo.com (opcional)"
                   />
                 </div>
               </div>
