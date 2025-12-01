@@ -35,7 +35,7 @@ const configMenuItems = [
   { title: 'Configurar Planos', url: '/configuracoes/planos', icon: Package },
   { title: 'Configurar Adicionais', url: '/configuracoes/adicionais', icon: PlusCircle },
   { title: 'Gerenciar Usuários', url: '/configuracoes/usuarios', icon: Users },
-  { title: 'Configurar Slots', url: '/configuracoes/slots', icon: Clock },
+  { title: 'Configurar Vagas', url: '/configuracoes/slots', icon: Clock },
 ];
 
 export function AppSidebar() {

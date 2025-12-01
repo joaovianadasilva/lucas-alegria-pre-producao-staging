@@ -164,7 +164,7 @@ export function CalendarSlots() {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
           {daySlots.length === 0 ? (
             <div className="col-span-full text-center py-8 text-muted-foreground">
-              Nenhum slot configurado para este dia
+              Nenhuma vaga configurada para este dia
             </div>
           ) : (
             daySlots.map((slot) => (
@@ -384,7 +384,7 @@ export function CalendarSlots() {
           </Button>
           <Button onClick={() => setCreateDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            Criar Slots
+            Criar Vagas
           </Button>
         </div>
       </div>

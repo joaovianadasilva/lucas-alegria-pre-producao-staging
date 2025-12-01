@@ -79,8 +79,8 @@ const formularioSchema = z.object({
   diaVencimento: z.string().min(1, 'Dia de vencimento é obrigatório'),
   observacao: z.string().optional(),
 
-  dataAgendamento: z.string().min(1, 'Agendamento é obrigatório'),
-  slotAgendamento: z.number().min(1, 'Slot de agendamento é obrigatório'),
+  dataAgendamento: z.string().min(1, 'É necessário selecionar uma data de agendamento'),
+  slotAgendamento: z.number().min(1, 'É necessário selecionar uma vaga de agendamento'),
 }).superRefine((data, ctx) => {
   // Validação condicional para Pessoa Física
   if (data.tipoCliente === 'F') {
@@ -1220,7 +1220,7 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
               {(form.formState.errors.dataAgendamento || form.formState.errors.slotAgendamento) && (
                 <div className="flex items-center gap-2 p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive">
                   <span className="text-sm font-medium">
-                    {form.formState.errors.dataAgendamento?.message || form.formState.errors.slotAgendamento?.message}
+                    É necessário selecionar uma data e uma vaga de agendamento
                   </span>
                 </div>
               )}

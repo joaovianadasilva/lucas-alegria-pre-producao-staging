@@ -49,7 +49,7 @@ export function SlotSelectorForDate({ selectedDate, selectedSlot, onSlotSelect }
   if (!slotsData || slotsData.length === 0) {
     return (
       <div className="text-sm text-destructive">
-        Não há slots configurados para esta data
+        Não há vagas configuradas para esta data
       </div>
     );
   }
@@ -69,7 +69,7 @@ export function SlotSelectorForDate({ selectedDate, selectedSlot, onSlotSelect }
 
   return (
     <div className="space-y-2">
-      <Label>Selecione o horário</Label>
+      <Label>Selecione a vaga</Label>
       <div className="grid grid-cols-2 gap-2">
         {Array.from({ length: maxSlot }, (_, i) => i + 1).map((slotNum) => {
           const status = getSlotStatus(slotNum);
@@ -91,7 +91,7 @@ export function SlotSelectorForDate({ selectedDate, selectedSlot, onSlotSelect }
               }`}
             >
               <div className="text-center">
-                <div className="font-semibold">Slot {slotNum}</div>
+                <div className="font-semibold">Vaga {slotNum}</div>
                 {status === 'occupied' && (
                   <div className="text-xs text-muted-foreground">Ocupado</div>
                 )}
@@ -104,7 +104,7 @@ export function SlotSelectorForDate({ selectedDate, selectedSlot, onSlotSelect }
         })}
       </div>
       <div className="text-xs text-muted-foreground mt-2">
-        Selecione um horário disponível para o reagendamento
+        Selecione uma vaga disponível para o reagendamento
       </div>
     </div>
   );

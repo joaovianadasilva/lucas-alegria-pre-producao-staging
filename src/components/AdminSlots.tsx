@@ -75,10 +75,10 @@ export function AdminSlots() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-slots'] });
-      toast.success('Slot bloqueado');
+      toast.success('Vaga bloqueada');
     },
     onError: (error: any) => {
-      toast.error('Erro ao bloquear slot: ' + error.message);
+      toast.error('Erro ao bloquear vaga: ' + error.message);
     },
   });
 
@@ -96,10 +96,10 @@ export function AdminSlots() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-slots'] });
-      toast.success('Slot liberado');
+      toast.success('Vaga liberada');
     },
     onError: (error: any) => {
-      toast.error('Erro ao liberar slot: ' + error.message);
+      toast.error('Erro ao liberar vaga: ' + error.message);
     },
   });
 
@@ -176,7 +176,7 @@ export function AdminSlots() {
                           : 'bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-800'
                       }`}
                     >
-                      <div className="text-sm font-medium mb-2">Slot {slotNum}</div>
+                      <div className="text-sm font-medium mb-2">Vaga {slotNum}</div>
                       <div className="text-xs mb-2">
                         {status === 'available' && 'Disponível'}
                         {status === 'blocked' && 'Bloqueado'}
