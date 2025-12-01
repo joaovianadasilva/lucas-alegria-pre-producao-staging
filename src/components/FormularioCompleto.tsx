@@ -1210,12 +1210,20 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
                 Selecione uma data e horário disponível para o agendamento
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
               <CalendarSlotPicker
                 onSlotSelect={handleSlotSelect}
                 selectedDate={selectedDate}
                 selectedSlot={selectedSlot}
               />
+              
+              {(form.formState.errors.dataAgendamento || form.formState.errors.slotAgendamento) && (
+                <div className="flex items-center gap-2 p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive">
+                  <span className="text-sm font-medium">
+                    {form.formState.errors.dataAgendamento?.message || form.formState.errors.slotAgendamento?.message}
+                  </span>
+                </div>
+              )}
             </CardContent>
           </Card>
 
