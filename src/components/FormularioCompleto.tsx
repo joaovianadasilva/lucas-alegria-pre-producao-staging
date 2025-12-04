@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Calendar, Clock, ChevronsUpDown, X, Receipt } from 'lucide-react';
 import { FormularioCompleto as IFormularioCompleto, UFS, DIAS_VENCIMENTO } from '@/types/formulario';
 import { CalendarSlotPicker } from './CalendarSlotPicker';
-import { carregarPlanos, carregarAdicionais, formatarItemCatalogo, carregarCidades, carregarRepresentantes, ItemCidade, ItemRepresentante, ItemCatalogo } from '@/lib/catalogoSupabase';
+import { carregarPlanos, carregarAdicionais, formatarItemCatalogo, carregarCidades, carregarRepresentantes, carregarOrigens, ItemCidade, ItemRepresentante, ItemOrigem, ItemCatalogo } from '@/lib/catalogoSupabase';
 import { supabase } from '@/integrations/supabase/client';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -282,6 +282,7 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
   const [adicionaisOptions, setAdicionaisOptions] = useState<string[]>([]);
   const [cidadesOptions, setCidadesOptions] = useState<ItemCidade[]>([]);
   const [representantesOptions, setRepresentantesOptions] = useState<ItemRepresentante[]>([]);
+  const [origensOptions, setOrigensOptions] = useState<ItemOrigem[]>([]);
   const [planosData, setPlanosData] = useState<ItemCatalogo[]>([]);
   const [adicionaisData, setAdicionaisData] = useState<ItemCatalogo[]>([]);
   const { toast } = useToast();
@@ -334,12 +335,14 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
     const adicionais = await carregarAdicionais();
     const cidades = await carregarCidades();
     const representantes = await carregarRepresentantes();
+    const origens = await carregarOrigens();
     setPlanosData(planos);
     setAdicionaisData(adicionais);
     setPlanosOptions(planos.map(formatarItemCatalogo));
     setAdicionaisOptions(adicionais.map(formatarItemCatalogo));
     setCidadesOptions(cidades);
     setRepresentantesOptions(representantes);
+    setOrigensOptions(origens);
   };
 
   useEffect(() => {
@@ -464,32 +467,24 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Origem</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione a origem da venda" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="indicacao">Indicação</SelectItem>
-                        <SelectItem value="ex-cliente">Ex-cliente</SelectItem>
-                        <SelectItem value="panfleto">Panfleto</SelectItem>
-                        <SelectItem value="cartaz-banner-outdoor">Cartaz/Banner/Outdoor</SelectItem>
-                        <SelectItem value="google">Google</SelectItem>
-                        <SelectItem value="facebook">Facebook</SelectItem>
-                        <SelectItem value="instagram">Instagram</SelectItem>
-                        <SelectItem value="internet">Internet</SelectItem>
-                        <SelectItem value="anuncio-parede-placa">Anúncio na parede / Placa</SelectItem>
-                        <SelectItem value="carro-veiculos-empresa">Carro/Veículos da empresa</SelectItem>
-                        <SelectItem value="anuncio-avenida">Anúncio na avenida</SelectItem>
-                        <SelectItem value="caixa-poste">Caixa no poste</SelectItem>
-                        <SelectItem value="via-tecnico">Via Técnico</SelectItem>
-                        <SelectItem value="propaganda">Propaganda</SelectItem>
-                        <SelectItem value="mora-proximo">Mora próximo</SelectItem>
-                        <SelectItem value="condominio">Condomínio</SelectItem>
-                        <SelectItem value="ja-cliente">Já é cliente</SelectItem>
-                        <SelectItem value="via-vendedor">Via Vendedor</SelectItem>
-                        <SelectItem value="nao-informado">Não informado</SelectItem>
+                        {origensOptions.length === 0 ? (
+                          <SelectItem value="sem-origens" disabled>
+                            Nenhuma origem cadastrada
+                          </SelectItem>
+                        ) : (
+                          origensOptions.map((origem) => (
+                            <SelectItem key={origem.id} value={origem.nome}>
+                              {origem.nome}
+                            </SelectItem>
+                          ))
+                        )}
                       </SelectContent>
                     </Select>
                     <FormMessage />
