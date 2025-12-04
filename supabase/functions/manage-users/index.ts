@@ -113,17 +113,17 @@ serve(async (req) => {
           throw authError;
         }
 
-        // Criar perfil
+        // Criar ou atualizar perfil (upsert para evitar erro de chave duplicada)
         const { error: profileError } = await supabaseAdmin
           .from('profiles')
-          .insert({
+          .upsert({
             id: authData.user.id,
             nome,
             sobrenome,
             email,
             telefone,
             ativo: true,
-          });
+          }, { onConflict: 'id' });
 
         if (profileError) throw profileError;
 
