@@ -27,7 +27,6 @@ const availableRoles = [
   { value: 'supervisor', label: 'Supervisor' },
   { value: 'tecnico', label: 'Técnico' },
   { value: 'vendedor', label: 'Vendedor' },
-  { value: 'atendente', label: 'Atendente' },
 ];
 
 export default function GerenciarUsuarios() {
