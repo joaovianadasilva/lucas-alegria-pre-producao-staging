@@ -61,6 +61,7 @@ export type Database = {
           nome_cliente: string
           observacao: string | null
           origem: string | null
+          rede: string | null
           representante_vendas: string | null
           slot_numero: number
           status: string
@@ -80,6 +81,7 @@ export type Database = {
           nome_cliente: string
           observacao?: string | null
           origem?: string | null
+          rede?: string | null
           representante_vendas?: string | null
           slot_numero: number
           status?: string
@@ -99,6 +101,7 @@ export type Database = {
           nome_cliente?: string
           observacao?: string | null
           origem?: string | null
+          rede?: string | null
           representante_vendas?: string | null
           slot_numero?: number
           status?: string
