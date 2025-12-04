@@ -1276,6 +1276,9 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
                     R$ {resumoContrato.totalMensal.toFixed(2)}
                   </p>
                 </div>
+                <p className="text-sm text-muted-foreground text-right">
+                  Pagando até o dia do vencimento
+                </p>
                 
                 {diaVencimento && (
                   <div className="flex justify-between items-center pt-2 border-t border-border">
