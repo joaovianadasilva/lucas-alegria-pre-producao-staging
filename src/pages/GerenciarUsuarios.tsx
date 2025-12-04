@@ -22,6 +22,14 @@ interface User {
   roles: string[];
 }
 
+const availableRoles = [
+  { value: 'admin', label: 'Administrador' },
+  { value: 'supervisor', label: 'Supervisor' },
+  { value: 'tecnico', label: 'Técnico' },
+  { value: 'vendedor', label: 'Vendedor' },
+  { value: 'atendente', label: 'Atendente' },
+];
+
 export default function GerenciarUsuarios() {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -31,7 +39,7 @@ export default function GerenciarUsuarios() {
     nome: '',
     sobrenome: '',
     telefone: '',
-    role: 'user',
+    role: 'vendedor',
   });
 
   const { data: users, isLoading } = useQuery({
@@ -71,7 +79,7 @@ export default function GerenciarUsuarios() {
         nome: '',
         sobrenome: '',
         telefone: '',
-        role: 'user',
+        role: 'vendedor',
       });
       setIsDialogOpen(false);
     },
@@ -220,9 +228,11 @@ export default function GerenciarUsuarios() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="user">Usuário</SelectItem>
-                    <SelectItem value="tecnico">Técnico</SelectItem>
-                    <SelectItem value="admin">Administrador</SelectItem>
+                    {availableRoles.map((role) => (
+                      <SelectItem key={role.value} value={role.value}>
+                        {role.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -278,9 +288,13 @@ export default function GerenciarUsuarios() {
                           <Plus className="h-3 w-3" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="user">user</SelectItem>
-                          <SelectItem value="tecnico">tecnico</SelectItem>
-                          <SelectItem value="admin">admin</SelectItem>
+                          {availableRoles
+                            .filter((role) => !user.roles.includes(role.value))
+                            .map((role) => (
+                              <SelectItem key={role.value} value={role.value}>
+                                {role.label}
+                              </SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
                     </div>
