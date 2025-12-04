@@ -490,6 +490,21 @@ serve(async (req) => {
         );
       }
 
+      case 'listOrigens': {
+        const { data, error } = await supabase
+          .from('catalogo_origem_vendas')
+          .select('id, nome')
+          .eq('ativo', true)
+          .order('nome', { ascending: true });
+        
+        if (error) throw error;
+        
+        return new Response(
+          JSON.stringify({ success: true, data }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       default:
         throw new Error('Ação inválida');
     }

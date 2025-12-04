@@ -148,7 +148,7 @@ export const formatarItemCatalogo = (item: ItemCatalogo): string => {
   return `[${item.id}] - [${item.nome}] - [R$ ${item.valor.toFixed(2)}]`;
 };
 
-// Interfaces para Cidades e Representantes
+// Interfaces para Cidades, Representantes e Origens
 export interface ItemCidade {
   id: string;
   nome: string;
@@ -156,6 +156,11 @@ export interface ItemCidade {
 }
 
 export interface ItemRepresentante {
+  id: string;
+  nome: string;
+}
+
+export interface ItemOrigem {
   id: string;
   nome: string;
 }
@@ -286,5 +291,25 @@ export const removerRepresentante = async (id: string): Promise<boolean> => {
   } catch (error) {
     console.error('Erro ao remover representante:', error);
     throw error;
+  }
+};
+
+// Carregar origens de vendas
+export const carregarOrigens = async (): Promise<ItemOrigem[]> => {
+  try {
+    const { data, error } = await supabase.functions.invoke('manage-catalog', {
+      body: { action: 'listOrigens' }
+    });
+    
+    if (error) throw error;
+    
+    if (!data?.success) {
+      throw new Error(data?.error || 'Erro ao carregar origens');
+    }
+    
+    return data.data || [];
+  } catch (error) {
+    console.error('Erro ao carregar origens:', error);
+    return [];
   }
 };
