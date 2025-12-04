@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -11,14 +11,20 @@ import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Calendar, Clock, ChevronsUpDown, X } from 'lucide-react';
+import { Loader2, Calendar, Clock, ChevronsUpDown, X, Receipt } from 'lucide-react';
 import { FormularioCompleto as IFormularioCompleto, UFS, DIAS_VENCIMENTO } from '@/types/formulario';
 import { CalendarSlotPicker } from './CalendarSlotPicker';
-import { carregarPlanos, carregarAdicionais, formatarItemCatalogo, carregarCidades, carregarRepresentantes, ItemCidade, ItemRepresentante } from '@/lib/catalogoSupabase';
+import { carregarPlanos, carregarAdicionais, formatarItemCatalogo, carregarCidades, carregarRepresentantes, ItemCidade, ItemRepresentante, ItemCatalogo } from '@/lib/catalogoSupabase';
 import { supabase } from '@/integrations/supabase/client';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
+
+// Função para extrair código do formato "[codigo] - [nome] - [R$ valor]"
+const extrairCodigoDoItem = (itemFormatado: string): string => {
+  const match = itemFormatado.match(/^\[(.+?)\]/);
+  return match ? match[1] : '';
+};
 
 // Função para calcular idade a partir da data de nascimento
 const calcularIdade = (dataNascimento: string): number => {
@@ -276,6 +282,8 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
   const [adicionaisOptions, setAdicionaisOptions] = useState<string[]>([]);
   const [cidadesOptions, setCidadesOptions] = useState<ItemCidade[]>([]);
   const [representantesOptions, setRepresentantesOptions] = useState<ItemRepresentante[]>([]);
+  const [planosData, setPlanosData] = useState<ItemCatalogo[]>([]);
+  const [adicionaisData, setAdicionaisData] = useState<ItemCatalogo[]>([]);
   const { toast } = useToast();
 
   const form = useForm<FormularioSchema>({
@@ -288,12 +296,46 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
 
   const tipoCliente = form.watch('tipoCliente');
   const instalacaoMesmoEndereco = form.watch('instalacaoMesmoEndereco');
+  const planoSelecionado = form.watch('planoContratado');
+  const adicionaisSelecionados = form.watch('adicionaisContratados');
+  const diaVencimento = form.watch('diaVencimento');
+
+  // Cálculo do resumo do contrato
+  const resumoContrato = useMemo(() => {
+    let planoInfo: { nome: string; valor: number } | null = null;
+    let adicionaisInfo: { nome: string; valor: number }[] = [];
+    let totalMensal = 0;
+
+    if (planoSelecionado) {
+      const codigo = extrairCodigoDoItem(planoSelecionado);
+      const plano = planosData.find(p => p.id === codigo);
+      if (plano) {
+        planoInfo = { nome: plano.nome, valor: plano.valor };
+        totalMensal += plano.valor;
+      }
+    }
+
+    if (adicionaisSelecionados && adicionaisSelecionados.length > 0) {
+      adicionaisSelecionados.forEach(adicionalFormatado => {
+        const codigo = extrairCodigoDoItem(adicionalFormatado);
+        const adicional = adicionaisData.find(a => a.id === codigo);
+        if (adicional) {
+          adicionaisInfo.push({ nome: adicional.nome, valor: adicional.valor });
+          totalMensal += adicional.valor;
+        }
+      });
+    }
+
+    return { planoInfo, adicionaisInfo, totalMensal };
+  }, [planoSelecionado, adicionaisSelecionados, planosData, adicionaisData]);
 
   const loadOptions = async () => {
     const planos = await carregarPlanos();
     const adicionais = await carregarAdicionais();
     const cidades = await carregarCidades();
     const representantes = await carregarRepresentantes();
+    setPlanosData(planos);
+    setAdicionaisData(adicionais);
     setPlanosOptions(planos.map(formatarItemCatalogo));
     setAdicionaisOptions(adicionais.map(formatarItemCatalogo));
     setCidadesOptions(cidades);
@@ -1198,6 +1240,57 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
               />
             </CardContent>
           </Card>
+
+          {/* Resumo do Contrato */}
+          {(resumoContrato.planoInfo || resumoContrato.adicionaisInfo.length > 0) && (
+            <Card className="bg-muted/50 border-primary/20">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Receipt className="h-5 w-5" />
+                  Resumo do Contrato
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {resumoContrato.planoInfo && (
+                  <div className="flex justify-between items-center py-2 border-b border-border">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Plano</p>
+                      <p className="font-medium">{resumoContrato.planoInfo.nome}</p>
+                    </div>
+                    <p className="font-semibold text-primary">
+                      R$ {resumoContrato.planoInfo.valor.toFixed(2)}
+                    </p>
+                  </div>
+                )}
+                
+                {resumoContrato.adicionaisInfo.length > 0 && (
+                  <div className="py-2 border-b border-border">
+                    <p className="text-sm text-muted-foreground mb-2">Adicionais</p>
+                    {resumoContrato.adicionaisInfo.map((adicional, index) => (
+                      <div key={index} className="flex justify-between items-center py-1">
+                        <p className="font-medium">{adicional.nome}</p>
+                        <p className="text-primary">R$ {adicional.valor.toFixed(2)}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                <div className="flex justify-between items-center pt-2">
+                  <p className="text-lg font-bold">Total Mensal</p>
+                  <p className="text-xl font-bold text-primary">
+                    R$ {resumoContrato.totalMensal.toFixed(2)}
+                  </p>
+                </div>
+                
+                {diaVencimento && (
+                  <div className="flex justify-between items-center pt-2 border-t border-border">
+                    <p className="text-sm text-muted-foreground">Data de Vencimento</p>
+                    <p className="font-medium">Todo dia {diaVencimento}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Agendamento */}
           <Card>
