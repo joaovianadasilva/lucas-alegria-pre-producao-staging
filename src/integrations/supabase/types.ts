@@ -56,7 +56,7 @@ export type Database = {
           contrato_id: string | null
           created_at: string
           data_agendamento: string
-          email_cliente: string
+          email_cliente: string | null
           id: string
           nome_cliente: string
           observacao: string | null
@@ -75,7 +75,7 @@ export type Database = {
           contrato_id?: string | null
           created_at?: string
           data_agendamento: string
-          email_cliente: string
+          email_cliente?: string | null
           id?: string
           nome_cliente: string
           observacao?: string | null
@@ -94,7 +94,7 @@ export type Database = {
           contrato_id?: string | null
           created_at?: string
           data_agendamento?: string
-          email_cliente?: string
+          email_cliente?: string | null
           id?: string
           nome_cliente?: string
           observacao?: string | null
