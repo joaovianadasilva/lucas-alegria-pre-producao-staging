@@ -55,7 +55,7 @@ export default function GerenciarUsuarios() {
 
   const createUserMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.functions.invoke('manage-users', {
+      const { data, error } = await supabase.functions.invoke('manage-users', {
         body: {
           action: 'createUser',
           email: formData.email,
@@ -68,6 +68,8 @@ export default function GerenciarUsuarios() {
       });
 
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users-admin'] });
