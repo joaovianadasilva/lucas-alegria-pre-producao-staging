@@ -43,6 +43,10 @@ const App = () => (
                 <Route path="/configuracoes/planos" element={<ConfigurarPlanos />} />
                 <Route path="/configuracoes/adicionais" element={<ConfigurarAdicionais />} />
                 <Route path="/configuracoes/usuarios" element={<GerenciarUsuarios />} />
+              </Route>
+              
+              {/* Configurar Vagas - admin ou supervisor */}
+              <Route element={<ProtectedRoute requiredRoles={["admin", "supervisor"]} />}>
                 <Route path="/configuracoes/slots" element={<ConfigurarSlots />} />
               </Route>
             </Route>
