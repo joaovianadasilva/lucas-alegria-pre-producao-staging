@@ -31,12 +31,13 @@ const mainMenuItems = [
   { title: 'Histórico', url: '/historico', icon: Clock },
 ];
 
-const configMenuItems = [
+const adminOnlyMenuItems = [
   { title: 'Configurar Planos', url: '/configuracoes/planos', icon: Package },
   { title: 'Configurar Adicionais', url: '/configuracoes/adicionais', icon: PlusCircle },
   { title: 'Gerenciar Usuários', url: '/configuracoes/usuarios', icon: Users },
-  { title: 'Configurar Vagas', url: '/configuracoes/slots', icon: Clock },
 ];
+
+const slotsMenuItem = { title: 'Configurar Vagas', url: '/configuracoes/slots', icon: Clock };
 
 export function AppSidebar() {
   const { state } = useSidebar();
@@ -44,9 +45,20 @@ export function AppSidebar() {
   const location = useLocation();
   const { hasRole } = useAuth();
   const isAdmin = hasRole('admin');
+  const isSupervisor = hasRole('supervisor');
+  const canAccessSlots = isAdmin || isSupervisor;
 
   const isActive = (path: string) => location.pathname === path;
+  
+  // Montar itens de configuração baseado nas permissões
+  const configMenuItems = isAdmin 
+    ? [...adminOnlyMenuItems, slotsMenuItem]
+    : canAccessSlots 
+      ? [slotsMenuItem]
+      : [];
+  
   const isConfigGroupActive = configMenuItems.some((item) => isActive(item.url));
+  const showConfigMenu = configMenuItems.length > 0;
 
   const getNavClass = ({ isActive }: { isActive: boolean }) =>
     isActive ? 'bg-accent text-accent-foreground font-medium' : 'hover:bg-accent/50';
@@ -72,7 +84,7 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {isAdmin && (
+        {showConfigMenu && (
           <Collapsible defaultOpen={isConfigGroupActive} className="group/collapsible">
             <SidebarGroup>
               <SidebarGroupLabel asChild>
