@@ -52,6 +52,18 @@ const TIPO_LABELS = {
   suporte: 'Suporte',
 };
 
+const REDE_LABELS = {
+  'lado_a': 'Lado A',
+  'lado_b': 'Lado B',
+  'lado_c': 'Lado C',
+};
+
+const REDE_COLORS = {
+  'lado_a': 'bg-purple-500',
+  'lado_b': 'bg-indigo-500',
+  'lado_c': 'bg-cyan-500',
+};
+
 export default function GerenciarAgendamentos() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -71,6 +83,7 @@ export default function GerenciarAgendamentos() {
   const [novaConfirmacao, setNovaConfirmacao] = useState('');
   const [novaOrigem, setNovaOrigem] = useState('');
   const [novoRepresentante, setNovoRepresentante] = useState('');
+  const [novaRede, setNovaRede] = useState('');
   const [representantesOptions, setRepresentantesOptions] = useState<{id: string, nome: string}[]>([]);
 
   // Estados para reagendamento
@@ -159,6 +172,7 @@ export default function GerenciarAgendamentos() {
       'tecnico_responsavel_id': 'Técnico Responsável',
       'origem': 'Origem',
       'representante_vendas': 'Representante de Vendas',
+      'rede': 'Rede',
       'reagendamento': 'Data/Horário'
     };
     return nomes[campo] || campo;
@@ -175,6 +189,9 @@ export default function GerenciarAgendamentos() {
     }
     if (campo === 'confirmacao') {
       return CONFIRMACAO_LABELS[valor as keyof typeof CONFIRMACAO_LABELS] || valor;
+    }
+    if (campo === 'rede') {
+      return REDE_LABELS[valor as keyof typeof REDE_LABELS] || valor;
     }
     
     return valor;
@@ -267,6 +284,7 @@ export default function GerenciarAgendamentos() {
     setNovaConfirmacao(agendamento.confirmacao || 'pre-agendado');
     setNovaOrigem(agendamento.origem || '');
     setNovoRepresentante(agendamento.representante_vendas || '');
+    setNovaRede(agendamento.rede || '');
     
     // Buscar histórico completo
     fetchHistoricoCompleto(agendamento.id);
@@ -292,6 +310,7 @@ export default function GerenciarAgendamentos() {
             confirmacao: novaConfirmacao,
             origem: novaOrigem || null,
             representante_vendas: novoRepresentante || null,
+            rede: novaRede || null,
           },
           usuarioId: user?.id
         }
@@ -509,6 +528,7 @@ export default function GerenciarAgendamentos() {
                       <TableHead>Origem</TableHead>
                       <TableHead>Representante</TableHead>
                       <TableHead>Confirmação</TableHead>
+                      <TableHead>Rede</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Técnico</TableHead>
                       <TableHead>Ações</TableHead>
@@ -558,6 +578,15 @@ export default function GerenciarAgendamentos() {
                           <Badge className={CONFIRMACAO_COLORS[agendamento.confirmacao as keyof typeof CONFIRMACAO_COLORS]}>
                             {CONFIRMACAO_LABELS[agendamento.confirmacao as keyof typeof CONFIRMACAO_LABELS]}
                           </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {agendamento.rede ? (
+                            <Badge className={REDE_COLORS[agendamento.rede as keyof typeof REDE_COLORS]}>
+                              {REDE_LABELS[agendamento.rede as keyof typeof REDE_LABELS]}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">-</span>
+                          )}
                         </TableCell>
                         <TableCell>
                           <Badge className={STATUS_COLORS[agendamento.status as keyof typeof STATUS_COLORS]}>
@@ -732,6 +761,21 @@ export default function GerenciarAgendamentos() {
                         </SelectItem>
                       ))
                     )}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Rede</Label>
+                <Select value={novaRede || 'none'} onValueChange={(val) => setNovaRede(val === 'none' ? '' : val)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a rede (opcional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Não definida</SelectItem>
+                    <SelectItem value="lado_a">Lado A</SelectItem>
+                    <SelectItem value="lado_b">Lado B</SelectItem>
+                    <SelectItem value="lado_c">Lado C</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
