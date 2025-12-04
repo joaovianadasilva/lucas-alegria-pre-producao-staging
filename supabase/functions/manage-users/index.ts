@@ -102,7 +102,16 @@ serve(async (req) => {
           },
         });
 
-        if (authError) throw authError;
+        if (authError) {
+          console.error('Erro ao criar usuário:', authError);
+          if (authError.message.includes('already been registered')) {
+            return new Response(
+              JSON.stringify({ error: 'Este email já está cadastrado no sistema' }),
+              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          throw authError;
+        }
 
         // Criar perfil
         const { error: profileError } = await supabaseAdmin
