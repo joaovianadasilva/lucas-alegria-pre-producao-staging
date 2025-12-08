@@ -40,6 +40,9 @@ export interface FormularioCompleto {
   razaoSocial?: string;
   inscricaoEstadual?: string;
 
+  // Estrangeiro
+  documentoEstrangeiro?: string;
+
   // Informações do Contrato
   planoContratado: string;
   adicionaisContratados?: string[];
