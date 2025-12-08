@@ -79,6 +79,7 @@ const formularioSchema = z.object({
   cnpj: z.string().optional(),
   razaoSocial: z.string().optional(),
   inscricaoEstadual: z.string().optional(),
+  documentoEstrangeiro: z.string().optional(),
 
   planoContratado: z.string().optional(),
   adicionaisContratados: z.array(z.string()).optional(),
@@ -198,7 +199,44 @@ const formularioSchema = z.object({
       }
     }
   }
-  
+
+  // Validação condicional para Estrangeiro
+  if (data.tipoCliente === 'E') {
+    if (!data.dataNascimento || data.dataNascimento.trim() === '') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Data de Nascimento é obrigatória para Estrangeiro',
+        path: ['dataNascimento']
+      });
+    }
+    if (!data.documentoEstrangeiro || data.documentoEstrangeiro.trim() === '') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'CNRM ou RNE é obrigatório para Estrangeiro',
+        path: ['documentoEstrangeiro']
+      });
+    }
+    
+    // Validação de idade mínima para Estrangeiro
+    if (data.dataNascimento && data.dataNascimento.trim() !== '') {
+      try {
+        const idade = calcularIdade(data.dataNascimento);
+        if (idade < 18) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'O cliente deve ter pelo menos 18 anos de idade',
+            path: ['dataNascimento']
+          });
+        }
+      } catch (error) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Data de nascimento inválida',
+          path: ['dataNascimento']
+        });
+      }
+    }
+  }
   // Validação condicional para endereço de instalação diferente
   if (data.instalacaoMesmoEndereco === 'N') {
     if (!data.instalacaoRua || data.instalacaoRua.trim() === '') {
@@ -359,14 +397,16 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
     } else if (tipoCliente === 'J') {
       // Se mudou para Pessoa Jurídica, não limpar campos compartilhados (CPF, RG, Órgão, Data Nascimento)
     } else if (tipoCliente === 'E') {
-      // Se mudou para Estrangeiro, limpar ambos
+      // Se mudou para Estrangeiro, limpar campos de Física/Jurídica
       form.setValue('cpf', undefined);
       form.setValue('rg', undefined);
       form.setValue('orgaoExpedicao', undefined);
-      form.setValue('dataNascimento', undefined);
       form.setValue('cnpj', undefined);
       form.setValue('razaoSocial', undefined);
       form.setValue('inscricaoEstadual', undefined);
+    } else if (tipoCliente === 'F' || tipoCliente === 'J') {
+      // Se mudou para Física ou Jurídica, limpar documento estrangeiro
+      form.setValue('documentoEstrangeiro', undefined);
     }
   }, [tipoCliente, form]);
 
@@ -650,6 +690,38 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
                         <FormLabel>Data de Nascimento</FormLabel>
                         <FormControl>
                           <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </>
+              )}
+
+              {tipoCliente === 'E' && (
+                <>
+                  <FormField
+                    control={form.control}
+                    name="dataNascimento"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Data de Nascimento</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="documentoEstrangeiro"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>CNRM ou RNE</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Número do documento" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
