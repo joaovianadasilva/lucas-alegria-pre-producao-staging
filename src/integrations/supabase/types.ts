@@ -364,6 +364,7 @@ export type Database = {
           tipo_cliente: string
           tipo_venda: string | null
           updated_at: string | null
+          valor_total: number
         }
         Insert: {
           celular: string
@@ -406,6 +407,7 @@ export type Database = {
           tipo_cliente: string
           tipo_venda?: string | null
           updated_at?: string | null
+          valor_total?: number
         }
         Update: {
           celular?: string
@@ -448,6 +450,7 @@ export type Database = {
           tipo_cliente?: string
           tipo_venda?: string | null
           updated_at?: string | null
+          valor_total?: number
         }
         Relationships: []
       }

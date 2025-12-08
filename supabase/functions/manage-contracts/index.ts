@@ -101,6 +101,12 @@ serve(async (req) => {
           }
         }
 
+        // Calcular valor total (plano + adicionais)
+        const valorTotalAdicionais = adicionaisProcessados.reduce(
+          (acc, adic) => acc + adic.valor, 0
+        );
+        const valorTotal = planoValor + valorTotalAdicionais;
+
         // Verificar disponibilidade do slot
         const { data: slotData, error: slotError } = await supabase
           .from('slots')
@@ -157,6 +163,7 @@ serve(async (req) => {
             plano_codigo: planoCodigo,
             plano_nome: planoNome,
             plano_valor: planoValor,
+            valor_total: valorTotal,
             dia_vencimento: diaVencimento,
             observacao,
             status: 'pendente'
