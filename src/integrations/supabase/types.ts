@@ -134,6 +134,7 @@ export type Database = {
           created_at: string | null
           id: string
           nome: string
+          requer_agendamento: boolean
           updated_at: string | null
           valor: number
         }
@@ -143,6 +144,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           nome: string
+          requer_agendamento?: boolean
           updated_at?: string | null
           valor: number
         }
@@ -152,6 +154,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           nome?: string
+          requer_agendamento?: boolean
           updated_at?: string | null
           valor?: number
         }

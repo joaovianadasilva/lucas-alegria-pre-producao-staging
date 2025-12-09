@@ -7,7 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { Pencil, Trash2, Plus } from 'lucide-react';
+import { Pencil, Trash2, Plus, Calendar } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface Adicional {
   id: string;
@@ -15,6 +16,7 @@ interface Adicional {
   nome: string;
   valor: number;
   ativo: boolean;
+  requer_agendamento: boolean;
 }
 
 export default function ConfigurarAdicionais() {
@@ -24,6 +26,7 @@ export default function ConfigurarAdicionais() {
     codigo: '',
     nome: '',
     valor: '',
+    requer_agendamento: false,
   });
 
   const { data: adicionais, isLoading } = useQuery({
@@ -47,6 +50,7 @@ export default function ConfigurarAdicionais() {
           codigo: formData.codigo,
           nome: formData.nome,
           valor: parseFloat(formData.valor),
+          requer_agendamento: formData.requer_agendamento,
         },
       });
 
@@ -82,7 +86,7 @@ export default function ConfigurarAdicionais() {
   });
 
   const resetForm = () => {
-    setFormData({ codigo: '', nome: '', valor: '' });
+    setFormData({ codigo: '', nome: '', valor: '', requer_agendamento: false });
     setEditingId(null);
   };
 
@@ -92,6 +96,7 @@ export default function ConfigurarAdicionais() {
       codigo: adicional.codigo,
       nome: adicional.nome,
       valor: adicional.valor.toString(),
+      requer_agendamento: adicional.requer_agendamento,
     });
   };
 
@@ -119,7 +124,7 @@ export default function ConfigurarAdicionais() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
                 <Label htmlFor="codigo">Código</Label>
                 <Input
@@ -149,6 +154,21 @@ export default function ConfigurarAdicionais() {
                   required
                 />
               </div>
+              <div className="flex items-end pb-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="requer_agendamento"
+                    checked={formData.requer_agendamento}
+                    onCheckedChange={(checked) => 
+                      setFormData({ ...formData, requer_agendamento: checked === true })
+                    }
+                  />
+                  <Label htmlFor="requer_agendamento" className="cursor-pointer flex items-center gap-1">
+                    <Calendar className="h-4 w-4" />
+                    Requer Agendamento
+                  </Label>
+                </div>
+              </div>
             </div>
             <div className="flex gap-2">
               <Button type="submit" disabled={saveMutation.isPending}>
@@ -176,6 +196,7 @@ export default function ConfigurarAdicionais() {
                 <TableHead>Código</TableHead>
                 <TableHead>Nome</TableHead>
                 <TableHead>Valor</TableHead>
+                <TableHead>Requer Agenda</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
@@ -186,6 +207,16 @@ export default function ConfigurarAdicionais() {
                   <TableCell>{adicional.codigo}</TableCell>
                   <TableCell>{adicional.nome}</TableCell>
                   <TableCell>R$ {adicional.valor.toFixed(2)}</TableCell>
+                  <TableCell>
+                    {adicional.requer_agendamento ? (
+                      <span className="inline-flex items-center gap-1 text-primary">
+                        <Calendar className="h-4 w-4" />
+                        Sim
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">Não</span>
+                    )}
+                  </TableCell>
                   <TableCell>{adicional.ativo ? 'Ativo' : 'Inativo'}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">

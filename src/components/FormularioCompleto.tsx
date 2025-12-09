@@ -86,8 +86,11 @@ const formularioSchema = z.object({
   diaVencimento: z.string().min(1, 'Dia de vencimento é obrigatório'),
   observacao: z.string().optional(),
 
-  dataAgendamento: z.string().min(1, 'É necessário selecionar uma data de agendamento'),
-  slotAgendamento: z.number().min(1, 'É necessário selecionar uma vaga de agendamento'),
+  dataAgendamento: z.string().optional(),
+  slotAgendamento: z.number().optional(),
+  
+  // Campo interno para controlar se agendamento é obrigatório (não enviado ao backend)
+  _agendamentoObrigatorio: z.boolean().optional(),
 }).superRefine((data, ctx) => {
   // Validação condicional para Pessoa Física
   if (data.tipoCliente === 'F') {
@@ -293,6 +296,21 @@ const formularioSchema = z.object({
         path: ['planoContratado']
       });
     }
+    // Agendamento sempre obrigatório para Contrato Ordinário
+    if (!data.dataAgendamento || data.dataAgendamento.trim() === '') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'É necessário selecionar uma data de agendamento',
+        path: ['dataAgendamento']
+      });
+    }
+    if (!data.slotAgendamento || data.slotAgendamento < 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'É necessário selecionar uma vaga de agendamento',
+        path: ['slotAgendamento']
+      });
+    }
   } else if (data.tipoVenda === 'Adicional Avulso') {
     // Para Adicional Avulso, adicionais são obrigatórios
     if (!data.adicionaisContratados || data.adicionaisContratados.length === 0) {
@@ -301,6 +319,24 @@ const formularioSchema = z.object({
         message: 'Pelo menos um adicional deve ser selecionado para Adicional Avulso',
         path: ['adicionaisContratados']
       });
+    }
+    // Para Adicional Avulso, agendamento é obrigatório apenas se _agendamentoObrigatorio for true
+    // (isso é controlado pelo componente baseado nos adicionais que requerem agendamento)
+    if (data._agendamentoObrigatorio === true) {
+      if (!data.dataAgendamento || data.dataAgendamento.trim() === '') {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'É necessário selecionar uma data de agendamento (um dos adicionais requer agendamento)',
+          path: ['dataAgendamento']
+        });
+      }
+      if (!data.slotAgendamento || data.slotAgendamento < 1) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'É necessário selecionar uma vaga de agendamento (um dos adicionais requer agendamento)',
+          path: ['slotAgendamento']
+        });
+      }
     }
   }
 });
@@ -334,10 +370,33 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
   });
 
   const tipoCliente = form.watch('tipoCliente');
+  const tipoVenda = form.watch('tipoVenda');
   const instalacaoMesmoEndereco = form.watch('instalacaoMesmoEndereco');
   const planoSelecionado = form.watch('planoContratado');
   const adicionaisSelecionados = form.watch('adicionaisContratados');
   const diaVencimento = form.watch('diaVencimento');
+
+  // Verificar se algum adicional selecionado requer agendamento
+  const algumAdicionalRequerAgenda = useMemo(() => {
+    if (!adicionaisSelecionados || adicionaisSelecionados.length === 0) return false;
+    
+    return adicionaisSelecionados.some(adicionalFormatado => {
+      const codigo = extrairCodigoDoItem(adicionalFormatado);
+      const adicional = adicionaisData.find(a => a.id === codigo);
+      return adicional?.requerAgendamento === true;
+    });
+  }, [adicionaisSelecionados, adicionaisData]);
+
+  // Agendamento é obrigatório se:
+  // - Tipo de venda é "Contrato Ordinário" (sempre)
+  // - OU Tipo de venda é "Adicional Avulso" E algum adicional requer agenda
+  const agendamentoObrigatorio = tipoVenda === 'Contrato Ordinário' || 
+    (tipoVenda === 'Adicional Avulso' && algumAdicionalRequerAgenda);
+
+  // Atualizar o campo interno _agendamentoObrigatorio para validação
+  useEffect(() => {
+    form.setValue('_agendamentoObrigatorio', agendamentoObrigatorio);
+  }, [agendamentoObrigatorio, form]);
 
   // Cálculo do resumo do contrato
   const resumoContrato = useMemo(() => {
@@ -1363,14 +1422,17 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
           )}
 
           {/* Agendamento */}
-          <Card>
+          <Card className={!agendamentoObrigatorio ? 'border-dashed' : ''}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Calendar className="w-5 h-5" />
-                Agendamento (Obrigatório)
+                Agendamento {agendamentoObrigatorio ? '(Obrigatório)' : '(Opcional)'}
               </CardTitle>
               <CardDescription>
-                Selecione uma data e horário disponível para o agendamento
+                {agendamentoObrigatorio 
+                  ? 'Selecione uma data e horário disponível para o agendamento'
+                  : 'Nenhum adicional selecionado requer agendamento. Preencha apenas se desejar agendar.'
+                }
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -1380,7 +1442,7 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
                 selectedSlot={selectedSlot}
               />
               
-              {(form.formState.errors.dataAgendamento || form.formState.errors.slotAgendamento) && (
+              {agendamentoObrigatorio && (form.formState.errors.dataAgendamento || form.formState.errors.slotAgendamento) && (
                 <div className="flex items-center gap-2 p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive">
                   <span className="text-sm font-medium">
                     É necessário selecionar uma data e uma vaga de agendamento

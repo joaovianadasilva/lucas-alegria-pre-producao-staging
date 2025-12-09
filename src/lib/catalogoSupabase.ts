@@ -4,6 +4,7 @@ export interface ItemCatalogo {
   id: string;    // será o 'codigo' do banco
   nome: string;
   valor: number;
+  requerAgendamento?: boolean;
 }
 
 export const carregarPlanos = async (): Promise<ItemCatalogo[]> => {
@@ -44,7 +45,8 @@ export const carregarAdicionais = async (): Promise<ItemCatalogo[]> => {
     return data.adicionais.map((a: any) => ({ 
       id: a.codigo, 
       nome: a.nome, 
-      valor: a.valor 
+      valor: a.valor,
+      requerAgendamento: a.requer_agendamento || false
     }));
   } catch (error) {
     console.error('Erro ao carregar adicionais:', error);
