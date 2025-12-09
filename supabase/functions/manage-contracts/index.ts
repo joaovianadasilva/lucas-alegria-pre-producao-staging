@@ -107,20 +107,25 @@ serve(async (req) => {
         );
         const valorTotal = planoValor + valorTotalAdicionais;
 
-        // Verificar disponibilidade do slot
-        const { data: slotData, error: slotError } = await supabase
-          .from('slots')
-          .select('*')
-          .eq('data_disponivel', dataAgendamento)
-          .eq('slot_numero', slotAgendamento)
-          .single();
+        // Verificar se agendamento foi fornecido
+        const temAgendamento = dataAgendamento && slotAgendamento;
 
-        if (slotError || !slotData) {
-          throw new Error('Slot não encontrado para a data selecionada');
-        }
+        // Verificar disponibilidade do slot apenas se tiver agendamento
+        if (temAgendamento) {
+          const { data: slotData, error: slotError } = await supabase
+            .from('slots')
+            .select('*')
+            .eq('data_disponivel', dataAgendamento)
+            .eq('slot_numero', slotAgendamento)
+            .single();
 
-        if (slotData.status !== 'disponivel') {
-          throw new Error('Slot não está disponível');
+          if (slotError || !slotData) {
+            throw new Error('Vaga não encontrada para a data selecionada');
+          }
+
+          if (slotData.status !== 'disponivel') {
+            throw new Error('Vaga não está disponível');
+          }
         }
 
         // TRANSAÇÃO: Criar contrato + adicionais + agendamento + atualizar slot
@@ -197,42 +202,47 @@ serve(async (req) => {
           }
         }
 
-        // 3. Criar agendamento vinculado ao contrato
-        const { data: agendamentoData, error: agendamentoError } = await supabase
-          .from('agendamentos')
-          .insert({
-            contrato_id: contratoId,
-            data_agendamento: dataAgendamento,
-            slot_numero: slotAgendamento,
-            nome_cliente: nomeCompleto,
-            email_cliente: email,
-            telefone_cliente: telefone,
-            status: 'pendente',
-            confirmacao: 'pre-agendado'
-          })
-          .select()
-          .single();
+        // 3. Criar agendamento vinculado ao contrato (apenas se tiver dados de agendamento)
+        let agendamentoData = null;
+        if (temAgendamento) {
+          const { data, error: agendamentoError } = await supabase
+            .from('agendamentos')
+            .insert({
+              contrato_id: contratoId,
+              data_agendamento: dataAgendamento,
+              slot_numero: slotAgendamento,
+              nome_cliente: nomeCompleto,
+              email_cliente: email,
+              telefone_cliente: telefone,
+              status: 'pendente',
+              confirmacao: 'pre-agendado'
+            })
+            .select()
+            .single();
 
-        if (agendamentoError) {
-          // Rollback: deletar contrato (cascade deleta adicionais)
-          await supabase.from('contratos').delete().eq('id', contratoId);
-          throw new Error(`Erro ao criar agendamento: ${agendamentoError.message}`);
-        }
+          if (agendamentoError) {
+            // Rollback: deletar contrato (cascade deleta adicionais)
+            await supabase.from('contratos').delete().eq('id', contratoId);
+            throw new Error(`Erro ao criar agendamento: ${agendamentoError.message}`);
+          }
+          
+          agendamentoData = data;
 
-        // 4. Atualizar slot para vincular o agendamento
-        const { error: slotUpdateError } = await supabase
-          .from('slots')
-          .update({ 
-            status: 'ocupado',
-            agendamento_id: agendamentoData.id
-          })
-          .eq('data_disponivel', dataAgendamento)
-          .eq('slot_numero', slotAgendamento);
+          // 4. Atualizar slot para vincular o agendamento
+          const { error: slotUpdateError } = await supabase
+            .from('slots')
+            .update({ 
+              status: 'ocupado',
+              agendamento_id: agendamentoData.id
+            })
+            .eq('data_disponivel', dataAgendamento)
+            .eq('slot_numero', slotAgendamento);
 
-        if (slotUpdateError) {
-          // Rollback: deletar contrato (cascade deleta agendamento e adicionais)
-          await supabase.from('contratos').delete().eq('id', contratoId);
-          throw new Error(`Erro ao atualizar slot: ${slotUpdateError.message}`);
+          if (slotUpdateError) {
+            // Rollback: deletar contrato (cascade deleta agendamento e adicionais)
+            await supabase.from('contratos').delete().eq('id', contratoId);
+            throw new Error(`Erro ao atualizar vaga: ${slotUpdateError.message}`);
+          }
         }
 
         // 5. Registrar histórico de criação do contrato
