@@ -55,7 +55,7 @@ const formularioSchema = z.object({
   rg: z.string().optional(),
   orgaoExpedicao: z.string().optional(),
   dataNascimento: z.string().optional(),
-  telefone: z.string().min(1, 'Telefone é obrigatório'),
+  telefone: z.string().optional(),
   celular: z.string().min(1, 'Celular é obrigatório'),
   email: z.string().email('Email inválido'),
 
@@ -85,6 +85,10 @@ const formularioSchema = z.object({
   adicionaisContratados: z.array(z.string()).optional(),
   diaVencimento: z.string().min(1, 'Dia de vencimento é obrigatório'),
   observacao: z.string().optional(),
+  
+  // Taxa de instalação
+  taxaInstalacao: z.enum(['gratis', '150', '100', 'outro'], { required_error: 'Taxa de instalação é obrigatória' }),
+  taxaInstalacaoOutro: z.string().optional(),
 
   dataAgendamento: z.string().optional(),
   slotAgendamento: z.number().optional(),
@@ -92,6 +96,25 @@ const formularioSchema = z.object({
   // Campo interno para controlar se agendamento é obrigatório (não enviado ao backend)
   _agendamentoObrigatorio: z.boolean().optional(),
 }).superRefine((data, ctx) => {
+  // Validação para taxa de instalação "outro"
+  if (data.taxaInstalacao === 'outro') {
+    if (!data.taxaInstalacaoOutro || data.taxaInstalacaoOutro.trim() === '') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Informe o valor da taxa de instalação',
+        path: ['taxaInstalacaoOutro']
+      });
+    } else {
+      const valor = parseFloat(data.taxaInstalacaoOutro);
+      if (isNaN(valor) || valor < 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Informe um valor numérico válido',
+          path: ['taxaInstalacaoOutro']
+        });
+      }
+    }
+  }
   // Validação condicional para Pessoa Física
   if (data.tipoCliente === 'F') {
     if (!data.cpf || data.cpf.trim() === '') {
@@ -375,6 +398,8 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
   const planoSelecionado = form.watch('planoContratado');
   const adicionaisSelecionados = form.watch('adicionaisContratados');
   const diaVencimento = form.watch('diaVencimento');
+  const taxaInstalacao = form.watch('taxaInstalacao');
+  const taxaInstalacaoOutro = form.watch('taxaInstalacaoOutro');
 
   // Verificar se algum adicional selecionado requer agendamento
   const algumAdicionalRequerAgenda = useMemo(() => {
@@ -480,12 +505,24 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
     setIsSubmitting(true);
     
     try {
+      // Calcular valor da taxa de instalação
+      const calcularTaxaInstalacao = (): number => {
+        switch (data.taxaInstalacao) {
+          case 'gratis': return 0;
+          case '150': return 150;
+          case '100': return 100;
+          case 'outro': return parseFloat(data.taxaInstalacaoOutro || '0');
+          default: return 0;
+        }
+      };
+
       // 1. Criar contrato no Supabase
       console.log('Criando contrato via manage-contracts...');
       const { data: contractResult, error: contractError } = await supabase.functions.invoke('manage-contracts', {
         body: {
           action: 'createContract',
-          ...data
+          ...data,
+          taxaInstalacao: calcularTaxaInstalacao()
         }
       });
 
@@ -794,7 +831,7 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
                 name="telefone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Telefone</FormLabel>
+                    <FormLabel>Telefone (Opcional)</FormLabel>
                     <FormControl>
                       <Input placeholder="(11) 1234-5678" {...field} />
                     </FormControl>
@@ -1353,6 +1390,63 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
               
               <FormField
                 control={form.control}
+                name="taxaInstalacao"
+                render={({ field }) => (
+                  <FormItem className="md:col-span-2">
+                    <FormLabel>Taxa de Instalação</FormLabel>
+                    <FormControl>
+                      <RadioGroup
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        className="flex flex-wrap gap-4"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="gratis" id="taxa-gratis" />
+                          <Label htmlFor="taxa-gratis">GRÁTIS (R$ 0,00)</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="150" id="taxa-150" />
+                          <Label htmlFor="taxa-150">R$ 150,00</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="100" id="taxa-100" />
+                          <Label htmlFor="taxa-100">R$ 100,00</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="outro" id="taxa-outro" />
+                          <Label htmlFor="taxa-outro">Outro</Label>
+                        </div>
+                      </RadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {taxaInstalacao === 'outro' && (
+                <FormField
+                  control={form.control}
+                  name="taxaInstalacaoOutro"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Valor da Taxa (R$)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          step="0.01" 
+                          min="0"
+                          placeholder="0,00" 
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+              
+              <FormField
+                control={form.control}
                 name="observacao"
                 render={({ field }) => (
                   <FormItem className="md:col-span-2">
@@ -1410,6 +1504,18 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
                 <p className="text-sm text-muted-foreground text-right">
                   Pagando até o dia do vencimento
                 </p>
+
+                {taxaInstalacao && (
+                  <div className="flex justify-between items-center pt-2 border-t border-border">
+                    <p className="text-sm text-muted-foreground">Taxa de Instalação</p>
+                    <p className="font-medium">
+                      {taxaInstalacao === 'gratis' && 'GRÁTIS'}
+                      {taxaInstalacao === '150' && 'R$ 150,00'}
+                      {taxaInstalacao === '100' && 'R$ 100,00'}
+                      {taxaInstalacao === 'outro' && taxaInstalacaoOutro && `R$ ${parseFloat(taxaInstalacaoOutro).toFixed(2)}`}
+                    </p>
+                  </div>
+                )}
                 
                 {diaVencimento && (
                   <div className="flex justify-between items-center pt-2 border-t border-border">

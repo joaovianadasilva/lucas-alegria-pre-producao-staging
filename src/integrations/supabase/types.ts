@@ -400,7 +400,8 @@ export type Database = {
           rg: string | null
           status: string | null
           status_contrato: string | null
-          telefone: string
+          taxa_instalacao: number | null
+          telefone: string | null
           tipo_cliente: string
           tipo_venda: string | null
           updated_at: string | null
@@ -453,7 +454,8 @@ export type Database = {
           rg?: string | null
           status?: string | null
           status_contrato?: string | null
-          telefone: string
+          taxa_instalacao?: number | null
+          telefone?: string | null
           tipo_cliente: string
           tipo_venda?: string | null
           updated_at?: string | null
@@ -506,7 +508,8 @@ export type Database = {
           rg?: string | null
           status?: string | null
           status_contrato?: string | null
-          telefone?: string
+          taxa_instalacao?: number | null
+          telefone?: string | null
           tipo_cliente?: string
           tipo_venda?: string | null
           updated_at?: string | null
