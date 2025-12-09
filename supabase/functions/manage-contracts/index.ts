@@ -30,7 +30,8 @@ serve(async (req) => {
           instalacaoComplemento, instalacaoCep, instalacaoCidade, instalacaoUf,
           cnpj, razaoSocial, inscricaoEstadual,
           planoContratado, adicionaisContratados, diaVencimento, observacao,
-          dataAgendamento, slotAgendamento, usuarioId
+          dataAgendamento, slotAgendamento, usuarioId,
+          taxaInstalacao
         } = requestBody;
 
         // Validar que existe plano OU adicionais
@@ -171,6 +172,7 @@ serve(async (req) => {
             valor_total: valorTotal,
             dia_vencimento: diaVencimento,
             observacao,
+            taxa_instalacao: taxaInstalacao || 0,
             status: 'pendente'
           })
           .select()
