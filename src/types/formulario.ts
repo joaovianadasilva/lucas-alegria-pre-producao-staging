@@ -61,5 +61,5 @@ export const UFS = [
 ];
 
 export const DIAS_VENCIMENTO = [
-  '05', '10', '15', '20', '25'
+  '05', '07', '10', '12', '20'
 ];
