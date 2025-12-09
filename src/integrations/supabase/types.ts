@@ -327,9 +327,16 @@ export type Database = {
           celular: string
           cnpj: string | null
           codigo_cliente: string | null
+          codigo_contrato: string | null
           cpf: string | null
           created_at: string | null
+          data_ativacao: string | null
+          data_cancelamento: string | null
           data_nascimento: string | null
+          data_pgto_primeira_mensalidade: string | null
+          data_pgto_segunda_mensalidade: string | null
+          data_pgto_terceira_mensalidade: string | null
+          data_reembolso: string | null
           dia_vencimento: string
           email: string
           id: string
@@ -342,6 +349,7 @@ export type Database = {
           instalacao_numero: string | null
           instalacao_rua: string | null
           instalacao_uf: string | null
+          motivo_cancelamento: string | null
           nome_completo: string
           observacao: string | null
           orgao_expedicao: string | null
@@ -350,6 +358,7 @@ export type Database = {
           plano_nome: string
           plano_valor: number
           razao_social: string | null
+          reembolsavel: boolean | null
           representante_vendas: string | null
           residencia_bairro: string
           residencia_cep: string
@@ -360,6 +369,7 @@ export type Database = {
           residencia_uf: string
           rg: string | null
           status: string | null
+          status_contrato: string | null
           telefone: string
           tipo_cliente: string
           tipo_venda: string | null
@@ -370,9 +380,16 @@ export type Database = {
           celular: string
           cnpj?: string | null
           codigo_cliente?: string | null
+          codigo_contrato?: string | null
           cpf?: string | null
           created_at?: string | null
+          data_ativacao?: string | null
+          data_cancelamento?: string | null
           data_nascimento?: string | null
+          data_pgto_primeira_mensalidade?: string | null
+          data_pgto_segunda_mensalidade?: string | null
+          data_pgto_terceira_mensalidade?: string | null
+          data_reembolso?: string | null
           dia_vencimento: string
           email: string
           id?: string
@@ -385,6 +402,7 @@ export type Database = {
           instalacao_numero?: string | null
           instalacao_rua?: string | null
           instalacao_uf?: string | null
+          motivo_cancelamento?: string | null
           nome_completo: string
           observacao?: string | null
           orgao_expedicao?: string | null
@@ -393,6 +411,7 @@ export type Database = {
           plano_nome: string
           plano_valor: number
           razao_social?: string | null
+          reembolsavel?: boolean | null
           representante_vendas?: string | null
           residencia_bairro: string
           residencia_cep: string
@@ -403,6 +422,7 @@ export type Database = {
           residencia_uf: string
           rg?: string | null
           status?: string | null
+          status_contrato?: string | null
           telefone: string
           tipo_cliente: string
           tipo_venda?: string | null
@@ -413,9 +433,16 @@ export type Database = {
           celular?: string
           cnpj?: string | null
           codigo_cliente?: string | null
+          codigo_contrato?: string | null
           cpf?: string | null
           created_at?: string | null
+          data_ativacao?: string | null
+          data_cancelamento?: string | null
           data_nascimento?: string | null
+          data_pgto_primeira_mensalidade?: string | null
+          data_pgto_segunda_mensalidade?: string | null
+          data_pgto_terceira_mensalidade?: string | null
+          data_reembolso?: string | null
           dia_vencimento?: string
           email?: string
           id?: string
@@ -428,6 +455,7 @@ export type Database = {
           instalacao_numero?: string | null
           instalacao_rua?: string | null
           instalacao_uf?: string | null
+          motivo_cancelamento?: string | null
           nome_completo?: string
           observacao?: string | null
           orgao_expedicao?: string | null
@@ -436,6 +464,7 @@ export type Database = {
           plano_nome?: string
           plano_valor?: number
           razao_social?: string | null
+          reembolsavel?: boolean | null
           representante_vendas?: string | null
           residencia_bairro?: string
           residencia_cep?: string
@@ -446,6 +475,7 @@ export type Database = {
           residencia_uf?: string
           rg?: string | null
           status?: string | null
+          status_contrato?: string | null
           telefone?: string
           tipo_cliente?: string
           tipo_venda?: string | null
