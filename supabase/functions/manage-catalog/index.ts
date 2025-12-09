@@ -505,6 +505,95 @@ serve(async (req) => {
         );
       }
 
+      // Tipos de Agendamento
+      case 'listTiposAgendamento': {
+        const { data, error } = await supabase
+          .from('catalogo_tipos_agendamento')
+          .select('id, codigo, nome')
+          .eq('ativo', true)
+          .order('nome', { ascending: true });
+        
+        if (error) throw error;
+        
+        return new Response(
+          JSON.stringify({ success: true, tipos: data }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'addTipoAgendamento': {
+        if (!codigo || !nome) {
+          throw new Error('Código e nome são obrigatórios');
+        }
+
+        const { data: existing } = await supabase
+          .from('catalogo_tipos_agendamento')
+          .select('codigo')
+          .eq('codigo', codigo)
+          .single();
+
+        if (existing) {
+          throw new Error('Código já existe');
+        }
+
+        const { data, error } = await supabase
+          .from('catalogo_tipos_agendamento')
+          .insert({ codigo, nome, ativo: true })
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        return new Response(
+          JSON.stringify({ success: true, tipo: data }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'updateTipoAgendamento': {
+        const tipoId = body.tipoId;
+        if (!tipoId) {
+          throw new Error('ID do tipo é obrigatório');
+        }
+
+        const updateData: any = {};
+        if (codigo !== undefined) updateData.codigo = codigo;
+        if (nome !== undefined) updateData.nome = nome;
+
+        const { data, error } = await supabase
+          .from('catalogo_tipos_agendamento')
+          .update(updateData)
+          .eq('id', tipoId)
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        return new Response(
+          JSON.stringify({ success: true, tipo: data }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'removeTipoAgendamento': {
+        const tipoId = body.tipoId || id;
+        if (!tipoId) {
+          throw new Error('ID do tipo é obrigatório');
+        }
+
+        const { error } = await supabase
+          .from('catalogo_tipos_agendamento')
+          .update({ ativo: false })
+          .eq('id', tipoId);
+
+        if (error) throw error;
+
+        return new Response(
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       default:
         throw new Error('Ação inválida');
     }
