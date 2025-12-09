@@ -44,14 +44,6 @@ const CONFIRMACAO_LABELS = {
   'cancelado': 'Cancelado',
 };
 
-const TIPO_LABELS = {
-  contrato: 'Contrato',
-  instalacao: 'Instalação',
-  manutencao: 'Manutenção',
-  visita_tecnica: 'Visita Técnica',
-  suporte: 'Suporte',
-};
-
 const REDE_LABELS = {
   'lado_a': 'Lado A',
   'lado_b': 'Lado B',
@@ -85,6 +77,8 @@ export default function GerenciarAgendamentos() {
   const [novoRepresentante, setNovoRepresentante] = useState('');
   const [novaRede, setNovaRede] = useState('');
   const [representantesOptions, setRepresentantesOptions] = useState<{id: string, nome: string}[]>([]);
+  const [tiposAgendamento, setTiposAgendamento] = useState<{codigo: string, nome: string}[]>([]);
+  const [tiposMap, setTiposMap] = useState<Record<string, string>>({});
 
   // Estados para reagendamento
   const [reagendarDialog, setReagendarDialog] = useState(false);
@@ -98,21 +92,37 @@ export default function GerenciarAgendamentos() {
     reagendamentos: any[];
   }>({ edicoes: [], reagendamentos: [] });
 
-  // Carregar representantes de vendas
+  // Carregar representantes e tipos de agendamento
   React.useEffect(() => {
-    const loadRepresentantes = async () => {
-      const { data, error } = await supabase
+    const loadData = async () => {
+      // Carregar representantes
+      const { data: reps, error: repsError } = await supabase
         .from('catalogo_representantes')
         .select('id, nome')
         .eq('ativo', true)
         .order('nome');
       
-      if (data && !error) {
-        setRepresentantesOptions(data);
+      if (reps && !repsError) {
+        setRepresentantesOptions(reps);
+      }
+
+      // Carregar tipos de agendamento
+      const { data: tiposData, error: tiposError } = await supabase.functions.invoke('manage-catalog', {
+        body: { action: 'listTiposAgendamento' }
+      });
+      
+      if (tiposData?.success && tiposData.tipos) {
+        setTiposAgendamento(tiposData.tipos);
+        // Criar mapa codigo -> nome para exibição na tabela
+        const map: Record<string, string> = { contrato: 'Contrato' }; // Manter contrato como legado
+        tiposData.tipos.forEach((t: { codigo: string; nome: string }) => {
+          map[t.codigo] = t.nome;
+        });
+        setTiposMap(map);
       }
     };
     
-    loadRepresentantes();
+    loadData();
   }, []);
 
   const { data: agendamentosData, isLoading, refetch } = useQuery({
@@ -182,7 +192,7 @@ export default function GerenciarAgendamentos() {
     if (valor === 'null') return 'Não definido';
     
     if (campo === 'tipo') {
-      return TIPO_LABELS[valor as keyof typeof TIPO_LABELS] || valor;
+      return tiposMap[valor] || valor;
     }
     if (campo === 'status') {
       return STATUS_LABELS[valor as keyof typeof STATUS_LABELS] || valor;
@@ -476,10 +486,11 @@ export default function GerenciarAgendamentos() {
                   <SelectContent>
                     <SelectItem value="all">Todos</SelectItem>
                     <SelectItem value="contrato">Contrato</SelectItem>
-                    <SelectItem value="instalacao">Instalação</SelectItem>
-                    <SelectItem value="manutencao">Manutenção</SelectItem>
-                    <SelectItem value="visita_tecnica">Visita Técnica</SelectItem>
-                    <SelectItem value="suporte">Suporte</SelectItem>
+                    {tiposAgendamento.map((t) => (
+                      <SelectItem key={t.codigo} value={t.codigo}>
+                        {t.nome}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -546,7 +557,7 @@ export default function GerenciarAgendamentos() {
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline">
-                            {TIPO_LABELS[agendamento.tipo as keyof typeof TIPO_LABELS]}
+                            {tiposMap[agendamento.tipo] || agendamento.tipo}
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -686,10 +697,11 @@ export default function GerenciarAgendamentos() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="instalacao">Instalação</SelectItem>
-                    <SelectItem value="manutencao">Manutenção</SelectItem>
-                    <SelectItem value="visita_tecnica">Visita Técnica</SelectItem>
-                    <SelectItem value="suporte">Suporte</SelectItem>
+                    {tiposAgendamento.map((t) => (
+                      <SelectItem key={t.codigo} value={t.codigo}>
+                        {t.nome}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

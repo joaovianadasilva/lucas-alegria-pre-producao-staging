@@ -12,13 +12,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft } from 'lucide-react';
 
-const TIPOS_AGENDAMENTO = [
-  { value: 'instalacao', label: 'Instalação' },
-  { value: 'manutencao', label: 'Manutenção' },
-  { value: 'visita_tecnica', label: 'Visita Técnica' },
-  { value: 'suporte', label: 'Suporte' },
-];
-
 export default function NovoAgendamento() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -36,21 +29,32 @@ export default function NovoAgendamento() {
   const [origem, setOrigem] = useState('');
   const [representanteVendas, setRepresentanteVendas] = useState('');
   const [representantesOptions, setRepresentantesOptions] = useState<{id: string, nome: string}[]>([]);
+  const [tiposAgendamento, setTiposAgendamento] = useState<{codigo: string, nome: string}[]>([]);
 
   React.useEffect(() => {
-    const loadRepresentantes = async () => {
-      const { data, error } = await supabase
+    const loadData = async () => {
+      // Carregar representantes
+      const { data: reps, error: repsError } = await supabase
         .from('catalogo_representantes')
         .select('id, nome')
         .eq('ativo', true)
         .order('nome');
       
-      if (data && !error) {
-        setRepresentantesOptions(data);
+      if (reps && !repsError) {
+        setRepresentantesOptions(reps);
+      }
+
+      // Carregar tipos de agendamento
+      const { data: tiposData, error: tiposError } = await supabase.functions.invoke('manage-catalog', {
+        body: { action: 'listTiposAgendamento' }
+      });
+      
+      if (tiposData?.success && tiposData.tipos) {
+        setTiposAgendamento(tiposData.tipos);
       }
     };
     
-    loadRepresentantes();
+    loadData();
   }, []);
 
   const handleSlotSelect = (date: string, slot: number) => {
@@ -144,9 +148,9 @@ export default function NovoAgendamento() {
                     <SelectValue placeholder="Selecione o tipo" />
                   </SelectTrigger>
                   <SelectContent>
-                    {TIPOS_AGENDAMENTO.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>
-                        {t.label}
+                    {tiposAgendamento.map((t) => (
+                      <SelectItem key={t.codigo} value={t.codigo}>
+                        {t.nome}
                       </SelectItem>
                     ))}
                   </SelectContent>
