@@ -413,6 +413,7 @@ serve(async (req) => {
       }
 
       case 'createAddOn': {
+        const { requer_agendamento } = body;
         if (!codigo || !nome || valor === undefined) {
           throw new Error('Código, nome e valor são obrigatórios');
         }
@@ -434,7 +435,8 @@ serve(async (req) => {
             codigo,
             nome,
             valor: parseFloat(valor),
-            ativo: true
+            ativo: true,
+            requer_agendamento: requer_agendamento || false
           })
           .select()
           .single();
@@ -448,6 +450,7 @@ serve(async (req) => {
       }
 
       case 'updateAddOn': {
+        const { requer_agendamento } = body;
         if (!addOnId) {
           throw new Error('ID do adicional é obrigatório');
         }
@@ -456,6 +459,7 @@ serve(async (req) => {
         if (codigo !== undefined) updateData.codigo = codigo;
         if (nome !== undefined) updateData.nome = nome;
         if (valor !== undefined) updateData.valor = parseFloat(valor);
+        if (requer_agendamento !== undefined) updateData.requer_agendamento = requer_agendamento;
 
         const { data, error } = await supabase
           .from('catalogo_adicionais')
