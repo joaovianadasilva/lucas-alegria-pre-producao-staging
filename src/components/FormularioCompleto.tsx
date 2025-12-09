@@ -1435,6 +1435,7 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
                           type="number" 
                           step="0.01" 
                           min="0"
+                          inputMode="decimal"
                           placeholder="0,00" 
                           {...field} 
                         />
