@@ -76,6 +76,8 @@ export default function GerenciarAgendamentos() {
   const [novaOrigem, setNovaOrigem] = useState('');
   const [novoRepresentante, setNovoRepresentante] = useState('');
   const [novaRede, setNovaRede] = useState('');
+  const [novaObservacao, setNovaObservacao] = useState('');
+  const [novoCodigoCliente, setNovoCodigoCliente] = useState('');
   const [representantesOptions, setRepresentantesOptions] = useState<{id: string, nome: string}[]>([]);
   const [tiposAgendamento, setTiposAgendamento] = useState<{codigo: string, nome: string}[]>([]);
   const [tiposMap, setTiposMap] = useState<Record<string, string>>({});
@@ -183,7 +185,9 @@ export default function GerenciarAgendamentos() {
       'origem': 'Origem',
       'representante_vendas': 'Representante de Vendas',
       'rede': 'Rede',
-      'reagendamento': 'Data/Horário'
+      'reagendamento': 'Data/Horário',
+      'observacao': 'Observações',
+      'codigo_cliente': 'ID do Cliente'
     };
     return nomes[campo] || campo;
   };
@@ -295,6 +299,8 @@ export default function GerenciarAgendamentos() {
     setNovaOrigem(agendamento.origem || '');
     setNovoRepresentante(agendamento.representante_vendas || '');
     setNovaRede(agendamento.rede || '');
+    setNovaObservacao(agendamento.observacao || '');
+    setNovoCodigoCliente(agendamento.codigo_cliente || '');
     
     // Buscar histórico completo
     fetchHistoricoCompleto(agendamento.id);
@@ -321,6 +327,8 @@ export default function GerenciarAgendamentos() {
             origem: novaOrigem || null,
             representante_vendas: novoRepresentante || null,
             rede: novaRede || null,
+            observacao: novaObservacao || null,
+            codigo_cliente: novoCodigoCliente || null,
           },
           usuarioId: user?.id
         }
@@ -790,6 +798,27 @@ export default function GerenciarAgendamentos() {
                     <SelectItem value="lado_c">Lado C</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="border-t pt-4 mt-4">
+                <div className="space-y-2">
+                  <Label>ID do Cliente</Label>
+                  <Input
+                    placeholder="Código do cliente no sistema"
+                    value={novoCodigoCliente}
+                    onChange={(e) => setNovoCodigoCliente(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Observações</Label>
+                <Textarea
+                  placeholder="Observações sobre o agendamento..."
+                  value={novaObservacao}
+                  onChange={(e) => setNovaObservacao(e.target.value)}
+                  rows={4}
+                />
               </div>
             </TabsContent>
             
