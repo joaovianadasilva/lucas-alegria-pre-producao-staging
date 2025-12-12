@@ -44,16 +44,16 @@ const CONFIRMACAO_LABELS = {
   'cancelado': 'Cancelado',
 };
 
-const REDE_LABELS = {
-  'lado_a': 'Lado A',
-  'lado_b': 'Lado B',
-  'lado_c': 'Lado C',
-};
+// Gera opções de rede de A-Z
+const REDE_OPTIONS = Array.from({ length: 26 }, (_, i) => ({
+  value: `lado_${String.fromCharCode(97 + i)}`,
+  label: String.fromCharCode(65 + i)
+}));
 
-const REDE_COLORS = {
-  'lado_a': 'bg-purple-500',
-  'lado_b': 'bg-indigo-500',
-  'lado_c': 'bg-cyan-500',
+// Extrai a letra do lado (lado_a -> A)
+const getRedeLetra = (rede: string | null) => {
+  if (!rede) return null;
+  return rede.replace('lado_', '').toUpperCase();
 };
 
 export default function GerenciarAgendamentos() {
@@ -205,7 +205,7 @@ export default function GerenciarAgendamentos() {
       return CONFIRMACAO_LABELS[valor as keyof typeof CONFIRMACAO_LABELS] || valor;
     }
     if (campo === 'rede') {
-      return REDE_LABELS[valor as keyof typeof REDE_LABELS] || valor;
+      return getRedeLetra(valor) || valor;
     }
     
     return valor;
@@ -595,9 +595,7 @@ export default function GerenciarAgendamentos() {
                         </TableCell>
                         <TableCell>
                           {agendamento.rede ? (
-                            <Badge className={REDE_COLORS[agendamento.rede as keyof typeof REDE_COLORS]}>
-                              {REDE_LABELS[agendamento.rede as keyof typeof REDE_LABELS]}
-                            </Badge>
+                            <span className="font-medium">{getRedeLetra(agendamento.rede)}</span>
                           ) : (
                             <span className="text-muted-foreground text-sm">-</span>
                           )}
@@ -799,9 +797,11 @@ export default function GerenciarAgendamentos() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Não definida</SelectItem>
-                    <SelectItem value="lado_a">Lado A</SelectItem>
-                    <SelectItem value="lado_b">Lado B</SelectItem>
-                    <SelectItem value="lado_c">Lado C</SelectItem>
+                    {REDE_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
