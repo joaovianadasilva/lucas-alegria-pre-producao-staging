@@ -214,7 +214,7 @@ serve(async (req) => {
         // Buscar dados atuais ANTES do update para comparar
         const { data: dadosAtuais, error: fetchError } = await supabase
           .from('agendamentos')
-          .select('tipo, status, confirmacao, tecnico_responsavel_id, origem, representante_vendas, rede')
+          .select('tipo, status, confirmacao, tecnico_responsavel_id, origem, representante_vendas, rede, observacao, codigo_cliente')
           .eq('id', agendamentoId)
           .single();
 
@@ -238,7 +238,7 @@ serve(async (req) => {
         }
 
         // Registrar histórico para cada campo alterado
-        const camposParaVerificar = ['tipo', 'status', 'confirmacao', 'tecnico_responsavel_id', 'origem', 'representante_vendas', 'rede'];
+        const camposParaVerificar = ['tipo', 'status', 'confirmacao', 'tecnico_responsavel_id', 'origem', 'representante_vendas', 'rede', 'observacao', 'codigo_cliente'];
         
         for (const campo of camposParaVerificar) {
           const valorAntigo = (dadosAtuais as any)[campo];
