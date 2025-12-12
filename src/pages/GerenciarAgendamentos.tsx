@@ -544,12 +544,12 @@ export default function GerenciarAgendamentos() {
                       <TableHead>ID Cliente</TableHead>
                       <TableHead>Cliente</TableHead>
                       <TableHead>Contato</TableHead>
-                      <TableHead>Origem</TableHead>
                       <TableHead>Representante</TableHead>
                       <TableHead>Confirmação</TableHead>
                       <TableHead>Rede</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Técnico</TableHead>
+                      <TableHead>Observações</TableHead>
                       <TableHead>Ações</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -569,8 +569,8 @@ export default function GerenciarAgendamentos() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {agendamento.contrato?.codigo_cliente || (
-                            <span className="text-muted-foreground text-sm">Não vinculado</span>
+                          {agendamento.codigo_cliente || agendamento.contrato?.codigo_cliente || (
+                            <span className="text-muted-foreground text-sm">-</span>
                           )}
                         </TableCell>
                         <TableCell>{agendamento.nome_cliente}</TableCell>
@@ -581,11 +581,6 @@ export default function GerenciarAgendamentos() {
                               <br />
                               {agendamento.telefone_cliente}
                             </>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {agendamento.origem || (
-                            <span className="text-muted-foreground text-sm">-</span>
                           )}
                         </TableCell>
                         <TableCell>
@@ -627,6 +622,17 @@ export default function GerenciarAgendamentos() {
                             </div>
                           ) : (
                             <span className="text-muted-foreground text-sm">Não atribuído</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="max-w-[200px]">
+                          {agendamento.observacao ? (
+                            <span className="truncate block text-sm" title={agendamento.observacao}>
+                              {agendamento.observacao.length > 40 
+                                ? `${agendamento.observacao.substring(0, 40)}...` 
+                                : agendamento.observacao}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">-</span>
                           )}
                         </TableCell>
                         <TableCell>
