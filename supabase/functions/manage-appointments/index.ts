@@ -197,9 +197,19 @@ serve(async (req) => {
           throw new Error('ID do agendamento é obrigatório');
         }
 
-        // Validar tipo se presente
+        // Validar tipo se presente - buscar do catálogo
         if (updates.tipo) {
-          const tiposValidos = ['instalacao', 'manutencao', 'visita_tecnica', 'suporte'];
+          const { data: tiposData, error: tiposError } = await supabase
+            .from('catalogo_tipos_agendamento')
+            .select('codigo')
+            .eq('ativo', true);
+
+          if (tiposError) {
+            console.error('Error fetching tipos:', tiposError);
+            throw new Error('Erro ao validar tipo de agendamento');
+          }
+
+          const tiposValidos = tiposData?.map(t => t.codigo) || [];
           if (!tiposValidos.includes(updates.tipo)) {
             throw new Error('Tipo de agendamento inválido');
           }
