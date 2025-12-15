@@ -393,21 +393,32 @@ serve(async (req) => {
           }
         }
 
-        // Liberar slot
-        const { error: slotError } = await supabase
+        // Liberar slot - buscar pelo agendamento_id para garantir precisão
+        const { data: slotToRelease, error: slotFetchError } = await supabase
           .from('slots')
-          .update({ 
-            status: 'disponivel',
-            agendamento_id: null 
-          })
-          .eq('data_disponivel', agendamento.data_agendamento)
-          .eq('slot_numero', agendamento.slot_numero);
+          .select('id, data_disponivel, slot_numero')
+          .eq('agendamento_id', agendamentoId)
+          .single();
 
-        if (slotError) {
-          console.error('Erro ao liberar slot:', slotError);
+        if (slotFetchError) {
+          console.log('Nenhum slot vinculado encontrado para este agendamento:', slotFetchError.message);
+        } else if (slotToRelease) {
+          const { error: slotUpdateError } = await supabase
+            .from('slots')
+            .update({ 
+              status: 'disponivel',
+              agendamento_id: null 
+            })
+            .eq('id', slotToRelease.id);
+
+          if (slotUpdateError) {
+            console.error('Erro ao liberar slot:', slotUpdateError);
+          } else {
+            console.log(`Slot liberado com sucesso: data=${slotToRelease.data_disponivel}, numero=${slotToRelease.slot_numero}`);
+          }
         }
 
-        console.log('Appointment cancelled and slot released');
+        console.log('Appointment cancelled');
 
         return new Response(
           JSON.stringify({ success: true }),
