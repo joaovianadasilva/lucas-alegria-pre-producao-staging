@@ -70,7 +70,7 @@ export function SlotSelectorForDate({ selectedDate, selectedSlot, onSlotSelect }
   return (
     <div className="space-y-2">
       <Label>Selecione a vaga</Label>
-      <div className="max-h-[300px] overflow-y-auto pr-1">
+      <div className="max-h-[300px] overflow-y-scroll pr-1">
         <div className="grid grid-cols-2 gap-2">
           {Array.from({ length: maxSlot }, (_, i) => i + 1).map((slotNum) => {
             const status = getSlotStatus(slotNum);
