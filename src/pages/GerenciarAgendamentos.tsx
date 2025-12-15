@@ -1024,7 +1024,7 @@ export default function GerenciarAgendamentos() {
 
       {/* Dialog de Reagendamento */}
       <Dialog open={reagendarDialog} onOpenChange={setReagendarDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Reagendar Agendamento</DialogTitle>
             <DialogDescription>

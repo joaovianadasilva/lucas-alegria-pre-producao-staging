@@ -70,38 +70,40 @@ export function SlotSelectorForDate({ selectedDate, selectedSlot, onSlotSelect }
   return (
     <div className="space-y-2">
       <Label>Selecione a vaga</Label>
-      <div className="grid grid-cols-2 gap-2">
-        {Array.from({ length: maxSlot }, (_, i) => i + 1).map((slotNum) => {
-          const status = getSlotStatus(slotNum);
-          const isSelected = selectedSlot === slotNum;
-          const isDisabled = status !== 'available';
+      <div className="max-h-[300px] overflow-y-auto pr-1">
+        <div className="grid grid-cols-2 gap-2">
+          {Array.from({ length: maxSlot }, (_, i) => i + 1).map((slotNum) => {
+            const status = getSlotStatus(slotNum);
+            const isSelected = selectedSlot === slotNum;
+            const isDisabled = status !== 'available';
 
-          return (
-            <Button
-              key={slotNum}
-              variant={isSelected ? 'default' : 'outline'}
-              disabled={isDisabled}
-              onClick={() => onSlotSelect(slotNum)}
-              className={`w-full ${
-                status === 'occupied' 
-                  ? 'opacity-50 cursor-not-allowed' 
-                  : status === 'blocked'
-                  ? 'opacity-30 cursor-not-allowed'
-                  : ''
-              }`}
-            >
-              <div className="text-center">
-                <div className="font-semibold">Vaga {slotNum}</div>
-                {status === 'occupied' && (
-                  <div className="text-xs text-muted-foreground">Ocupado</div>
-                )}
-                {status === 'blocked' && (
-                  <div className="text-xs text-muted-foreground">Bloqueado</div>
-                )}
-              </div>
-            </Button>
-          );
-        })}
+            return (
+              <Button
+                key={slotNum}
+                variant={isSelected ? 'default' : 'outline'}
+                disabled={isDisabled}
+                onClick={() => onSlotSelect(slotNum)}
+                className={`w-full ${
+                  status === 'occupied' 
+                    ? 'opacity-50 cursor-not-allowed' 
+                    : status === 'blocked'
+                    ? 'opacity-30 cursor-not-allowed'
+                    : ''
+                }`}
+              >
+                <div className="text-center">
+                  <div className="font-semibold">Vaga {slotNum}</div>
+                  {status === 'occupied' && (
+                    <div className="text-xs text-muted-foreground">Ocupado</div>
+                  )}
+                  {status === 'blocked' && (
+                    <div className="text-xs text-muted-foreground">Bloqueado</div>
+                  )}
+                </div>
+              </Button>
+            );
+          })}
+        </div>
       </div>
       <div className="text-xs text-muted-foreground mt-2">
         Selecione uma vaga disponível para o reagendamento
