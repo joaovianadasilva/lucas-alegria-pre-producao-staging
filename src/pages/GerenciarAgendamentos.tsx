@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -63,9 +63,28 @@ export default function GerenciarAgendamentos() {
 
   const [filtroStatus, setFiltroStatus] = useState('all');
   const [filtroTipo, setFiltroTipo] = useState('all');
+  const [filtroConfirmacao, setFiltroConfirmacao] = useState('all');
   const [filtroTecnico, setFiltroTecnico] = useState('all');
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
+  
+  // Paginação
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 20;
+  
+  // Verificar se filtros foram aplicados
+  const filtersApplied = 
+    filtroStatus !== 'all' || 
+    filtroTipo !== 'all' || 
+    filtroConfirmacao !== 'all' ||
+    filtroTecnico !== 'all' ||
+    dataInicio !== '' || 
+    dataFim !== '';
+
+  // Resetar página quando filtros mudam
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filtroStatus, filtroTipo, filtroConfirmacao, filtroTecnico, dataInicio, dataFim]);
 
   const [editDialog, setEditDialog] = useState(false);
   const [selectedAgendamento, setSelectedAgendamento] = useState<any>(null);
@@ -128,13 +147,16 @@ export default function GerenciarAgendamentos() {
   }, []);
 
   const { data: agendamentosData, isLoading, refetch } = useQuery({
-    queryKey: ['agendamentos', filtroStatus, filtroTipo, filtroTecnico, dataInicio, dataFim],
+    queryKey: ['agendamentos', filtroStatus, filtroTipo, filtroConfirmacao, filtroTecnico, dataInicio, dataFim, currentPage],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('manage-appointments', {
         body: {
           action: 'listAppointments',
+          limit: ITEMS_PER_PAGE,
+          offset: (currentPage - 1) * ITEMS_PER_PAGE,
           status: filtroStatus !== 'all' ? filtroStatus : undefined,
           tipo: filtroTipo !== 'all' ? filtroTipo : undefined,
+          confirmacao: filtroConfirmacao !== 'all' ? filtroConfirmacao : undefined,
           tecnicoId: filtroTecnico !== 'all' ? filtroTecnico : undefined,
           dataInicio: dataInicio || undefined,
           dataFim: dataFim || undefined,
@@ -146,6 +168,7 @@ export default function GerenciarAgendamentos() {
 
       return data;
     },
+    enabled: filtersApplied,
   });
 
   // Função para buscar histórico completo
@@ -520,6 +543,21 @@ export default function GerenciarAgendamentos() {
                   onChange={(e) => setDataFim(e.target.value)}
                 />
               </div>
+
+              <div className="space-y-2">
+                <Label>Confirmação</Label>
+                <Select value={filtroConfirmacao} onValueChange={setFiltroConfirmacao}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="confirmado">Confirmado</SelectItem>
+                    <SelectItem value="pre-agendado">Pré-Agendado</SelectItem>
+                    <SelectItem value="cancelado">Cancelado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -528,11 +566,24 @@ export default function GerenciarAgendamentos() {
           <CardHeader>
             <CardTitle>Agendamentos</CardTitle>
             <CardDescription>
-              {agendamentosData?.total || 0} agendamento(s) encontrado(s)
+              {filtersApplied 
+                ? `${agendamentosData?.total || 0} agendamento(s) encontrado(s)`
+                : 'Aplique pelo menos um filtro para visualizar os agendamentos'
+              }
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {isLoading ? (
+            {!filtersApplied ? (
+              <div className="text-center py-12 space-y-4">
+                <Filter className="h-12 w-12 mx-auto text-muted-foreground" />
+                <div>
+                  <h3 className="font-semibold text-lg">Aplique pelo menos um filtro</h3>
+                  <p className="text-muted-foreground">
+                    Selecione status, tipo, confirmação, data ou técnico para visualizar os agendamentos
+                  </p>
+                </div>
+              </div>
+            ) : isLoading ? (
               <div className="text-center py-8">Carregando...</div>
             ) : (
               <div className="overflow-x-auto">
@@ -666,6 +717,36 @@ export default function GerenciarAgendamentos() {
                     ))}
                   </TableBody>
                 </Table>
+                
+                {/* Paginação */}
+                {agendamentosData?.total && agendamentosData.total > 0 && (
+                  <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                    <p className="text-sm text-muted-foreground">
+                      Exibindo {((currentPage - 1) * ITEMS_PER_PAGE) + 1} - {Math.min(currentPage * ITEMS_PER_PAGE, agendamentosData.total)} de {agendamentosData.total}
+                    </p>
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        disabled={currentPage === 1}
+                        onClick={() => setCurrentPage(p => p - 1)}
+                      >
+                        Anterior
+                      </Button>
+                      <span className="flex items-center px-3 text-sm">
+                        Página {currentPage} de {Math.ceil(agendamentosData.total / ITEMS_PER_PAGE)}
+                      </span>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        disabled={currentPage * ITEMS_PER_PAGE >= agendamentosData.total}
+                        onClick={() => setCurrentPage(p => p + 1)}
+                      >
+                        Próxima
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
