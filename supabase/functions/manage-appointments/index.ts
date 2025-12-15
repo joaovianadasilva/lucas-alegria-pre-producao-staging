@@ -149,12 +149,13 @@ serve(async (req) => {
           offset = 0, 
           status, 
           tipo, 
+          confirmacao,
           tecnicoId,
           dataInicio,
           dataFim
         } = requestBody;
 
-        console.log('Listing appointments with filters:', { status, tipo, tecnicoId, dataInicio, dataFim });
+        console.log('Listing appointments with filters:', { status, tipo, confirmacao, tecnicoId, dataInicio, dataFim });
 
         let query = supabase
           .from('agendamentos')
@@ -169,6 +170,7 @@ serve(async (req) => {
 
         if (status) query = query.eq('status', status);
         if (tipo) query = query.eq('tipo', tipo);
+        if (confirmacao) query = query.eq('confirmacao', confirmacao);
         if (tecnicoId) query = query.eq('tecnico_responsavel_id', tecnicoId);
         if (dataInicio) query = query.gte('data_agendamento', dataInicio);
         if (dataFim) query = query.lte('data_agendamento', dataFim);
