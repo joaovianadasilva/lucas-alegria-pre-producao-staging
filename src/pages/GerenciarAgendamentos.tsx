@@ -14,7 +14,8 @@ import { TecnicoSelector } from '@/components/TecnicoSelector';
 import { SlotSelectorForDate } from '@/components/SlotSelectorForDate';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Edit, XCircle, Filter, Calendar, Clock, User } from 'lucide-react';
+import { useTecnicos } from '@/hooks/useTecnicos';
+import { ArrowLeft, Edit, XCircle, Filter, Calendar, Clock, User, Search, X } from 'lucide-react';
 import { formatLocalDate } from '@/lib/dateUtils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -61,30 +62,71 @@ export default function GerenciarAgendamentos() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const [filtroStatus, setFiltroStatus] = useState('all');
-  const [filtroTipo, setFiltroTipo] = useState('all');
-  const [filtroConfirmacao, setFiltroConfirmacao] = useState('all');
-  const [filtroTecnico, setFiltroTecnico] = useState('all');
-  const [dataInicio, setDataInicio] = useState('');
-  const [dataFim, setDataFim] = useState('');
+  // Filtros pendentes (selecionados na UI)
+  const [pendingStatus, setPendingStatus] = useState('all');
+  const [pendingTipo, setPendingTipo] = useState('all');
+  const [pendingConfirmacao, setPendingConfirmacao] = useState('all');
+  const [pendingTecnico, setPendingTecnico] = useState('all');
+  const [pendingDataInicio, setPendingDataInicio] = useState('');
+  const [pendingDataFim, setPendingDataFim] = useState('');
+  
+  // Filtros aplicados (usados na query)
+  const [appliedFilters, setAppliedFilters] = useState({
+    status: 'all',
+    tipo: 'all',
+    confirmacao: 'all',
+    tecnico: 'all',
+    dataInicio: '',
+    dataFim: ''
+  });
   
   // Paginação
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 20;
   
+  // Carregar técnicos
+  const { data: tecnicos = [] } = useTecnicos();
+  
   // Verificar se filtros foram aplicados
   const filtersApplied = 
-    filtroStatus !== 'all' || 
-    filtroTipo !== 'all' || 
-    filtroConfirmacao !== 'all' ||
-    filtroTecnico !== 'all' ||
-    dataInicio !== '' || 
-    dataFim !== '';
+    appliedFilters.status !== 'all' || 
+    appliedFilters.tipo !== 'all' || 
+    appliedFilters.confirmacao !== 'all' ||
+    appliedFilters.tecnico !== 'all' ||
+    appliedFilters.dataInicio !== '' || 
+    appliedFilters.dataFim !== '';
 
-  // Resetar página quando filtros mudam
-  useEffect(() => {
+  // Função para aplicar filtros
+  const handleApplyFilters = () => {
+    setAppliedFilters({
+      status: pendingStatus,
+      tipo: pendingTipo,
+      confirmacao: pendingConfirmacao,
+      tecnico: pendingTecnico,
+      dataInicio: pendingDataInicio,
+      dataFim: pendingDataFim
+    });
     setCurrentPage(1);
-  }, [filtroStatus, filtroTipo, filtroConfirmacao, filtroTecnico, dataInicio, dataFim]);
+  };
+
+  // Função para limpar filtros
+  const handleClearFilters = () => {
+    setPendingStatus('all');
+    setPendingTipo('all');
+    setPendingConfirmacao('all');
+    setPendingTecnico('all');
+    setPendingDataInicio('');
+    setPendingDataFim('');
+    setAppliedFilters({
+      status: 'all',
+      tipo: 'all',
+      confirmacao: 'all',
+      tecnico: 'all',
+      dataInicio: '',
+      dataFim: ''
+    });
+    setCurrentPage(1);
+  };
 
   const [editDialog, setEditDialog] = useState(false);
   const [selectedAgendamento, setSelectedAgendamento] = useState<any>(null);
@@ -147,19 +189,19 @@ export default function GerenciarAgendamentos() {
   }, []);
 
   const { data: agendamentosData, isLoading, refetch } = useQuery({
-    queryKey: ['agendamentos', filtroStatus, filtroTipo, filtroConfirmacao, filtroTecnico, dataInicio, dataFim, currentPage],
+    queryKey: ['agendamentos', appliedFilters, currentPage],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('manage-appointments', {
         body: {
           action: 'listAppointments',
           limit: ITEMS_PER_PAGE,
           offset: (currentPage - 1) * ITEMS_PER_PAGE,
-          status: filtroStatus !== 'all' ? filtroStatus : undefined,
-          tipo: filtroTipo !== 'all' ? filtroTipo : undefined,
-          confirmacao: filtroConfirmacao !== 'all' ? filtroConfirmacao : undefined,
-          tecnicoId: filtroTecnico !== 'all' ? filtroTecnico : undefined,
-          dataInicio: dataInicio || undefined,
-          dataFim: dataFim || undefined,
+          status: appliedFilters.status !== 'all' ? appliedFilters.status : undefined,
+          tipo: appliedFilters.tipo !== 'all' ? appliedFilters.tipo : undefined,
+          confirmacao: appliedFilters.confirmacao !== 'all' ? appliedFilters.confirmacao : undefined,
+          tecnicoId: appliedFilters.tecnico !== 'all' ? appliedFilters.tecnico : undefined,
+          dataInicio: appliedFilters.dataInicio || undefined,
+          dataFim: appliedFilters.dataFim || undefined,
         }
       });
 
@@ -490,11 +532,11 @@ export default function GerenciarAgendamentos() {
             </CardTitle>
             <CardDescription>Filtre os agendamentos por status, tipo, técnico ou data</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <CardContent className="space-y-4">
+            <div className="grid md:grid-cols-2 lg:grid-cols-6 gap-4">
               <div className="space-y-2">
                 <Label>Status</Label>
-                <Select value={filtroStatus} onValueChange={setFiltroStatus}>
+                <Select value={pendingStatus} onValueChange={setPendingStatus}>
                   <SelectTrigger>
                     <SelectValue placeholder="Todos" />
                   </SelectTrigger>
@@ -510,7 +552,7 @@ export default function GerenciarAgendamentos() {
 
               <div className="space-y-2">
                 <Label>Tipo</Label>
-                <Select value={filtroTipo} onValueChange={setFiltroTipo}>
+                <Select value={pendingTipo} onValueChange={setPendingTipo}>
                   <SelectTrigger>
                     <SelectValue placeholder="Todos" />
                   </SelectTrigger>
@@ -527,26 +569,8 @@ export default function GerenciarAgendamentos() {
               </div>
 
               <div className="space-y-2">
-                <Label>Data Início</Label>
-                <Input
-                  type="date"
-                  value={dataInicio}
-                  onChange={(e) => setDataInicio(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Data Fim</Label>
-                <Input
-                  type="date"
-                  value={dataFim}
-                  onChange={(e) => setDataFim(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2">
                 <Label>Confirmação</Label>
-                <Select value={filtroConfirmacao} onValueChange={setFiltroConfirmacao}>
+                <Select value={pendingConfirmacao} onValueChange={setPendingConfirmacao}>
                   <SelectTrigger>
                     <SelectValue placeholder="Todos" />
                   </SelectTrigger>
@@ -558,6 +582,52 @@ export default function GerenciarAgendamentos() {
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="space-y-2">
+                <Label>Técnico</Label>
+                <Select value={pendingTecnico} onValueChange={setPendingTecnico}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {tecnicos.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.nome} {t.sobrenome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Data Início</Label>
+                <Input
+                  type="date"
+                  value={pendingDataInicio}
+                  onChange={(e) => setPendingDataInicio(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Data Fim</Label>
+                <Input
+                  type="date"
+                  value={pendingDataFim}
+                  onChange={(e) => setPendingDataFim(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Button onClick={handleApplyFilters}>
+                <Search className="h-4 w-4 mr-2" />
+                Aplicar Filtros
+              </Button>
+              <Button variant="outline" onClick={handleClearFilters}>
+                <X className="h-4 w-4 mr-2" />
+                Limpar
+              </Button>
             </div>
           </CardContent>
         </Card>
