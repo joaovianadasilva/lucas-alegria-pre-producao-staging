@@ -19,13 +19,22 @@ interface HistoricoItem {
   id: string;
   created_at: string;
   tipo: 'edicao_agendamento' | 'reagendamento' | 'contrato' | 'adicional';
-  usuario?: { nome: string; sobrenome: string };
+  usuario?: { nome: string; sobrenome: string; email: string };
   entidade_nome: string;
   entidade_id: string;
   acao: string;
   detalhes_resumo: string;
   detalhes_completos: any;
 }
+
+// Helper para exibir nome do usuário com fallback para email
+const formatUsuarioNome = (usuario?: { nome: string; sobrenome: string; email: string }) => {
+  if (!usuario) return 'Sistema';
+  const nomeCompleto = `${usuario.nome || ''} ${usuario.sobrenome || ''}`.trim();
+  if (nomeCompleto) return nomeCompleto;
+  if (usuario.email) return usuario.email;
+  return 'Usuário sem nome';
+};
 
 export default function Historico() {
   const { toast } = useToast();
@@ -41,7 +50,7 @@ export default function Historico() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, nome, sobrenome')
+        .select('id, nome, sobrenome, email')
         .eq('ativo', true)
         .order('nome');
 
@@ -67,7 +76,7 @@ export default function Historico() {
             valor_anterior,
             valor_novo,
             usuario_id,
-            profiles!historico_edicoes_agendamentos_usuario_id_fkey(nome, sobrenome),
+            profiles!historico_edicoes_agendamentos_usuario_id_fkey(nome, sobrenome, email),
             agendamentos!historico_edicoes_agendamentos_agendamento_id_fkey(
               id,
               nome_cliente,
@@ -111,7 +120,7 @@ export default function Historico() {
             slot_novo,
             motivo,
             usuario_id,
-            profiles!historico_reagendamentos_usuario_id_fkey(nome, sobrenome),
+            profiles!historico_reagendamentos_usuario_id_fkey(nome, sobrenome, email),
             agendamentos!historico_reagendamentos_agendamento_id_fkey(
               id,
               nome_cliente,
@@ -153,7 +162,7 @@ export default function Historico() {
             valor_anterior,
             valor_novo,
             usuario_id,
-            profiles!historico_contratos_usuario_id_fkey(nome, sobrenome),
+            profiles!historico_contratos_usuario_id_fkey(nome, sobrenome, email),
             contratos!historico_contratos_contrato_id_fkey(
               id,
               nome_completo,
@@ -195,7 +204,7 @@ export default function Historico() {
             adicional_valor,
             tipo_acao,
             usuario_id,
-            profiles!historico_adicionais_contrato_usuario_id_fkey(nome, sobrenome),
+            profiles!historico_adicionais_contrato_usuario_id_fkey(nome, sobrenome, email),
             contratos!historico_adicionais_contrato_contrato_id_fkey(
               id,
               nome_completo,
@@ -315,7 +324,7 @@ export default function Historico() {
                   <SelectItem value="all">Todos os usuários</SelectItem>
                   {usuarios?.map((user) => (
                     <SelectItem key={user.id} value={user.id}>
-                      {user.nome} {user.sobrenome}
+                      {`${user.nome || ''} ${user.sobrenome || ''}`.trim() || user.email || 'Usuário sem nome'}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -390,11 +399,12 @@ export default function Historico() {
                       <div className="flex items-center gap-2">
                         <Avatar className="h-8 w-8">
                           <AvatarFallback>
-                            {item.usuario?.nome?.[0]}{item.usuario?.sobrenome?.[0]}
+                            {item.usuario?.nome?.[0] || item.usuario?.email?.[0]?.toUpperCase() || 'S'}
+                            {item.usuario?.sobrenome?.[0] || ''}
                           </AvatarFallback>
                         </Avatar>
                         <span className="text-sm">
-                          {item.usuario ? `${item.usuario.nome} ${item.usuario.sobrenome}` : 'Sistema'}
+                          {formatUsuarioNome(item.usuario)}
                         </span>
                       </div>
                     </TableCell>
@@ -450,9 +460,7 @@ export default function Historico() {
                 <div>
                   <Label>Usuário</Label>
                   <p className="text-sm">
-                    {detalhesSelecionado.usuario 
-                      ? `${detalhesSelecionado.usuario.nome} ${detalhesSelecionado.usuario.sobrenome}`
-                      : 'Sistema'}
+                    {formatUsuarioNome(detalhesSelecionado.usuario)}
                   </p>
                 </div>
                 <div>
