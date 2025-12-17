@@ -47,6 +47,22 @@ interface ContractEditDialogProps {
 
 const DIAS_VENCIMENTO = ['05', '07', '10', '12', '20'];
 
+// Mapeamento entre valores do banco (F, J, E) e valores do formulário (pf, pj, estrangeiro)
+const DB_TO_FORM_TIPO_CLIENTE: Record<string, string> = {
+  'F': 'pf',
+  'J': 'pj',
+  'E': 'estrangeiro',
+  'pf': 'pf',
+  'pj': 'pj',
+  'estrangeiro': 'estrangeiro',
+};
+
+const FORM_TO_DB_TIPO_CLIENTE: Record<string, string> = {
+  'pf': 'F',
+  'pj': 'J',
+  'estrangeiro': 'E',
+};
+
 export function ContractEditDialog({ open, onOpenChange, contract, onSaved }: ContractEditDialogProps) {
   const [saving, setSaving] = useState(false);
   const [loadingCatalogs, setLoadingCatalogs] = useState(true);
@@ -141,7 +157,7 @@ export function ContractEditDialog({ open, onOpenChange, contract, onSaved }: Co
     
     // Informações pessoais
     setNomeCompleto(contract.nome_completo || '');
-    setTipoCliente(contract.tipo_cliente || '');
+    setTipoCliente(DB_TO_FORM_TIPO_CLIENTE[contract.tipo_cliente] || contract.tipo_cliente || '');
     setCpf(contract.cpf || '');
     setCnpj(contract.cnpj || '');
     setRg(contract.rg || '');
@@ -224,7 +240,7 @@ export function ContractEditDialog({ open, onOpenChange, contract, onSaved }: Co
           diaVencimento,
           // Pessoal
           nomeCompleto,
-          tipoCliente,
+          tipoCliente: FORM_TO_DB_TIPO_CLIENTE[tipoCliente] || tipoCliente,
           cpf: cpf || null,
           cnpj: cnpj || null,
           rg: rg || null,
