@@ -9,6 +9,7 @@ import {
   PlusCircle,
   Users,
   Clock,
+  ScrollText,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -38,6 +39,7 @@ const adminOnlyMenuItems = [
 ];
 
 const slotsMenuItem = { title: 'Configurar Vagas', url: '/configuracoes/slots', icon: Clock };
+const contratosMenuItem = { title: 'Contratos', url: '/contratos', icon: ScrollText };
 
 export function AppSidebar() {
   const { state } = useSidebar();
@@ -46,7 +48,9 @@ export function AppSidebar() {
   const { hasRole } = useAuth();
   const isAdmin = hasRole('admin');
   const isSupervisor = hasRole('supervisor');
+  const isProvedor = hasRole('provedor');
   const canAccessSlots = isAdmin || isSupervisor;
+  const canAccessContratos = isAdmin || isProvedor;
 
   const isActive = (path: string) => location.pathname === path;
   
@@ -80,6 +84,16 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+              {canAccessContratos && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <NavLink to={contratosMenuItem.url} className={getNavClass}>
+                      <contratosMenuItem.icon className="h-4 w-4" />
+                      {!collapsed && <span>{contratosMenuItem.title}</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

@@ -338,6 +338,143 @@ serve(async (req) => {
         );
       }
 
+      case 'listContractsWithFilter': {
+        const { 
+          limit = 20, 
+          offset = 0, 
+          dataInicio, 
+          dataFim, 
+          codigoClienteFilter, 
+          codigoContratoFilter 
+        } = requestBody;
+
+        console.log('listContractsWithFilter - params:', { limit, offset, dataInicio, dataFim, codigoClienteFilter, codigoContratoFilter });
+
+        let query = supabase
+          .from('contratos')
+          .select('id, nome_completo, celular, email, cpf, codigo_contrato, codigo_cliente, created_at', { count: 'exact' })
+          .order('created_at', { ascending: false });
+
+        // Filtro de data
+        if (dataInicio) {
+          query = query.gte('created_at', dataInicio);
+        }
+        if (dataFim) {
+          query = query.lte('created_at', dataFim + 'T23:59:59');
+        }
+
+        // Filtro de código cliente (vazio/preenchido)
+        if (codigoClienteFilter === 'vazio') {
+          query = query.or('codigo_cliente.is.null,codigo_cliente.eq.');
+        } else if (codigoClienteFilter === 'preenchido') {
+          query = query.not('codigo_cliente', 'is', null).neq('codigo_cliente', '');
+        }
+
+        // Filtro de código contrato (vazio/preenchido)
+        if (codigoContratoFilter === 'vazio') {
+          query = query.or('codigo_contrato.is.null,codigo_contrato.eq.');
+        } else if (codigoContratoFilter === 'preenchido') {
+          query = query.not('codigo_contrato', 'is', null).neq('codigo_contrato', '');
+        }
+
+        // Aplicar paginação
+        query = query.range(offset, offset + limit - 1);
+
+        const { data, error, count } = await query;
+
+        if (error) {
+          console.error('listContractsWithFilter - error:', error);
+          throw error;
+        }
+
+        console.log('listContractsWithFilter - success, count:', count);
+
+        return new Response(
+          JSON.stringify({ success: true, contratos: data, total: count }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'updateContractCodes': {
+        const { contratoId, codigoContrato, codigoCliente, usuarioId } = requestBody;
+
+        console.log('updateContractCodes - params:', { contratoId, codigoContrato, codigoCliente, usuarioId });
+
+        if (!contratoId) {
+          throw new Error('ID do contrato é obrigatório');
+        }
+
+        // Buscar valores atuais para histórico
+        const { data: contratoAtual, error: fetchError } = await supabase
+          .from('contratos')
+          .select('codigo_contrato, codigo_cliente')
+          .eq('id', contratoId)
+          .single();
+
+        if (fetchError) {
+          console.error('updateContractCodes - fetch error:', fetchError);
+          throw new Error('Contrato não encontrado');
+        }
+
+        // Atualizar contrato
+        const { error: updateError } = await supabase
+          .from('contratos')
+          .update({
+            codigo_contrato: codigoContrato || null,
+            codigo_cliente: codigoCliente || null,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', contratoId);
+
+        if (updateError) {
+          console.error('updateContractCodes - update error:', updateError);
+          throw new Error(`Erro ao atualizar contrato: ${updateError.message}`);
+        }
+
+        // Registrar histórico de alterações
+        const historicoInserts = [];
+
+        if (contratoAtual.codigo_contrato !== (codigoContrato || null)) {
+          historicoInserts.push({
+            contrato_id: contratoId,
+            tipo_acao: 'alteracao',
+            campo_alterado: 'codigo_contrato',
+            valor_anterior: contratoAtual.codigo_contrato || null,
+            valor_novo: codigoContrato || null,
+            usuario_id: usuarioId || null
+          });
+        }
+
+        if (contratoAtual.codigo_cliente !== (codigoCliente || null)) {
+          historicoInserts.push({
+            contrato_id: contratoId,
+            tipo_acao: 'alteracao',
+            campo_alterado: 'codigo_cliente',
+            valor_anterior: contratoAtual.codigo_cliente || null,
+            valor_novo: codigoCliente || null,
+            usuario_id: usuarioId || null
+          });
+        }
+
+        if (historicoInserts.length > 0) {
+          const { error: historicoError } = await supabase
+            .from('historico_contratos')
+            .insert(historicoInserts);
+
+          if (historicoError) {
+            console.error('updateContractCodes - historico error:', historicoError);
+            // Não lançar erro, apenas logar - o update já foi feito
+          }
+        }
+
+        console.log('updateContractCodes - success');
+
+        return new Response(
+          JSON.stringify({ success: true, message: 'Contrato atualizado com sucesso' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       default:
         throw new Error('Ação inválida');
     }
