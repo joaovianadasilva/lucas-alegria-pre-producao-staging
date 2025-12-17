@@ -9,7 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Filter, Edit, ChevronLeft, ChevronRight, FileText } from 'lucide-react';
+import { Filter, Edit, ChevronLeft, ChevronRight, FileText, Eye } from 'lucide-react';
+import { ContractDetailsDialog, ContratoCompleto } from '@/components/ContractDetailsDialog';
 
 interface Contrato {
   id: string;
@@ -49,6 +50,11 @@ export default function Contratos() {
   const [selectedContrato, setSelectedContrato] = useState<Contrato | null>(null);
   const [editCodigoContrato, setEditCodigoContrato] = useState('');
   const [editCodigoCliente, setEditCodigoCliente] = useState('');
+  
+  // Modal de detalhes
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [contractDetails, setContractDetails] = useState<ContratoCompleto | null>(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
 
   // Verificar se filtros foram aplicados
   const filtersApplied = 
@@ -153,6 +159,31 @@ export default function Contratos() {
 
   const handleSaveEdit = () => {
     updateCodesMutation.mutate();
+  };
+
+  const handleViewDetails = async (contrato: Contrato) => {
+    setDetailsDialogOpen(true);
+    setLoadingDetails(true);
+    setContractDetails(null);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('manage-contracts', {
+        body: {
+          action: 'getContract',
+          contratoId: contrato.id
+        }
+      });
+
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Erro ao carregar detalhes');
+
+      setContractDetails(data.contrato);
+    } catch (error: any) {
+      toast.error('Erro ao carregar detalhes: ' + error.message);
+      setDetailsDialogOpen(false);
+    } finally {
+      setLoadingDetails(false);
+    }
   };
 
   // Calcular range de exibição
@@ -282,13 +313,24 @@ export default function Contratos() {
                         <TableCell>{contrato.codigo_contrato || '-'}</TableCell>
                         <TableCell>{contrato.codigo_cliente || '-'}</TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEdit(contrato)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
+                          <div className="flex justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleViewDetails(contrato)}
+                              title="Ver resumo"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEdit(contrato)}
+                              title="Editar códigos"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -381,6 +423,14 @@ export default function Contratos() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Modal de Detalhes */}
+      <ContractDetailsDialog
+        open={detailsDialogOpen}
+        onOpenChange={setDetailsDialogOpen}
+        contract={contractDetails}
+        loading={loadingDetails}
+      />
     </div>
   );
 }
