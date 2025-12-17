@@ -475,6 +475,268 @@ serve(async (req) => {
         );
       }
 
+      case 'updateContractFull': {
+        const { 
+          contratoId, 
+          usuarioId,
+          // Plano e adicionais
+          planoCodigo,
+          planoNome,
+          planoValor,
+          adicionais, // array of { codigo, nome, valor }
+          taxaInstalacao,
+          diaVencimento,
+          // Informações pessoais
+          nomeCompleto,
+          tipoCliente,
+          cpf,
+          cnpj,
+          rg,
+          orgaoExpedicao,
+          razaoSocial,
+          inscricaoEstadual,
+          dataNascimento,
+          telefone,
+          celular,
+          email,
+          // Endereço residência
+          residenciaRua,
+          residenciaNumero,
+          residenciaBairro,
+          residenciaComplemento,
+          residenciaCep,
+          residenciaCidade,
+          residenciaUf,
+          // Endereço instalação
+          instalacaoMesmoEndereco,
+          instalacaoRua,
+          instalacaoNumero,
+          instalacaoBairro,
+          instalacaoComplemento,
+          instalacaoCep,
+          instalacaoCidade,
+          instalacaoUf,
+          // Outras informações
+          origem,
+          representanteVendas,
+          tipoVenda,
+          observacao
+        } = requestBody;
+
+        console.log('updateContractFull - starting for contratoId:', contratoId);
+
+        if (!contratoId) {
+          throw new Error('ID do contrato é obrigatório');
+        }
+
+        // 1. Buscar contrato atual para comparação
+        const { data: contratoAtual, error: fetchError } = await supabase
+          .from('contratos')
+          .select('*')
+          .eq('id', contratoId)
+          .single();
+
+        if (fetchError || !contratoAtual) {
+          console.error('updateContractFull - fetch error:', fetchError);
+          throw new Error('Contrato não encontrado');
+        }
+
+        // 2. Buscar adicionais atuais
+        const { data: adicionaisAtuais } = await supabase
+          .from('adicionais_contrato')
+          .select('*')
+          .eq('contrato_id', contratoId);
+
+        // 3. Calcular novo valor total
+        const novoPlanoValor = planoValor || 0;
+        const totalAdicionais = (adicionais || []).reduce(
+          (acc: number, adic: { valor: number }) => acc + (adic.valor || 0), 0
+        );
+        const novoValorTotal = novoPlanoValor + totalAdicionais;
+
+        // 4. Preparar campos para atualização
+        const updateData: Record<string, any> = {
+          plano_codigo: planoCodigo || '',
+          plano_nome: planoNome || 'Sem plano base',
+          plano_valor: novoPlanoValor,
+          valor_total: novoValorTotal,
+          taxa_instalacao: taxaInstalacao || 0,
+          dia_vencimento: diaVencimento,
+          nome_completo: nomeCompleto,
+          tipo_cliente: tipoCliente,
+          cpf: cpf || null,
+          cnpj: cnpj || null,
+          rg: rg || null,
+          orgao_expedicao: orgaoExpedicao || null,
+          razao_social: razaoSocial || null,
+          inscricao_estadual: inscricaoEstadual || null,
+          data_nascimento: dataNascimento || null,
+          telefone: telefone || null,
+          celular: celular,
+          email: email,
+          residencia_rua: residenciaRua,
+          residencia_numero: residenciaNumero,
+          residencia_bairro: residenciaBairro,
+          residencia_complemento: residenciaComplemento || null,
+          residencia_cep: residenciaCep,
+          residencia_cidade: residenciaCidade,
+          residencia_uf: residenciaUf,
+          instalacao_mesmo_endereco: instalacaoMesmoEndereco,
+          instalacao_rua: instalacaoMesmoEndereco ? null : instalacaoRua,
+          instalacao_numero: instalacaoMesmoEndereco ? null : instalacaoNumero,
+          instalacao_bairro: instalacaoMesmoEndereco ? null : instalacaoBairro,
+          instalacao_complemento: instalacaoMesmoEndereco ? null : instalacaoComplemento,
+          instalacao_cep: instalacaoMesmoEndereco ? null : instalacaoCep,
+          instalacao_cidade: instalacaoMesmoEndereco ? null : instalacaoCidade,
+          instalacao_uf: instalacaoMesmoEndereco ? null : instalacaoUf,
+          origem: origem,
+          representante_vendas: representanteVendas || null,
+          tipo_venda: tipoVenda || null,
+          observacao: observacao || null,
+          updated_at: new Date().toISOString()
+        };
+
+        // 5. Atualizar contrato
+        const { error: updateError } = await supabase
+          .from('contratos')
+          .update(updateData)
+          .eq('id', contratoId);
+
+        if (updateError) {
+          console.error('updateContractFull - update error:', updateError);
+          throw new Error(`Erro ao atualizar contrato: ${updateError.message}`);
+        }
+
+        // 6. Registrar histórico de alterações nos campos
+        const historicoInserts = [];
+        const camposComparar = [
+          { campo: 'plano_codigo', anterior: contratoAtual.plano_codigo, novo: updateData.plano_codigo },
+          { campo: 'plano_nome', anterior: contratoAtual.plano_nome, novo: updateData.plano_nome },
+          { campo: 'plano_valor', anterior: String(contratoAtual.plano_valor), novo: String(updateData.plano_valor) },
+          { campo: 'valor_total', anterior: String(contratoAtual.valor_total), novo: String(updateData.valor_total) },
+          { campo: 'taxa_instalacao', anterior: String(contratoAtual.taxa_instalacao || 0), novo: String(updateData.taxa_instalacao) },
+          { campo: 'dia_vencimento', anterior: contratoAtual.dia_vencimento, novo: updateData.dia_vencimento },
+          { campo: 'nome_completo', anterior: contratoAtual.nome_completo, novo: updateData.nome_completo },
+          { campo: 'tipo_cliente', anterior: contratoAtual.tipo_cliente, novo: updateData.tipo_cliente },
+          { campo: 'cpf', anterior: contratoAtual.cpf, novo: updateData.cpf },
+          { campo: 'cnpj', anterior: contratoAtual.cnpj, novo: updateData.cnpj },
+          { campo: 'rg', anterior: contratoAtual.rg, novo: updateData.rg },
+          { campo: 'orgao_expedicao', anterior: contratoAtual.orgao_expedicao, novo: updateData.orgao_expedicao },
+          { campo: 'razao_social', anterior: contratoAtual.razao_social, novo: updateData.razao_social },
+          { campo: 'inscricao_estadual', anterior: contratoAtual.inscricao_estadual, novo: updateData.inscricao_estadual },
+          { campo: 'data_nascimento', anterior: contratoAtual.data_nascimento, novo: updateData.data_nascimento },
+          { campo: 'telefone', anterior: contratoAtual.telefone, novo: updateData.telefone },
+          { campo: 'celular', anterior: contratoAtual.celular, novo: updateData.celular },
+          { campo: 'email', anterior: contratoAtual.email, novo: updateData.email },
+          { campo: 'residencia_rua', anterior: contratoAtual.residencia_rua, novo: updateData.residencia_rua },
+          { campo: 'residencia_numero', anterior: contratoAtual.residencia_numero, novo: updateData.residencia_numero },
+          { campo: 'residencia_bairro', anterior: contratoAtual.residencia_bairro, novo: updateData.residencia_bairro },
+          { campo: 'residencia_complemento', anterior: contratoAtual.residencia_complemento, novo: updateData.residencia_complemento },
+          { campo: 'residencia_cep', anterior: contratoAtual.residencia_cep, novo: updateData.residencia_cep },
+          { campo: 'residencia_cidade', anterior: contratoAtual.residencia_cidade, novo: updateData.residencia_cidade },
+          { campo: 'residencia_uf', anterior: contratoAtual.residencia_uf, novo: updateData.residencia_uf },
+          { campo: 'instalacao_mesmo_endereco', anterior: String(contratoAtual.instalacao_mesmo_endereco), novo: String(updateData.instalacao_mesmo_endereco) },
+          { campo: 'instalacao_rua', anterior: contratoAtual.instalacao_rua, novo: updateData.instalacao_rua },
+          { campo: 'instalacao_numero', anterior: contratoAtual.instalacao_numero, novo: updateData.instalacao_numero },
+          { campo: 'instalacao_bairro', anterior: contratoAtual.instalacao_bairro, novo: updateData.instalacao_bairro },
+          { campo: 'instalacao_complemento', anterior: contratoAtual.instalacao_complemento, novo: updateData.instalacao_complemento },
+          { campo: 'instalacao_cep', anterior: contratoAtual.instalacao_cep, novo: updateData.instalacao_cep },
+          { campo: 'instalacao_cidade', anterior: contratoAtual.instalacao_cidade, novo: updateData.instalacao_cidade },
+          { campo: 'instalacao_uf', anterior: contratoAtual.instalacao_uf, novo: updateData.instalacao_uf },
+          { campo: 'origem', anterior: contratoAtual.origem, novo: updateData.origem },
+          { campo: 'representante_vendas', anterior: contratoAtual.representante_vendas, novo: updateData.representante_vendas },
+          { campo: 'tipo_venda', anterior: contratoAtual.tipo_venda, novo: updateData.tipo_venda },
+          { campo: 'observacao', anterior: contratoAtual.observacao, novo: updateData.observacao },
+        ];
+
+        for (const { campo, anterior, novo } of camposComparar) {
+          const anteriorStr = anterior === null ? null : String(anterior);
+          const novoStr = novo === null ? null : String(novo);
+          if (anteriorStr !== novoStr) {
+            historicoInserts.push({
+              contrato_id: contratoId,
+              tipo_acao: 'alteracao',
+              campo_alterado: campo,
+              valor_anterior: anteriorStr,
+              valor_novo: novoStr,
+              usuario_id: usuarioId || null
+            });
+          }
+        }
+
+        if (historicoInserts.length > 0) {
+          await supabase.from('historico_contratos').insert(historicoInserts);
+        }
+
+        // 7. Processar adicionais - comparar e registrar alterações
+        const adicionaisAtuaisMap = new Map(
+          (adicionaisAtuais || []).map(a => [a.adicional_codigo, a])
+        );
+        const novosAdicionaisMap = new Map(
+          (adicionais || []).map((a: { codigo: string; nome: string; valor: number }) => [a.codigo, a])
+        );
+
+        // Adicionais removidos
+        const historicoAdicionaisInserts = [];
+        for (const [codigo, adicionalAtual] of adicionaisAtuaisMap) {
+          if (!novosAdicionaisMap.has(codigo)) {
+            // Adicional foi removido
+            historicoAdicionaisInserts.push({
+              contrato_id: contratoId,
+              adicional_codigo: adicionalAtual.adicional_codigo,
+              adicional_nome: adicionalAtual.adicional_nome,
+              adicional_valor: adicionalAtual.adicional_valor,
+              tipo_acao: 'remocao',
+              usuario_id: usuarioId || null
+            });
+          }
+        }
+
+        // Adicionais adicionados
+        for (const [codigo, novoAdicional] of novosAdicionaisMap) {
+          if (!adicionaisAtuaisMap.has(codigo)) {
+            // Adicional foi adicionado
+            const adicional = novoAdicional as { codigo: string; nome: string; valor: number };
+            historicoAdicionaisInserts.push({
+              contrato_id: contratoId,
+              adicional_codigo: adicional.codigo,
+              adicional_nome: adicional.nome,
+              adicional_valor: adicional.valor,
+              tipo_acao: 'adicao',
+              usuario_id: usuarioId || null
+            });
+          }
+        }
+
+        if (historicoAdicionaisInserts.length > 0) {
+          await supabase.from('historico_adicionais_contrato').insert(historicoAdicionaisInserts);
+        }
+
+        // 8. Deletar adicionais antigos e inserir novos
+        await supabase
+          .from('adicionais_contrato')
+          .delete()
+          .eq('contrato_id', contratoId);
+
+        if (adicionais && adicionais.length > 0) {
+          const adicionaisInserts = adicionais.map((a: { codigo: string; nome: string; valor: number }) => ({
+            contrato_id: contratoId,
+            adicional_codigo: a.codigo,
+            adicional_nome: a.nome,
+            adicional_valor: a.valor
+          }));
+
+          await supabase.from('adicionais_contrato').insert(adicionaisInserts);
+        }
+
+        console.log('updateContractFull - success');
+
+        return new Response(
+          JSON.stringify({ success: true, message: 'Contrato atualizado com sucesso' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       default:
         throw new Error('Ação inválida');
     }

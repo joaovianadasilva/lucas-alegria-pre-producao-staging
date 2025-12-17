@@ -186,6 +186,29 @@ export default function Contratos() {
     }
   };
 
+  const handleContractUpdated = async () => {
+    // Recarregar detalhes do contrato após edição
+    if (contractDetails) {
+      try {
+        const { data, error } = await supabase.functions.invoke('manage-contracts', {
+          body: {
+            action: 'getContract',
+            contratoId: contractDetails.id
+          }
+        });
+
+        if (error) throw error;
+        if (data?.success) {
+          setContractDetails(data.contrato);
+        }
+      } catch (error) {
+        console.error('Error refreshing contract:', error);
+      }
+    }
+    // Também recarregar a lista
+    queryClient.invalidateQueries({ queryKey: ['contratos-list'] });
+  };
+
   // Calcular range de exibição
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE + 1;
   const endIndex = Math.min(currentPage * ITEMS_PER_PAGE, totalContratos);
@@ -430,6 +453,7 @@ export default function Contratos() {
         onOpenChange={setDetailsDialogOpen}
         contract={contractDetails}
         loading={loadingDetails}
+        onContractUpdated={handleContractUpdated}
       />
     </div>
   );
