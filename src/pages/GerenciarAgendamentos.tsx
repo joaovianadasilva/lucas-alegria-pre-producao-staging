@@ -332,11 +332,11 @@ export default function GerenciarAgendamentos() {
         <div className="space-y-1 text-sm">
           <p className="text-muted-foreground">
             <span className="line-through">
-              {formatLocalDate(item.data_anterior)} - Slot {item.slot_anterior}
+              {formatLocalDate(item.data_anterior)} - Vaga {item.slot_anterior}
             </span>
             {' → '}
             <span className="text-foreground font-medium">
-              {formatLocalDate(item.data_nova)} - Slot {item.slot_novo}
+              {formatLocalDate(item.data_nova)} - Vaga {item.slot_novo}
             </span>
           </p>
           {item.motivo && (
@@ -681,7 +681,7 @@ export default function GerenciarAgendamentos() {
                           {formatLocalDate(agendamento.data_agendamento)}
                           <br />
                           <span className="text-sm text-muted-foreground">
-                            Slot {agendamento.slot_numero}
+                            Vaga {agendamento.slot_numero}
                           </span>
                         </TableCell>
                         <TableCell>
@@ -1036,7 +1036,7 @@ export default function GerenciarAgendamentos() {
               <div className="p-3 bg-muted rounded-lg">
                 <p className="text-sm font-semibold">Agendamento Atual:</p>
                 <p className="text-sm">
-                  {formatLocalDate(selectedAgendamento.data_agendamento)} - Slot {selectedAgendamento.slot_numero}
+                  {formatLocalDate(selectedAgendamento.data_agendamento)} - Vaga {selectedAgendamento.slot_numero}
                 </p>
                 <p className="text-sm text-muted-foreground">
                   Cliente: {selectedAgendamento.nome_cliente}
