@@ -24,6 +24,7 @@ interface User {
 
 const availableRoles = [
   { value: 'admin', label: 'Administrador' },
+  { value: 'provedor', label: 'Provedor' },
   { value: 'supervisor', label: 'Supervisor' },
   { value: 'tecnico', label: 'Técnico' },
   { value: 'vendedor', label: 'Vendedor' },

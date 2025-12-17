@@ -15,6 +15,7 @@ import ConfigurarPlanos from "./pages/ConfigurarPlanos";
 import ConfigurarAdicionais from "./pages/ConfigurarAdicionais";
 import GerenciarUsuarios from "./pages/GerenciarUsuarios";
 import ConfigurarSlots from "./pages/ConfigurarSlots";
+import Contratos from "./pages/Contratos";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -48,6 +49,11 @@ const App = () => (
               {/* Configurar Vagas - admin ou supervisor */}
               <Route element={<ProtectedRoute requiredRoles={["admin", "supervisor"]} />}>
                 <Route path="/configuracoes/slots" element={<ConfigurarSlots />} />
+              </Route>
+              
+              {/* Contratos - admin ou provedor */}
+              <Route element={<ProtectedRoute requiredRoles={["admin", "provedor"]} />}>
+                <Route path="/contratos" element={<Contratos />} />
               </Route>
             </Route>
             
