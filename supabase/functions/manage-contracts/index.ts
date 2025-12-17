@@ -261,7 +261,8 @@ serve(async (req) => {
             plano: planoNome,
             valor_total: planoValor
           }),
-          usuario_id: usuarioId || null
+          usuario_id: usuarioId || null,
+          entidade_nome: nomeCompleto
         });
 
         // 6. Registrar histórico de adicionais
@@ -272,7 +273,8 @@ serve(async (req) => {
             adicional_nome: adic.nome,
             adicional_valor: adic.valor,
             tipo_acao: 'adicao',
-            usuario_id: usuarioId || null
+            usuario_id: usuarioId || null,
+            entidade_nome: nomeCompleto
           }));
 
           await supabase.from('historico_adicionais_contrato').insert(historicoAdicionais);
@@ -407,7 +409,7 @@ serve(async (req) => {
         // Buscar valores atuais para histórico
         const { data: contratoAtual, error: fetchError } = await supabase
           .from('contratos')
-          .select('codigo_contrato, codigo_cliente')
+          .select('codigo_contrato, codigo_cliente, nome_completo')
           .eq('id', contratoId)
           .single();
 
@@ -441,7 +443,8 @@ serve(async (req) => {
             campo_alterado: 'codigo_contrato',
             valor_anterior: contratoAtual.codigo_contrato || null,
             valor_novo: codigoContrato || null,
-            usuario_id: usuarioId || null
+            usuario_id: usuarioId || null,
+            entidade_nome: contratoAtual.nome_completo
           });
         }
 
@@ -452,7 +455,8 @@ serve(async (req) => {
             campo_alterado: 'codigo_cliente',
             valor_anterior: contratoAtual.codigo_cliente || null,
             valor_novo: codigoCliente || null,
-            usuario_id: usuarioId || null
+            usuario_id: usuarioId || null,
+            entidade_nome: contratoAtual.nome_completo
           });
         }
 
@@ -659,7 +663,8 @@ serve(async (req) => {
               campo_alterado: campo,
               valor_anterior: anteriorStr,
               valor_novo: novoStr,
-              usuario_id: usuarioId || null
+              usuario_id: usuarioId || null,
+              entidade_nome: contratoAtual.nome_completo
             });
           }
         }
@@ -687,7 +692,8 @@ serve(async (req) => {
               adicional_nome: adicionalAtual.adicional_nome,
               adicional_valor: adicionalAtual.adicional_valor,
               tipo_acao: 'remocao',
-              usuario_id: usuarioId || null
+              usuario_id: usuarioId || null,
+              entidade_nome: contratoAtual.nome_completo
             });
           }
         }
@@ -703,7 +709,8 @@ serve(async (req) => {
               adicional_nome: adicional.nome,
               adicional_valor: adicional.valor,
               tipo_acao: 'adicao',
-              usuario_id: usuarioId || null
+              usuario_id: usuarioId || null,
+              entidade_nome: contratoAtual.nome_completo
             });
           }
         }

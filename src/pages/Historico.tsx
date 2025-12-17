@@ -162,6 +162,7 @@ export default function Historico() {
             valor_anterior,
             valor_novo,
             usuario_id,
+            entidade_nome,
             profiles!historico_contratos_usuario_id_fkey(nome, sobrenome, email),
             contratos!historico_contratos_contrato_id_fkey(
               id,
@@ -183,7 +184,7 @@ export default function Historico() {
             created_at: item.created_at,
             tipo: 'contrato' as const,
             usuario: item.profiles,
-            entidade_nome: item.contratos?.nome_completo || 'N/A',
+            entidade_nome: item.entidade_nome || item.contratos?.nome_completo || 'N/A',
             entidade_id: item.contratos?.id || '',
             acao: item.tipo_acao === 'criacao' ? 'Criação' : 'Edição',
             detalhes_resumo: item.campo_alterado || 'Contrato criado',
@@ -204,6 +205,7 @@ export default function Historico() {
             adicional_valor,
             tipo_acao,
             usuario_id,
+            entidade_nome,
             profiles!historico_adicionais_contrato_usuario_id_fkey(nome, sobrenome, email),
             contratos!historico_adicionais_contrato_contrato_id_fkey(
               id,
@@ -225,7 +227,7 @@ export default function Historico() {
             created_at: item.created_at,
             tipo: 'adicional' as const,
             usuario: item.profiles,
-            entidade_nome: item.contratos?.nome_completo || 'N/A',
+            entidade_nome: item.entidade_nome || item.contratos?.nome_completo || 'N/A',
             entidade_id: item.contratos?.id || '',
             acao: item.tipo_acao === 'adicao' ? 'Adição' : 'Remoção',
             detalhes_resumo: `${item.adicional_nome} - R$ ${item.adicional_valor}`,
