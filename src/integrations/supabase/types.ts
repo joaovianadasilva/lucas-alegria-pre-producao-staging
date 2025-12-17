@@ -524,6 +524,7 @@ export type Database = {
           adicional_valor: number
           contrato_id: string
           created_at: string | null
+          entidade_nome: string | null
           id: string
           tipo_acao: string
           usuario_id: string | null
@@ -534,6 +535,7 @@ export type Database = {
           adicional_valor: number
           contrato_id: string
           created_at?: string | null
+          entidade_nome?: string | null
           id?: string
           tipo_acao: string
           usuario_id?: string | null
@@ -544,6 +546,7 @@ export type Database = {
           adicional_valor?: number
           contrato_id?: string
           created_at?: string | null
+          entidade_nome?: string | null
           id?: string
           tipo_acao?: string
           usuario_id?: string | null
@@ -570,6 +573,7 @@ export type Database = {
           campo_alterado: string | null
           contrato_id: string
           created_at: string | null
+          entidade_nome: string | null
           id: string
           tipo_acao: string
           usuario_id: string | null
@@ -580,6 +584,7 @@ export type Database = {
           campo_alterado?: string | null
           contrato_id: string
           created_at?: string | null
+          entidade_nome?: string | null
           id?: string
           tipo_acao: string
           usuario_id?: string | null
@@ -590,6 +595,7 @@ export type Database = {
           campo_alterado?: string | null
           contrato_id?: string
           created_at?: string | null
+          entidade_nome?: string | null
           id?: string
           tipo_acao?: string
           usuario_id?: string | null
