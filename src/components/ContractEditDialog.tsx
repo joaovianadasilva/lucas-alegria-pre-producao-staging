@@ -310,12 +310,12 @@ export function ContractEditDialog({ open, onOpenChange, contract, onSaved }: Co
             <TabsContent value="plano" className="space-y-4">
               <div className="space-y-2">
                 <Label>Plano</Label>
-                <Select value={planoCodigo} onValueChange={setPlanoCodigo}>
+                <Select value={planoCodigo || '__none__'} onValueChange={(val) => setPlanoCodigo(val === '__none__' ? '' : val)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione um plano" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Sem plano base</SelectItem>
+                    <SelectItem value="__none__">Sem plano base</SelectItem>
                     {planos.map(plano => (
                       <SelectItem key={plano.id} value={plano.codigo}>
                         {plano.nome} - {formatCurrency(plano.valor)}
@@ -594,12 +594,12 @@ export function ContractEditDialog({ open, onOpenChange, contract, onSaved }: Co
 
               <div className="space-y-2">
                 <Label>Representante de Vendas</Label>
-                <Select value={representanteVendas} onValueChange={setRepresentanteVendas}>
+                <Select value={representanteVendas || '__none__'} onValueChange={(val) => setRepresentanteVendas(val === '__none__' ? '' : val)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhum</SelectItem>
+                    <SelectItem value="__none__">Nenhum</SelectItem>
                     {representantes.map(r => (
                       <SelectItem key={r.id} value={r.nome}>{r.nome}</SelectItem>
                     ))}
@@ -609,12 +609,12 @@ export function ContractEditDialog({ open, onOpenChange, contract, onSaved }: Co
 
               <div className="space-y-2">
                 <Label>Tipo de Venda</Label>
-                <Select value={tipoVenda} onValueChange={setTipoVenda}>
+                <Select value={tipoVenda || '__none__'} onValueChange={(val) => setTipoVenda(val === '__none__' ? '' : val)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhum</SelectItem>
+                    <SelectItem value="__none__">Nenhum</SelectItem>
                     <SelectItem value="Contrato Ordinário">Contrato Ordinário</SelectItem>
                     <SelectItem value="Adicional Avulso">Adicional Avulso</SelectItem>
                   </SelectContent>
