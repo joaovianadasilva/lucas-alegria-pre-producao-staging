@@ -366,6 +366,7 @@ export type Database = {
           data_pgto_primeira_mensalidade: string | null
           data_pgto_segunda_mensalidade: string | null
           data_pgto_terceira_mensalidade: string | null
+          data_recebimento: string | null
           data_reembolso: string | null
           dia_vencimento: string
           email: string
@@ -388,7 +389,9 @@ export type Database = {
           plano_nome: string
           plano_valor: number
           razao_social: string | null
+          recebimento_efetivado: boolean | null
           reembolsavel: boolean | null
+          reembolso_efetivado: boolean | null
           representante_vendas: string | null
           residencia_bairro: string
           residencia_cep: string
@@ -420,6 +423,7 @@ export type Database = {
           data_pgto_primeira_mensalidade?: string | null
           data_pgto_segunda_mensalidade?: string | null
           data_pgto_terceira_mensalidade?: string | null
+          data_recebimento?: string | null
           data_reembolso?: string | null
           dia_vencimento: string
           email: string
@@ -442,7 +446,9 @@ export type Database = {
           plano_nome: string
           plano_valor: number
           razao_social?: string | null
+          recebimento_efetivado?: boolean | null
           reembolsavel?: boolean | null
+          reembolso_efetivado?: boolean | null
           representante_vendas?: string | null
           residencia_bairro: string
           residencia_cep: string
@@ -474,6 +480,7 @@ export type Database = {
           data_pgto_primeira_mensalidade?: string | null
           data_pgto_segunda_mensalidade?: string | null
           data_pgto_terceira_mensalidade?: string | null
+          data_recebimento?: string | null
           data_reembolso?: string | null
           dia_vencimento?: string
           email?: string
@@ -496,7 +503,9 @@ export type Database = {
           plano_nome?: string
           plano_valor?: number
           razao_social?: string | null
+          recebimento_efetivado?: boolean | null
           reembolsavel?: boolean | null
+          reembolso_efetivado?: boolean | null
           representante_vendas?: string | null
           residencia_bairro?: string
           residencia_cep?: string
@@ -814,6 +823,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      "Yara.chat_history": {
+        Row: {
+          id: number
+          message: Json
+          session_id: string
+        }
+        Insert: {
+          id?: number
+          message: Json
+          session_id: string
+        }
+        Update: {
+          id?: number
+          message?: Json
+          session_id?: string
+        }
+        Relationships: []
       }
     }
     Views: {
