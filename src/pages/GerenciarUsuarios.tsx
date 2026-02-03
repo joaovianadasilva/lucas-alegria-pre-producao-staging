@@ -24,10 +24,9 @@ interface User {
 
 const availableRoles = [
   { value: 'admin', label: 'Administrador' },
-  { value: 'provedor', label: 'Provedor' },
   { value: 'supervisor', label: 'Supervisor' },
-  { value: 'tecnico', label: 'Técnico' },
-  { value: 'vendedor', label: 'Vendedor' },
+  { value: 'vendedor_clique', label: 'Vendedor Clique' },
+  { value: 'vendedor_provedor', label: 'Vendedor Provedor' },
 ];
 
 export default function GerenciarUsuarios() {
@@ -39,7 +38,7 @@ export default function GerenciarUsuarios() {
     nome: '',
     sobrenome: '',
     telefone: '',
-    role: 'vendedor',
+    role: 'vendedor_clique',
   });
 
   const { data: users, isLoading } = useQuery({
@@ -81,7 +80,7 @@ export default function GerenciarUsuarios() {
         nome: '',
         sobrenome: '',
         telefone: '',
-        role: 'vendedor',
+        role: 'vendedor_clique',
       });
       setIsDialogOpen(false);
     },

@@ -25,8 +25,15 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useAuth } from '@/contexts/AuthContext';
 
-const mainMenuItems = [
-  { title: 'Cadastro de Venda', url: '/cadastro-venda', icon: FileText },
+interface MenuItem {
+  title: string;
+  url: string;
+  icon: React.ComponentType<{ className?: string }>;
+  requiresCadastroVenda?: boolean;
+}
+
+const mainMenuItems: MenuItem[] = [
+  { title: 'Cadastro de Venda', url: '/cadastro-venda', icon: FileText, requiresCadastroVenda: true },
   { title: 'Registro de Agendamentos', url: '/agendamentos/novo', icon: Calendar },
   { title: 'Gerenciar Agenda', url: '/agendamentos/gerenciar', icon: ListChecks },
   { title: 'Histórico', url: '/historico', icon: Clock },
@@ -48,9 +55,17 @@ export function AppSidebar() {
   const { hasRole } = useAuth();
   const isAdmin = hasRole('admin');
   const isSupervisor = hasRole('supervisor');
-  const isProvedor = hasRole('provedor');
+  const isVendedorClique = hasRole('vendedor_clique');
+  const isVendedorProvedor = hasRole('vendedor_provedor');
+  
+  // Quem pode ver Cadastro de Venda (todos menos vendedor_provedor)
+  const canAccessCadastroVenda = isAdmin || isSupervisor || isVendedorClique;
+  
+  // Quem pode ver Contratos (todas as 4 roles)
+  const canAccessContratos = isAdmin || isSupervisor || isVendedorClique || isVendedorProvedor;
+  
+  // Quem pode ver Configurar Vagas (admin e supervisor apenas)
   const canAccessSlots = isAdmin || isSupervisor;
-  const canAccessContratos = isAdmin || isProvedor;
 
   const isActive = (path: string) => location.pathname === path;
   
@@ -73,8 +88,10 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupLabel>Menu Principal</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
-              {mainMenuItems.map((item) => (
+          <SidebarMenu>
+              {mainMenuItems
+                .filter(item => !item.requiresCadastroVenda || canAccessCadastroVenda)
+                .map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink to={item.url} end className={getNavClass}>
