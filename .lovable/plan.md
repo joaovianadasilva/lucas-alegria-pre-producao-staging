@@ -1,19 +1,18 @@
 
-## Plano: Reestruturar Sistema de Permissões
+## Plano: Reestruturar Sistema de Permissoes (Atualizado)
 
-### Resumo das Alterações
+### Resumo das Alteracoes
 
 O sistema atual possui 6 roles: `admin`, `provedor`, `supervisor`, `tecnico`, `vendedor`, `atendente`.
 
-O novo sistema terá 5 roles com permissões redefinidas:
+O novo sistema tera **4 roles** com permissoes simplificadas:
 
-| Role | Cadastro de Venda | Registro de Agendamentos | Gerenciar Agenda | Histórico | Contratos | Configurar Vagas |
-|------|:-----------------:|:------------------------:|:----------------:|:---------:|:---------:|:----------------:|
-| **Admin** | Sim | Sim | Sim | Sim | Sim | Sim + configs |
-| **Provedor** | Sim | Sim | Sim | Sim | Sim | Sim |
-| **Supervisor** | Sim | Sim | Sim | Sim | Sim | Sim |
-| **Vendedor Clique** | Sim | Sim | Sim | Sim | Sim | Nao |
-| **Vendedor Provedor** | Nao | Sim | Sim | Sim | Sim | Nao |
+| Role | Cadastro de Venda | Registro de Agendamentos | Gerenciar Agenda | Historico | Contratos | Configurar Vagas | Configs Admin |
+|------|:-----------------:|:------------------------:|:----------------:|:---------:|:---------:|:----------------:|:-------------:|
+| **Admin** | Sim | Sim | Sim | Sim | Sim | Sim | Sim |
+| **Supervisor** | Sim | Sim | Sim | Sim | Sim | Sim | Nao |
+| **Vendedor Clique** | Sim | Sim | Sim | Sim | Sim | Nao | Nao |
+| **Vendedor Provedor** | Nao | Sim | Sim | Sim | Sim | Nao | Nao |
 
 ---
 
@@ -26,7 +25,7 @@ ALTER TYPE public.app_role ADD VALUE IF NOT EXISTS 'vendedor_clique';
 ALTER TYPE public.app_role ADD VALUE IF NOT EXISTS 'vendedor_provedor';
 ```
 
-Nota: As roles existentes (`tecnico`, `vendedor`, `atendente`) serao mantidas no banco para compatibilidade com usuarios ja cadastrados, mas serao removidas da interface de gerenciamento.
+**Nota**: As roles existentes (`provedor`, `tecnico`, `vendedor`, `atendente`) serao mantidas no banco para compatibilidade com usuarios ja cadastrados, mas serao **removidas da interface de gerenciamento**.
 
 ---
 
@@ -34,46 +33,50 @@ Nota: As roles existentes (`tecnico`, `vendedor`, `atendente`) serao mantidas no
 
 #### 2.1 Arquivo `src/pages/GerenciarUsuarios.tsx`
 
-Atualizar a lista de roles disponiveis:
+**Linha 25-31** - Atualizar a lista de roles disponiveis:
 
 ```typescript
 const availableRoles = [
   { value: 'admin', label: 'Administrador' },
-  { value: 'provedor', label: 'Provedor' },
   { value: 'supervisor', label: 'Supervisor' },
   { value: 'vendedor_clique', label: 'Vendedor Clique' },
   { value: 'vendedor_provedor', label: 'Vendedor Provedor' },
 ];
 ```
 
-Alterar o valor padrao de `role` no formulario:
+**Linha 42** - Alterar o valor padrao de `role` no formulario:
 
 ```typescript
 role: 'vendedor_clique', // era 'vendedor'
+```
+
+**Linha 84** - Atualizar reset do formulario:
+
+```typescript
+role: 'vendedor_clique',
 ```
 
 ---
 
 #### 2.2 Arquivo `src/components/AppSidebar.tsx`
 
-Refatorar a logica de permissoes:
+Refatorar a logica de permissoes (linhas ~43-50):
 
 ```typescript
 const { hasRole } = useAuth();
 const isAdmin = hasRole('admin');
-const isProvedor = hasRole('provedor');
 const isSupervisor = hasRole('supervisor');
 const isVendedorClique = hasRole('vendedor_clique');
 const isVendedorProvedor = hasRole('vendedor_provedor');
 
 // Quem pode ver Cadastro de Venda (todos menos vendedor_provedor)
-const canAccessCadastroVenda = isAdmin || isProvedor || isSupervisor || isVendedorClique;
+const canAccessCadastroVenda = isAdmin || isSupervisor || isVendedorClique;
 
-// Quem pode ver Contratos (todos as novas roles)
-const canAccessContratos = isAdmin || isProvedor || isSupervisor || isVendedorClique || isVendedorProvedor;
+// Quem pode ver Contratos (todas as 4 roles)
+const canAccessContratos = isAdmin || isSupervisor || isVendedorClique || isVendedorProvedor;
 
-// Quem pode ver Configurar Vagas (admin, provedor, supervisor)
-const canAccessSlots = isAdmin || isProvedor || isSupervisor;
+// Quem pode ver Configurar Vagas (admin e supervisor apenas)
+const canAccessSlots = isAdmin || isSupervisor;
 ```
 
 Atualizar o menu principal para filtrar "Cadastro de Venda" baseado na permissao:
@@ -85,13 +88,6 @@ const mainMenuItems = [
   { title: 'Gerenciar Agenda', url: '/agendamentos/gerenciar', icon: ListChecks },
   { title: 'Historico', url: '/historico', icon: Clock },
 ];
-
-// No render, filtrar baseado nas permissoes
-{mainMenuItems
-  .filter(item => !item.requiresCadastroVenda || canAccessCadastroVenda)
-  .map((item) => (
-    // ... render menu item
-  ))}
 ```
 
 ---
@@ -102,7 +98,7 @@ Atualizar as rotas protegidas:
 
 ```typescript
 {/* Cadastro de Venda - todos exceto vendedor_provedor */}
-<Route element={<ProtectedRoute requiredRoles={["admin", "provedor", "supervisor", "vendedor_clique"]} />}>
+<Route element={<ProtectedRoute requiredRoles={["admin", "supervisor", "vendedor_clique"]} />}>
   <Route path="/cadastro-venda" element={<CadastroVenda />} />
 </Route>
 
@@ -111,13 +107,13 @@ Atualizar as rotas protegidas:
 <Route path="/agendamentos/gerenciar" element={<GerenciarAgendamentos />} />
 <Route path="/historico" element={<Historico />} />
 
-{/* Contratos - todos as novas roles */}
-<Route element={<ProtectedRoute requiredRoles={["admin", "provedor", "supervisor", "vendedor_clique", "vendedor_provedor"]} />}>
+{/* Contratos - todas as 4 roles */}
+<Route element={<ProtectedRoute requiredRoles={["admin", "supervisor", "vendedor_clique", "vendedor_provedor"]} />}>
   <Route path="/contratos" element={<Contratos />} />
 </Route>
 
-{/* Configurar Vagas - admin, provedor, supervisor */}
-<Route element={<ProtectedRoute requiredRoles={["admin", "provedor", "supervisor"]} />}>
+{/* Configurar Vagas - admin e supervisor */}
+<Route element={<ProtectedRoute requiredRoles={["admin", "supervisor"]} />}>
   <Route path="/configuracoes/slots" element={<ConfigurarSlots />} />
 </Route>
 
@@ -129,18 +125,11 @@ Atualizar as rotas protegidas:
 </Route>
 ```
 
----
-
-#### 2.4 Ajustar redirecionamento padrao
-
-Atualizar o redirecionamento inicial para direcionar `vendedor_provedor` para uma pagina que ele pode acessar:
+Atualizar o redirecionamento padrao (linha 33):
 
 ```typescript
-{/* Redirect padrao baseado na role */}
 <Route path="/" element={<Navigate to="/agendamentos/novo" replace />} />
 ```
-
-Ou criar logica condicional no componente de redirecionamento.
 
 ---
 
@@ -149,12 +138,14 @@ Ou criar logica condicional no componente de redirecionamento.
 | Arquivo | Alteracao |
 |---------|-----------|
 | Migracao SQL | Adicionar `vendedor_clique` e `vendedor_provedor` ao enum |
-| `src/pages/GerenciarUsuarios.tsx` | Atualizar lista de roles disponiveis |
+| `src/pages/GerenciarUsuarios.tsx` | Atualizar lista de roles (remover provedor, tecnico, vendedor; adicionar novas) |
 | `src/components/AppSidebar.tsx` | Atualizar logica de visibilidade do menu |
-| `src/App.tsx` | Atualizar rotas protegidas |
+| `src/App.tsx` | Atualizar rotas protegidas e redirecionamento padrao |
+
+---
 
 ### Observacoes
 
-1. As roles antigas (`tecnico`, `vendedor`, `atendente`) permanecerao no banco de dados, mas nao aparecerão mais na interface de gerenciamento
-2. Usuarios com roles antigas continuarao funcionando com acesso basico (paginas que nao requerem role especifica)
-3. Recomenda-se migrar usuarios existentes para as novas roles manualmente ou via script SQL
+1. As roles antigas (`provedor`, `tecnico`, `vendedor`, `atendente`) permanecerao no banco de dados para compatibilidade
+2. Usuarios com roles antigas continuarao com acesso basico (paginas sem restricao de role)
+3. Recomenda-se migrar usuarios existentes para as novas roles via painel admin ou SQL
