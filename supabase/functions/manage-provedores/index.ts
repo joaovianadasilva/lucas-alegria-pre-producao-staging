@@ -96,12 +96,14 @@ serve(async (req) => {
           );
         }
 
-        const { nome, slug, logoUrl } = params;
-        if (!nome || !slug) throw new Error('Nome e slug são obrigatórios');
+        const { nome, logoUrl } = params;
+        if (!nome) throw new Error('Nome é obrigatório');
+
+        const generatedSlug = nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
         const { data, error } = await supabaseAdmin
           .from('provedores')
-          .insert({ nome, slug, logo_url: logoUrl || null })
+          .insert({ nome, slug: generatedSlug, logo_url: logoUrl || null })
           .select()
           .single();
 
