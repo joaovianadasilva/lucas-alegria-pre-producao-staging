@@ -22,7 +22,7 @@ interface Provedor {
 export default function GerenciarProvedores() {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [formData, setFormData] = useState({ nome: '', slug: '' });
+  const [formData, setFormData] = useState({ nome: '', slug: '', logoUrl: '' });
 
   const { data: provedores, isLoading } = useQuery({
     queryKey: ['provedores-admin'],
@@ -38,7 +38,7 @@ export default function GerenciarProvedores() {
   const createMutation = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke('manage-provedores', {
-        body: { action: 'createProvedor', nome: formData.nome, slug: formData.slug },
+        body: { action: 'createProvedor', nome: formData.nome, slug: formData.slug, logoUrl: formData.logoUrl || null },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
@@ -47,7 +47,7 @@ export default function GerenciarProvedores() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['provedores-admin'] });
       toast.success('Provedor criado!');
-      setFormData({ nome: '', slug: '' });
+      setFormData({ nome: '', slug: '', logoUrl: '' });
       setIsDialogOpen(false);
     },
     onError: (e: any) => toast.error('Erro: ' + e.message),
@@ -91,6 +91,10 @@ export default function GerenciarProvedores() {
               <div>
                 <Label>Slug</Label>
                 <Input value={formData.slug} onChange={(e) => setFormData({ ...formData, slug: e.target.value })} required placeholder="ex: meu-provedor" />
+              </div>
+              <div>
+                <Label>URL da Logo</Label>
+                <Input value={formData.logoUrl} onChange={(e) => setFormData({ ...formData, logoUrl: e.target.value })} placeholder="https://exemplo.com/logo.png" />
               </div>
               <Button type="submit" className="w-full" disabled={createMutation.isPending}>
                 {createMutation.isPending ? 'Criando...' : 'Criar Provedor'}
