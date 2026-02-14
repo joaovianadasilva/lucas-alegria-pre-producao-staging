@@ -13,351 +13,61 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { action, codigo, nome, valor, uf, id, planId, addOnId } = body;
+    const { action, codigo, nome, valor, uf, id, planId, addOnId, provedorId } = body;
     
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    if (!provedorId) {
+      throw new Error('provedorId é obrigatório');
+    }
+
     switch (action) {
-      case 'listPlanos': {
-        const { data, error } = await supabase
-          .from('catalogo_planos')
-          .select('*')
-          .eq('ativo', true)
-          .order('codigo', { ascending: true });
-        
-        if (error) throw error;
-        
-        return new Response(
-          JSON.stringify({ success: true, planos: data }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      case 'listAdicionais': {
-        const { data, error } = await supabase
-          .from('catalogo_adicionais')
-          .select('*')
-          .eq('ativo', true)
-          .order('codigo', { ascending: true });
-        
-        if (error) throw error;
-        
-        return new Response(
-          JSON.stringify({ success: true, adicionais: data }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      case 'addPlano': {
-        if (!codigo || !nome || !valor) {
-          throw new Error('Código, nome e valor são obrigatórios');
-        }
-
-        // Verificar duplicidade
-        const { data: existing } = await supabase
-          .from('catalogo_planos')
-          .select('codigo')
-          .eq('codigo', codigo)
-          .single();
-
-        if (existing) {
-          throw new Error('Código já existe');
-        }
-
-        const { data, error } = await supabase
-          .from('catalogo_planos')
-          .insert({
-            codigo,
-            nome,
-            valor: parseFloat(valor),
-            ativo: true
-          })
-          .select()
-          .single();
-
-        if (error) throw error;
-
-        return new Response(
-          JSON.stringify({ success: true, plano: data }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      case 'removePlano': {
-        if (!codigo) {
-          throw new Error('Código é obrigatório');
-        }
-
-        // Desativar em vez de deletar (soft delete)
-        const { error } = await supabase
-          .from('catalogo_planos')
-          .update({ ativo: false })
-          .eq('codigo', codigo);
-
-        if (error) throw error;
-
-        return new Response(
-          JSON.stringify({ success: true }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      case 'addAdicional': {
-        if (!codigo || !nome || !valor) {
-          throw new Error('Código, nome e valor são obrigatórios');
-        }
-
-        // Verificar duplicidade
-        const { data: existing } = await supabase
-          .from('catalogo_adicionais')
-          .select('codigo')
-          .eq('codigo', codigo)
-          .single();
-
-        if (existing) {
-          throw new Error('Código já existe');
-        }
-
-        const { data, error } = await supabase
-          .from('catalogo_adicionais')
-          .insert({
-            codigo,
-            nome,
-            valor: parseFloat(valor),
-            ativo: true
-          })
-          .select()
-          .single();
-
-        if (error) throw error;
-
-        return new Response(
-          JSON.stringify({ success: true, adicional: data }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      case 'removeAdicional': {
-        if (!codigo) {
-          throw new Error('Código é obrigatório');
-        }
-
-        // Desativar em vez de deletar (soft delete)
-        const { error } = await supabase
-          .from('catalogo_adicionais')
-          .update({ ativo: false })
-          .eq('codigo', codigo);
-
-        if (error) throw error;
-
-        return new Response(
-          JSON.stringify({ success: true }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      case 'listCidades': {
-        let query = supabase
-          .from('catalogo_cidades')
-          .select('id, nome, uf')
-          .eq('ativo', true)
-          .order('nome', { ascending: true });
-        
-        if (uf) {
-          query = query.eq('uf', uf);
-        }
-        
-        const { data, error } = await query;
-        
-        if (error) throw error;
-        
-        return new Response(
-          JSON.stringify({ success: true, data }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      case 'addCidade': {
-        if (!nome) {
-          throw new Error('Nome e UF são obrigatórios');
-        }
-        const cidade_uf = body.uf;
-        if (!cidade_uf) {
-          throw new Error('UF é obrigatória');
-        }
-
-        // Verificar duplicidade
-        const { data: existing } = await supabase
-          .from('catalogo_cidades')
-          .select('id')
-          .eq('nome', nome)
-          .eq('uf', cidade_uf)
-          .single();
-
-        if (existing) {
-          throw new Error('Cidade já existe para esta UF');
-        }
-
-        const { data, error } = await supabase
-          .from('catalogo_cidades')
-          .insert({
-            nome,
-            uf: cidade_uf,
-            ativo: true
-          })
-          .select()
-          .single();
-
-        if (error) throw error;
-
-        return new Response(
-          JSON.stringify({ success: true, cidade: data }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      case 'removeCidade': {
-        if (!id) {
-          throw new Error('ID é obrigatório');
-        }
-
-        const { error } = await supabase
-          .from('catalogo_cidades')
-          .update({ ativo: false })
-          .eq('id', id);
-
-        if (error) throw error;
-
-        return new Response(
-          JSON.stringify({ success: true }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      case 'listRepresentantes': {
-        const { data, error } = await supabase
-          .from('catalogo_representantes')
-          .select('id, nome')
-          .eq('ativo', true)
-          .order('nome', { ascending: true });
-        
-        if (error) throw error;
-        
-        return new Response(
-          JSON.stringify({ success: true, data }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      case 'addRepresentante': {
-        if (!nome) {
-          throw new Error('Nome é obrigatório');
-        }
-
-        // Verificar duplicidade
-        const { data: existing } = await supabase
-          .from('catalogo_representantes')
-          .select('id')
-          .eq('nome', nome)
-          .single();
-
-        if (existing) {
-          throw new Error('Representante já existe');
-        }
-
-        const { data, error } = await supabase
-          .from('catalogo_representantes')
-          .insert({
-            nome,
-            ativo: true
-          })
-          .select()
-          .single();
-
-        if (error) throw error;
-
-        return new Response(
-          JSON.stringify({ success: true, representante: data }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      case 'removeRepresentante': {
-        if (!id) {
-          throw new Error('ID é obrigatório');
-        }
-
-        const { error } = await supabase
-          .from('catalogo_representantes')
-          .update({ ativo: false })
-          .eq('id', id);
-
-        if (error) throw error;
-
-        return new Response(
-          JSON.stringify({ success: true }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      // English aliases for Plans
+      // === PLANOS ===
+      case 'listPlanos':
       case 'listPlans': {
         const { data, error } = await supabase
           .from('catalogo_planos')
           .select('*')
           .eq('ativo', true)
+          .eq('provedor_id', provedorId)
           .order('codigo', { ascending: true });
-        
         if (error) throw error;
-        
         return new Response(
-          JSON.stringify({ success: true, plans: data }),
+          JSON.stringify({ success: true, planos: data, plans: data }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
+      case 'addPlano':
       case 'createPlan': {
-        if (!codigo || !nome || valor === undefined) {
-          throw new Error('Código, nome e valor são obrigatórios');
-        }
+        if (!codigo || !nome || !valor) throw new Error('Código, nome e valor são obrigatórios');
 
-        // Verificar duplicidade
         const { data: existing } = await supabase
           .from('catalogo_planos')
           .select('codigo')
           .eq('codigo', codigo)
+          .eq('provedor_id', provedorId)
           .single();
 
-        if (existing) {
-          throw new Error('Código já existe');
-        }
+        if (existing) throw new Error('Código já existe');
 
         const { data, error } = await supabase
           .from('catalogo_planos')
-          .insert({
-            codigo,
-            nome,
-            valor: parseFloat(valor),
-            ativo: true
-          })
+          .insert({ codigo, nome, valor: parseFloat(valor), ativo: true, provedor_id: provedorId })
           .select()
           .single();
 
         if (error) throw error;
-
         return new Response(
-          JSON.stringify({ success: true, plan: data }),
+          JSON.stringify({ success: true, plano: data, plan: data }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
       case 'updatePlan': {
-        if (!planId) {
-          throw new Error('ID do plano é obrigatório');
-        }
-
+        if (!planId) throw new Error('ID do plano é obrigatório');
         const updateData: any = {};
         if (codigo !== undefined) updateData.codigo = codigo;
         if (nome !== undefined) updateData.nome = nome;
@@ -367,93 +77,80 @@ serve(async (req) => {
           .from('catalogo_planos')
           .update(updateData)
           .eq('id', planId)
+          .eq('provedor_id', provedorId)
           .select()
           .single();
-        
         if (error) throw error;
-        
         return new Response(
           JSON.stringify({ success: true, plan: data }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
+      case 'removePlano':
       case 'deletePlan': {
-        if (!planId) {
-          throw new Error('ID do plano é obrigatório');
-        }
-
-        const { error } = await supabase
-          .from('catalogo_planos')
-          .update({ ativo: false })
-          .eq('id', planId);
+        const removeId = planId || undefined;
+        const removeCodigo = codigo || undefined;
         
+        let query = supabase.from('catalogo_planos').update({ ativo: false });
+        if (removeId) query = query.eq('id', removeId);
+        else if (removeCodigo) query = query.eq('codigo', removeCodigo);
+        else throw new Error('ID ou código é obrigatório');
+        
+        const { error } = await query.eq('provedor_id', provedorId);
         if (error) throw error;
-        
         return new Response(
           JSON.stringify({ success: true }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      // English aliases for Add-ons
+      // === ADICIONAIS ===
+      case 'listAdicionais':
       case 'listAddOns': {
         const { data, error } = await supabase
           .from('catalogo_adicionais')
           .select('*')
           .eq('ativo', true)
+          .eq('provedor_id', provedorId)
           .order('codigo', { ascending: true });
-        
         if (error) throw error;
-        
         return new Response(
-          JSON.stringify({ success: true, addOns: data }),
+          JSON.stringify({ success: true, adicionais: data, addOns: data }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
+      case 'addAdicional':
       case 'createAddOn': {
         const { requer_agendamento } = body;
-        if (!codigo || !nome || valor === undefined) {
-          throw new Error('Código, nome e valor são obrigatórios');
-        }
+        if (!codigo || !nome || !valor) throw new Error('Código, nome e valor são obrigatórios');
 
-        // Verificar duplicidade
         const { data: existing } = await supabase
           .from('catalogo_adicionais')
           .select('codigo')
           .eq('codigo', codigo)
+          .eq('provedor_id', provedorId)
           .single();
 
-        if (existing) {
-          throw new Error('Código já existe');
-        }
+        if (existing) throw new Error('Código já existe');
 
         const { data, error } = await supabase
           .from('catalogo_adicionais')
-          .insert({
-            codigo,
-            nome,
-            valor: parseFloat(valor),
-            ativo: true,
-            requer_agendamento: requer_agendamento || false
-          })
+          .insert({ codigo, nome, valor: parseFloat(valor), ativo: true, requer_agendamento: requer_agendamento || false, provedor_id: provedorId })
           .select()
           .single();
 
         if (error) throw error;
-
         return new Response(
-          JSON.stringify({ success: true, addOn: data }),
+          JSON.stringify({ success: true, adicional: data, addOn: data }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
       case 'updateAddOn': {
         const { requer_agendamento } = body;
-        if (!addOnId) {
-          throw new Error('ID do adicional é obrigatório');
-        }
+        if (!addOnId) throw new Error('ID do adicional é obrigatório');
 
         const updateData: any = {};
         if (codigo !== undefined) updateData.codigo = codigo;
@@ -465,60 +162,206 @@ serve(async (req) => {
           .from('catalogo_adicionais')
           .update(updateData)
           .eq('id', addOnId)
+          .eq('provedor_id', provedorId)
           .select()
           .single();
-        
         if (error) throw error;
-        
         return new Response(
           JSON.stringify({ success: true, addOn: data }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
+      case 'removeAdicional':
       case 'deleteAddOn': {
-        if (!addOnId) {
-          throw new Error('ID do adicional é obrigatório');
-        }
-
-        const { error } = await supabase
-          .from('catalogo_adicionais')
-          .update({ ativo: false })
-          .eq('id', addOnId);
+        const removeId = addOnId || undefined;
+        const removeCodigo = codigo || undefined;
         
+        let query = supabase.from('catalogo_adicionais').update({ ativo: false });
+        if (removeId) query = query.eq('id', removeId);
+        else if (removeCodigo) query = query.eq('codigo', removeCodigo);
+        else throw new Error('ID ou código é obrigatório');
+        
+        const { error } = await query.eq('provedor_id', provedorId);
         if (error) throw error;
-        
         return new Response(
           JSON.stringify({ success: true }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      case 'listOrigens': {
-        const { data, error } = await supabase
-          .from('catalogo_origem_vendas')
-          .select('id, nome')
+      // === CIDADES ===
+      case 'listCidades': {
+        let query = supabase
+          .from('catalogo_cidades')
+          .select('id, nome, uf')
           .eq('ativo', true)
+          .eq('provedor_id', provedorId)
           .order('nome', { ascending: true });
-        
+        if (uf) query = query.eq('uf', uf);
+        const { data, error } = await query;
         if (error) throw error;
-        
         return new Response(
           JSON.stringify({ success: true, data }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      // Tipos de Agendamento
+      case 'addCidade': {
+        if (!nome) throw new Error('Nome e UF são obrigatórios');
+        const cidade_uf = body.uf;
+        if (!cidade_uf) throw new Error('UF é obrigatória');
+
+        const { data: existing } = await supabase
+          .from('catalogo_cidades')
+          .select('id')
+          .eq('nome', nome)
+          .eq('uf', cidade_uf)
+          .eq('provedor_id', provedorId)
+          .single();
+
+        if (existing) throw new Error('Cidade já existe para esta UF');
+
+        const { data, error } = await supabase
+          .from('catalogo_cidades')
+          .insert({ nome, uf: cidade_uf, ativo: true, provedor_id: provedorId })
+          .select()
+          .single();
+
+        if (error) throw error;
+        return new Response(
+          JSON.stringify({ success: true, cidade: data }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'removeCidade': {
+        if (!id) throw new Error('ID é obrigatório');
+        const { error } = await supabase
+          .from('catalogo_cidades')
+          .update({ ativo: false })
+          .eq('id', id)
+          .eq('provedor_id', provedorId);
+        if (error) throw error;
+        return new Response(
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // === REPRESENTANTES ===
+      case 'listRepresentantes': {
+        const { data, error } = await supabase
+          .from('catalogo_representantes')
+          .select('id, nome')
+          .eq('ativo', true)
+          .eq('provedor_id', provedorId)
+          .order('nome', { ascending: true });
+        if (error) throw error;
+        return new Response(
+          JSON.stringify({ success: true, data }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'addRepresentante': {
+        if (!nome) throw new Error('Nome é obrigatório');
+        const { data: existing } = await supabase
+          .from('catalogo_representantes')
+          .select('id')
+          .eq('nome', nome)
+          .eq('provedor_id', provedorId)
+          .single();
+
+        if (existing) throw new Error('Representante já existe');
+
+        const { data, error } = await supabase
+          .from('catalogo_representantes')
+          .insert({ nome, ativo: true, provedor_id: provedorId })
+          .select()
+          .single();
+        if (error) throw error;
+        return new Response(
+          JSON.stringify({ success: true, representante: data }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'removeRepresentante': {
+        if (!id) throw new Error('ID é obrigatório');
+        const { error } = await supabase
+          .from('catalogo_representantes')
+          .update({ ativo: false })
+          .eq('id', id)
+          .eq('provedor_id', provedorId);
+        if (error) throw error;
+        return new Response(
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // === ORIGENS ===
+      case 'listOrigens': {
+        const { data, error } = await supabase
+          .from('catalogo_origem_vendas')
+          .select('id, nome')
+          .eq('ativo', true)
+          .eq('provedor_id', provedorId)
+          .order('nome', { ascending: true });
+        if (error) throw error;
+        return new Response(
+          JSON.stringify({ success: true, data }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'addOrigem': {
+        if (!nome) throw new Error('Nome é obrigatório');
+        const { data: existing } = await supabase
+          .from('catalogo_origem_vendas')
+          .select('id')
+          .eq('nome', nome)
+          .eq('provedor_id', provedorId)
+          .single();
+
+        if (existing) throw new Error('Origem já existe');
+
+        const { data, error } = await supabase
+          .from('catalogo_origem_vendas')
+          .insert({ nome, ativo: true, provedor_id: provedorId })
+          .select()
+          .single();
+        if (error) throw error;
+        return new Response(
+          JSON.stringify({ success: true, origem: data }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'removeOrigem': {
+        if (!id) throw new Error('ID é obrigatório');
+        const { error } = await supabase
+          .from('catalogo_origem_vendas')
+          .update({ ativo: false })
+          .eq('id', id)
+          .eq('provedor_id', provedorId);
+        if (error) throw error;
+        return new Response(
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // === TIPOS DE AGENDAMENTO ===
       case 'listTiposAgendamento': {
         const { data, error } = await supabase
           .from('catalogo_tipos_agendamento')
           .select('id, codigo, nome')
           .eq('ativo', true)
+          .eq('provedor_id', provedorId)
           .order('nome', { ascending: true });
-        
         if (error) throw error;
-        
         return new Response(
           JSON.stringify({ success: true, tipos: data }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -526,28 +369,23 @@ serve(async (req) => {
       }
 
       case 'addTipoAgendamento': {
-        if (!codigo || !nome) {
-          throw new Error('Código e nome são obrigatórios');
-        }
+        if (!codigo || !nome) throw new Error('Código e nome são obrigatórios');
 
         const { data: existing } = await supabase
           .from('catalogo_tipos_agendamento')
           .select('codigo')
           .eq('codigo', codigo)
+          .eq('provedor_id', provedorId)
           .single();
 
-        if (existing) {
-          throw new Error('Código já existe');
-        }
+        if (existing) throw new Error('Código já existe');
 
         const { data, error } = await supabase
           .from('catalogo_tipos_agendamento')
-          .insert({ codigo, nome, ativo: true })
+          .insert({ codigo, nome, ativo: true, provedor_id: provedorId })
           .select()
           .single();
-
         if (error) throw error;
-
         return new Response(
           JSON.stringify({ success: true, tipo: data }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -556,9 +394,7 @@ serve(async (req) => {
 
       case 'updateTipoAgendamento': {
         const tipoId = body.tipoId;
-        if (!tipoId) {
-          throw new Error('ID do tipo é obrigatório');
-        }
+        if (!tipoId) throw new Error('ID do tipo é obrigatório');
 
         const updateData: any = {};
         if (codigo !== undefined) updateData.codigo = codigo;
@@ -568,11 +404,10 @@ serve(async (req) => {
           .from('catalogo_tipos_agendamento')
           .update(updateData)
           .eq('id', tipoId)
+          .eq('provedor_id', provedorId)
           .select()
           .single();
-
         if (error) throw error;
-
         return new Response(
           JSON.stringify({ success: true, tipo: data }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -581,17 +416,13 @@ serve(async (req) => {
 
       case 'removeTipoAgendamento': {
         const tipoId = body.tipoId || id;
-        if (!tipoId) {
-          throw new Error('ID do tipo é obrigatório');
-        }
-
+        if (!tipoId) throw new Error('ID do tipo é obrigatório');
         const { error } = await supabase
           .from('catalogo_tipos_agendamento')
           .update({ ativo: false })
-          .eq('id', tipoId);
-
+          .eq('id', tipoId)
+          .eq('provedor_id', provedorId);
         if (error) throw error;
-
         return new Response(
           JSON.stringify({ success: true }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -606,10 +437,7 @@ serve(async (req) => {
     const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
     return new Response(
       JSON.stringify({ success: false, error: errorMessage }),
-      { 
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 })

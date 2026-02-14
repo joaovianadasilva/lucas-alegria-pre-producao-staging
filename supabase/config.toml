@@ -1,1 +1,4 @@
 project_id = "vvvtmsykjeyrevjmofhq"
+
+[functions.manage-provedores]
+verify_jwt = false
