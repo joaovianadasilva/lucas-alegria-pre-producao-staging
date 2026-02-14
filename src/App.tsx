@@ -38,10 +38,6 @@ const App = () => (
               <Route path="/selecionar-provedor" element={<SelecionarProvedor />} />
             </Route>
 
-            {/* Gerenciar Provedores - super_admin, sem exigir provedor */}
-            <Route element={<ProtectedRoute requireProvedor={false} requiredRole="super_admin" />}>
-              <Route path="/gerenciar-provedores" element={<GerenciarProvedores />} />
-            </Route>
             
             {/* Rotas Protegidas (exigem provedor ativo) */}
             <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
@@ -72,6 +68,11 @@ const App = () => (
                 <Route path="/configuracoes/planos" element={<ConfigurarPlanos />} />
                 <Route path="/configuracoes/adicionais" element={<ConfigurarAdicionais />} />
                 <Route path="/configuracoes/usuarios" element={<GerenciarUsuarios />} />
+              </Route>
+
+              {/* Gerenciar Provedores - super_admin */}
+              <Route element={<ProtectedRoute requiredRole="super_admin" />}>
+                <Route path="/gerenciar-provedores" element={<GerenciarProvedores />} />
               </Route>
             </Route>
             
