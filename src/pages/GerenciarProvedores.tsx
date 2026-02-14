@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Plus, Power, Building2, Users } from 'lucide-react';
+import { Plus, Power, Building2, Users, Pencil } from 'lucide-react';
 import GerenciarUsuariosProvedorDialog from '@/components/GerenciarUsuariosProvedorDialog';
 
 interface Provedor {
@@ -25,6 +25,7 @@ export default function GerenciarProvedores() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [formData, setFormData] = useState({ nome: '', logoUrl: '' });
   const [usuariosDialog, setUsuariosDialog] = useState<{ open: boolean; provedorId: string; provedorNome: string }>({ open: false, provedorId: '', provedorNome: '' });
+  const [editDialog, setEditDialog] = useState<{ open: boolean; provedorId: string; nome: string; logoUrl: string }>({ open: false, provedorId: '', nome: '', logoUrl: '' });
 
   const { data: provedores, isLoading } = useQuery({
     queryKey: ['provedores-admin'],
@@ -66,6 +67,23 @@ export default function GerenciarProvedores() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['provedores-admin'] });
       toast.success('Status atualizado!');
+    },
+    onError: (e: any) => toast.error('Erro: ' + e.message),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke('manage-provedores', {
+        body: { action: 'updateProvedor', provedorId: editDialog.provedorId, nome: editDialog.nome, logoUrl: editDialog.logoUrl || null },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['provedores-admin'] });
+      toast.success('Provedor atualizado!');
+      setEditDialog({ open: false, provedorId: '', nome: '', logoUrl: '' });
     },
     onError: (e: any) => toast.error('Erro: ' + e.message),
   });
@@ -122,6 +140,9 @@ export default function GerenciarProvedores() {
                   </TableCell>
                   <TableCell><Badge variant={p.ativo ? 'default' : 'secondary'}>{p.ativo ? 'Ativo' : 'Inativo'}</Badge></TableCell>
                   <TableCell className="text-right space-x-1">
+                    <Button variant="ghost" size="icon" onClick={() => setEditDialog({ open: true, provedorId: p.id, nome: p.nome, logoUrl: p.logo_url || '' })}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
                     <Button variant="ghost" size="icon" onClick={() => setUsuariosDialog({ open: true, provedorId: p.id, provedorNome: p.nome })}>
                       <Users className="h-4 w-4" />
                     </Button>
@@ -142,6 +163,25 @@ export default function GerenciarProvedores() {
         provedorId={usuariosDialog.provedorId}
         provedorNome={usuariosDialog.provedorNome}
       />
+
+      <Dialog open={editDialog.open} onOpenChange={(open) => setEditDialog(prev => ({ ...prev, open }))}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Editar Provedor</DialogTitle></DialogHeader>
+          <form onSubmit={(e) => { e.preventDefault(); updateMutation.mutate(); }} className="space-y-4">
+            <div>
+              <Label>Nome</Label>
+              <Input value={editDialog.nome} onChange={(e) => setEditDialog(prev => ({ ...prev, nome: e.target.value }))} required />
+            </div>
+            <div>
+              <Label>URL da Logo</Label>
+              <Input value={editDialog.logoUrl} onChange={(e) => setEditDialog(prev => ({ ...prev, logoUrl: e.target.value }))} placeholder="https://exemplo.com/logo.png" />
+            </div>
+            <Button type="submit" className="w-full" disabled={updateMutation.isPending}>
+              {updateMutation.isPending ? 'Salvando...' : 'Salvar'}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
