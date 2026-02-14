@@ -14,12 +14,9 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-
-    // Cliente com permissões de serviço (admin)
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
     
-    // Extrair o token JWT do header Authorization
+    // Auth check
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(
@@ -29,53 +26,72 @@ serve(async (req) => {
     }
 
     const token = authHeader.replace('Bearer ', '');
-    
-    // Verificar se o usuário está autenticado usando o token
     const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
     if (authError || !user) {
-      console.error('Erro de autenticação:', authError);
       return new Response(
         JSON.stringify({ error: 'Não autorizado - Token inválido' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Verificar se o usuário é admin
+    // Verificar se o usuário é admin ou super_admin
     const { data: userRoles } = await supabaseAdmin
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id);
 
-    const isAdmin = userRoles?.some(r => r.role === 'admin');
+    const isAdmin = userRoles?.some(r => r.role === 'admin' || r.role === 'super_admin');
     if (!isAdmin) {
-      console.error('Usuário não é admin:', user.id);
       return new Response(
         JSON.stringify({ error: 'Acesso negado. Apenas administradores podem gerenciar usuários.' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const { action, ...params } = await req.json();
-    console.log('Action:', action, 'Params:', params);
+    const isSuperAdmin = userRoles?.some(r => r.role === 'super_admin');
+
+    const { action, provedorId, ...params } = await req.json();
+    console.log('Action:', action, 'ProvedorId:', provedorId, 'Params:', params);
+
+    // provedorId obrigatório para a maioria das ações
+    if (!provedorId && action !== 'listProvedoresForUser') {
+      throw new Error('provedorId é obrigatório');
+    }
 
     switch (action) {
       case 'listUsers': {
-        // Buscar todos os perfis
+        // Buscar usuários vinculados ao provedor
+        const { data: vinculos, error: vinculosError } = await supabaseAdmin
+          .from('usuario_provedores')
+          .select('user_id')
+          .eq('provedor_id', provedorId);
+
+        if (vinculosError) throw vinculosError;
+
+        const userIds = vinculos?.map(v => v.user_id) || [];
+
+        if (userIds.length === 0) {
+          return new Response(
+            JSON.stringify({ users: [] }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
         const { data: profiles, error: profilesError } = await supabaseAdmin
           .from('profiles')
           .select('*')
+          .in('id', userIds)
           .order('nome');
 
         if (profilesError) throw profilesError;
 
-        // Buscar roles de todos os usuários
         const { data: allRoles, error: rolesError } = await supabaseAdmin
           .from('user_roles')
-          .select('*');
+          .select('*')
+          .in('user_id', userIds);
 
         if (rolesError) throw rolesError;
 
-        // Combinar perfis com roles
         const usersWithRoles = profiles.map(profile => ({
           ...profile,
           roles: allRoles.filter(r => r.user_id === profile.id).map(r => r.role),
@@ -90,20 +106,14 @@ serve(async (req) => {
       case 'createUser': {
         const { email, password, nome, sobrenome, telefone, roles } = params;
 
-        // Criar usuário no auth
         const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
           email,
           password,
           email_confirm: true,
-          user_metadata: {
-            nome,
-            sobrenome,
-            telefone,
-          },
+          user_metadata: { nome, sobrenome, telefone },
         });
 
         if (authError) {
-          console.error('Erro ao criar usuário:', authError);
           if (authError.message.includes('already been registered')) {
             return new Response(
               JSON.stringify({ error: 'Este email já está cadastrado no sistema' }),
@@ -113,16 +123,12 @@ serve(async (req) => {
           throw authError;
         }
 
-        // Criar ou atualizar perfil (upsert para evitar erro de chave duplicada)
+        // Criar perfil
         const { error: profileError } = await supabaseAdmin
           .from('profiles')
           .upsert({
             id: authData.user.id,
-            nome,
-            sobrenome,
-            email,
-            telefone,
-            ativo: true,
+            nome, sobrenome, email, telefone, ativo: true,
           }, { onConflict: 'id' });
 
         if (profileError) throw profileError;
@@ -131,15 +137,16 @@ serve(async (req) => {
         if (roles && roles.length > 0) {
           const { error: rolesError } = await supabaseAdmin
             .from('user_roles')
-            .insert(
-              roles.map((role: string) => ({
-                user_id: authData.user.id,
-                role,
-              }))
-            );
-
+            .insert(roles.map((role: string) => ({ user_id: authData.user.id, role })));
           if (rolesError) throw rolesError;
         }
+
+        // Vincular ao provedor
+        const { error: vinculoError } = await supabaseAdmin
+          .from('usuario_provedores')
+          .insert({ user_id: authData.user.id, provedor_id: provedorId });
+
+        if (vinculoError) throw vinculoError;
 
         return new Response(
           JSON.stringify({ message: 'Usuário criado com sucesso', userId: authData.user.id }),
@@ -204,7 +211,6 @@ serve(async (req) => {
       case 'toggleUserStatus': {
         const { userId } = params;
 
-        // Buscar status atual
         const { data: profile, error: fetchError } = await supabaseAdmin
           .from('profiles')
           .select('ativo')
@@ -213,7 +219,6 @@ serve(async (req) => {
 
         if (fetchError) throw fetchError;
 
-        // Inverter status
         const { error: updateError } = await supabaseAdmin
           .from('profiles')
           .update({ ativo: !profile.ativo })
@@ -223,6 +228,52 @@ serve(async (req) => {
 
         return new Response(
           JSON.stringify({ message: 'Status do usuário atualizado com sucesso', ativo: !profile.ativo }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'assignProvedor': {
+        const { userId, targetProvedorId } = params;
+        
+        if (!isSuperAdmin) {
+          return new Response(
+            JSON.stringify({ error: 'Apenas super_admin pode vincular usuários a provedores' }),
+            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const { error } = await supabaseAdmin
+          .from('usuario_provedores')
+          .insert({ user_id: userId, provedor_id: targetProvedorId });
+
+        if (error) throw error;
+
+        return new Response(
+          JSON.stringify({ message: 'Usuário vinculado ao provedor com sucesso' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'removeProvedor': {
+        const { userId, targetProvedorId } = params;
+        
+        if (!isSuperAdmin) {
+          return new Response(
+            JSON.stringify({ error: 'Apenas super_admin pode desvincular usuários de provedores' }),
+            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const { error } = await supabaseAdmin
+          .from('usuario_provedores')
+          .delete()
+          .eq('user_id', userId)
+          .eq('provedor_id', targetProvedorId);
+
+        if (error) throw error;
+
+        return new Response(
+          JSON.stringify({ message: 'Usuário desvinculado do provedor com sucesso' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }

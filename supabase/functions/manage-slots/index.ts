@@ -12,13 +12,17 @@ serve(async (req) => {
   }
 
   try {
-    const { action, data: requestData } = await req.json();
+    const { action, data: requestData, provedorId } = await req.json();
     
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    console.log(`[manage-slots] Action: ${action}`, requestData);
+    if (!provedorId) {
+      throw new Error('provedorId é obrigatório');
+    }
+
+    console.log(`[manage-slots] Action: ${action} provedorId: ${provedorId}`, requestData);
 
     switch (action) {
       case 'getCalendarSlots': {
@@ -32,15 +36,9 @@ serve(async (req) => {
           .from('slots')
           .select(`
             *,
-            agendamentos(
-              id,
-              nome_cliente,
-              email_cliente,
-              tipo,
-              status,
-              confirmacao
-            )
+            agendamentos(id, nome_cliente, email_cliente, tipo, status, confirmacao)
           `)
+          .eq('provedor_id', provedorId)
           .gte('data_disponivel', dataInicio)
           .lte('data_disponivel', dataFim)
           .order('data_disponivel', { ascending: true })
@@ -48,18 +46,12 @@ serve(async (req) => {
         
         if (error) throw error;
 
-        // Agrupar slots por data
         const slotsByDate: { [key: string]: any[] } = {};
-        
         for (const slot of slots || []) {
           const date = slot.data_disponivel;
-          if (!slotsByDate[date]) {
-            slotsByDate[date] = [];
-          }
+          if (!slotsByDate[date]) slotsByDate[date] = [];
           slotsByDate[date].push(slot);
         }
-
-        console.log(`[manage-slots] Found ${slots?.length || 0} slots between ${dataInicio} and ${dataFim}`);
 
         return new Response(
           JSON.stringify({ success: true, data: slotsByDate }),
@@ -70,43 +62,32 @@ serve(async (req) => {
       case 'createSlotsInBulk': {
         const { dataDisponivel, quantidade } = requestData;
         
-        if (!dataDisponivel || !quantidade) {
-          throw new Error('Data e quantidade são obrigatórias');
-        }
+        if (!dataDisponivel || !quantidade) throw new Error('Data e quantidade são obrigatórias');
+        if (quantidade < 1 || quantidade > 50) throw new Error('Quantidade deve estar entre 1 e 50');
 
-        if (quantidade < 1 || quantidade > 50) {
-          throw new Error('Quantidade deve estar entre 1 e 50');
-        }
-
-        // Validar limite de 30 dias
         const dataLimite = new Date();
         dataLimite.setDate(dataLimite.getDate() + 30);
         const dataSelecionada = new Date(dataDisponivel);
         
-        if (dataSelecionada > dataLimite) {
-          throw new Error('Não é possível criar slots para mais de 30 dias no futuro');
-        }
+        if (dataSelecionada > dataLimite) throw new Error('Não é possível criar slots para mais de 30 dias no futuro');
+        if (dataSelecionada < new Date(new Date().setHours(0, 0, 0, 0))) throw new Error('Não é possível criar slots para datas passadas');
 
-        if (dataSelecionada < new Date(new Date().setHours(0, 0, 0, 0))) {
-          throw new Error('Não é possível criar slots para datas passadas');
-        }
-
-        // Buscar o maior slot_numero existente para essa data
-        const { data: maxSlot, error: maxError } = await supabase
+        const { data: maxSlot } = await supabase
           .from('slots')
           .select('slot_numero')
           .eq('data_disponivel', dataDisponivel)
+          .eq('provedor_id', provedorId)
           .order('slot_numero', { ascending: false })
           .limit(1)
           .maybeSingle();
 
         const startSlotNumero = (maxSlot?.slot_numero || 0) + 1;
 
-        // Criar array de novos slots
         const newSlots = Array.from({ length: quantidade }, (_, i) => ({
           data_disponivel: dataDisponivel,
           slot_numero: startSlotNumero + i,
-          status: 'disponivel'
+          status: 'disponivel',
+          provedor_id: provedorId
         }));
 
         const { data: created, error } = await supabase
@@ -115,8 +96,6 @@ serve(async (req) => {
           .select();
 
         if (error) throw error;
-
-        console.log(`[manage-slots] Created ${quantidade} slots for ${dataDisponivel}`);
 
         return new Response(
           JSON.stringify({ success: true, data: created }),
@@ -127,35 +106,26 @@ serve(async (req) => {
       case 'updateSlotStatus': {
         const { slotId, status } = requestData;
         
-        if (!slotId || !status) {
-          throw new Error('Slot ID e status são obrigatórios');
-        }
+        if (!slotId || !status) throw new Error('Slot ID e status são obrigatórios');
+        if (!['disponivel', 'bloqueado'].includes(status)) throw new Error('Status inválido');
 
-        if (!['disponivel', 'bloqueado'].includes(status)) {
-          throw new Error('Status inválido. Use "disponivel" ou "bloqueado"');
-        }
-
-        // Verificar se o slot existe e não está ocupado
         const { data: slot, error: checkError } = await supabase
           .from('slots')
           .select('status')
           .eq('id', slotId)
+          .eq('provedor_id', provedorId)
           .single();
 
         if (checkError) throw checkError;
-
-        if (slot.status === 'ocupado') {
-          throw new Error('Não é possível alterar status de slot ocupado');
-        }
+        if (slot.status === 'ocupado') throw new Error('Não é possível alterar status de slot ocupado');
 
         const { error } = await supabase
           .from('slots')
           .update({ status, agendamento_id: null })
-          .eq('id', slotId);
+          .eq('id', slotId)
+          .eq('provedor_id', provedorId);
 
         if (error) throw error;
-
-        console.log(`[manage-slots] Updated slot ${slotId} to status ${status}`);
 
         return new Response(
           JSON.stringify({ success: true }),
@@ -165,32 +135,25 @@ serve(async (req) => {
 
       case 'deleteSlot': {
         const { slotId } = requestData;
-        
-        if (!slotId) {
-          throw new Error('Slot ID é obrigatório');
-        }
+        if (!slotId) throw new Error('Slot ID é obrigatório');
 
-        // Verificar se slot não está ocupado
         const { data: slot, error: checkError } = await supabase
           .from('slots')
           .select('status')
           .eq('id', slotId)
+          .eq('provedor_id', provedorId)
           .single();
 
         if (checkError) throw checkError;
-
-        if (slot.status === 'ocupado') {
-          throw new Error('Não é possível deletar slot ocupado');
-        }
+        if (slot.status === 'ocupado') throw new Error('Não é possível deletar slot ocupado');
 
         const { error } = await supabase
           .from('slots')
           .delete()
-          .eq('id', slotId);
+          .eq('id', slotId)
+          .eq('provedor_id', provedorId);
 
         if (error) throw error;
-
-        console.log(`[manage-slots] Deleted slot ${slotId}`);
 
         return new Response(
           JSON.stringify({ success: true }),
@@ -199,12 +162,26 @@ serve(async (req) => {
       }
 
       case 'getSlotsStats': {
-        const { data: stats, error } = await supabase
-          .rpc('get_slots_statistics');
+        // Stats filtradas por provedor
+        const today = new Date().toISOString().split('T')[0];
+        const thirtyDays = new Date();
+        thirtyDays.setDate(thirtyDays.getDate() + 30);
+        const thirtyDaysStr = thirtyDays.toISOString().split('T')[0];
+
+        const { data: slots, error } = await supabase
+          .from('slots')
+          .select('status, data_disponivel')
+          .eq('provedor_id', provedorId)
+          .gte('data_disponivel', today)
+          .lte('data_disponivel', thirtyDaysStr);
 
         if (error) throw error;
 
-        console.log('[manage-slots] Retrieved slots statistics');
+        const stats = {
+          total_disponiveis: slots?.filter(s => s.status === 'disponivel').length || 0,
+          total_ocupados: slots?.filter(s => s.status === 'ocupado').length || 0,
+          total_bloqueados: slots?.filter(s => s.status === 'bloqueado').length || 0,
+        };
 
         return new Response(
           JSON.stringify({ success: true, data: stats }),
@@ -212,9 +189,7 @@ serve(async (req) => {
         );
       }
 
-      // Manter compatibilidade com código antigo
       case 'getDatesAndSlots': {
-        // Redirecionar para getCalendarSlots com período de 60 dias
         const today = new Date();
         const futureDate = new Date();
         futureDate.setDate(today.getDate() + 60);
@@ -225,6 +200,7 @@ serve(async (req) => {
         const { data: slots, error } = await supabase
           .from('slots')
           .select('*')
+          .eq('provedor_id', provedorId)
           .gte('data_disponivel', dataInicio)
           .lte('data_disponivel', dataFim)
           .order('data_disponivel', { ascending: true })
@@ -232,15 +208,10 @@ serve(async (req) => {
         
         if (error) throw error;
 
-        // Converter para formato antigo para compatibilidade
         const datesWithSlots: { [key: string]: { [key: number]: string | null } } = {};
-        
         for (const slot of slots || []) {
           const date = slot.data_disponivel;
-          if (!datesWithSlots[date]) {
-            datesWithSlots[date] = {};
-          }
-          
+          if (!datesWithSlots[date]) datesWithSlots[date] = {};
           datesWithSlots[date][slot.slot_numero] = 
             slot.status === 'disponivel' ? null :
             slot.status === 'bloqueado' ? '-' :
@@ -261,10 +232,7 @@ serve(async (req) => {
     const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
     return new Response(
       JSON.stringify({ success: false, error: errorMessage }),
-      { 
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 })

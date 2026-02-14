@@ -13,11 +13,16 @@ serve(async (req) => {
 
   try {
     const requestBody = await req.json();
-    const { action } = requestBody;
+    const { action, provedorId } = requestBody;
     
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Validar provedorId obrigatório
+    if (!provedorId) {
+      throw new Error('provedorId é obrigatório');
+    }
 
     switch (action) {
       case 'createContract': {
@@ -34,7 +39,6 @@ serve(async (req) => {
           taxaInstalacao
         } = requestBody;
 
-        // Validar que existe plano OU adicionais
         const temPlano = planoContratado && planoContratado.trim() !== '';
         const temAdicionais = adicionaisContratados && adicionaisContratados.length > 0;
         
@@ -42,11 +46,9 @@ serve(async (req) => {
           throw new Error('É necessário selecionar pelo menos um plano ou adicional');
         }
 
-        // Processar plano (se fornecido)
         let planoCodigo, planoNome, planoValor;
         
         if (temPlano) {
-          // Extrair código do plano (formato: "[10001] - [Fibra 100MB] - [R$ 79.90]")
           const planoMatch = planoContratado.match(/\[(\d+)\]\s*-\s*\[([^\]]+)\]\s*-\s*\[R\$\s*([\d,.]+)\]/);
           if (!planoMatch) {
             throw new Error('Formato de plano inválido');
@@ -55,25 +57,23 @@ serve(async (req) => {
           planoNome = planoMatch[2];
           planoValor = parseFloat(planoMatch[3].replace(',', '.'));
 
-          // Buscar detalhes do plano no catálogo (para validação)
           const { data: planoData, error: planoError } = await supabase
             .from('catalogo_planos')
             .select('*')
             .eq('codigo', planoCodigo)
             .eq('ativo', true)
+            .eq('provedor_id', provedorId)
             .single();
 
           if (planoError || !planoData) {
             throw new Error('Plano não encontrado ou inativo');
           }
         } else {
-          // Se não tem plano, usar valores padrão para indicar "sem plano"
           planoCodigo = '';
           planoNome = 'Sem plano base';
           planoValor = 0;
         }
 
-        // Processar adicionais contratados
         const adicionaisProcessados = [];
         if (adicionaisContratados && adicionaisContratados.length > 0) {
           for (const adicionalStr of adicionaisContratados) {
@@ -83,12 +83,12 @@ serve(async (req) => {
               const adicionalNome = adicionalMatch[2];
               const adicionalValor = parseFloat(adicionalMatch[3].replace(',', '.'));
 
-              // Validar adicional no catálogo
               const { data: adicionalData } = await supabase
                 .from('catalogo_adicionais')
                 .select('*')
                 .eq('codigo', adicionalCodigo)
                 .eq('ativo', true)
+                .eq('provedor_id', provedorId)
                 .single();
 
               if (adicionalData) {
@@ -102,22 +102,20 @@ serve(async (req) => {
           }
         }
 
-        // Calcular valor total (plano + adicionais)
         const valorTotalAdicionais = adicionaisProcessados.reduce(
           (acc, adic) => acc + adic.valor, 0
         );
         const valorTotal = planoValor + valorTotalAdicionais;
 
-        // Verificar se agendamento foi fornecido
         const temAgendamento = dataAgendamento && slotAgendamento;
 
-        // Verificar disponibilidade do slot apenas se tiver agendamento
         if (temAgendamento) {
           const { data: slotData, error: slotError } = await supabase
             .from('slots')
             .select('*')
             .eq('data_disponivel', dataAgendamento)
             .eq('slot_numero', slotAgendamento)
+            .eq('provedor_id', provedorId)
             .single();
 
           if (slotError || !slotData) {
@@ -129,12 +127,11 @@ serve(async (req) => {
           }
         }
 
-        // TRANSAÇÃO: Criar contrato + adicionais + agendamento + atualizar slot
-        
         // 1. Criar contrato
         const { data: contratoData, error: contratoError } = await supabase
           .from('contratos')
           .insert({
+            provedor_id: provedorId,
             codigo_cliente: null,
             origem,
             tipo_venda: tipoVenda,
@@ -190,7 +187,8 @@ serve(async (req) => {
             contrato_id: contratoId,
             adicional_codigo: adic.codigo,
             adicional_nome: adic.nome,
-            adicional_valor: adic.valor
+            adicional_valor: adic.valor,
+            provedor_id: provedorId
           }));
 
           const { error: adicionaisError } = await supabase
@@ -198,18 +196,18 @@ serve(async (req) => {
             .insert(adicionaisInserts);
 
           if (adicionaisError) {
-            // Rollback: deletar contrato
             await supabase.from('contratos').delete().eq('id', contratoId);
             throw new Error(`Erro ao criar adicionais: ${adicionaisError.message}`);
           }
         }
 
-        // 3. Criar agendamento vinculado ao contrato (apenas se tiver dados de agendamento)
+        // 3. Criar agendamento vinculado ao contrato
         let agendamentoData = null;
         if (temAgendamento) {
           const { data, error: agendamentoError } = await supabase
             .from('agendamentos')
             .insert({
+              provedor_id: provedorId,
               contrato_id: contratoId,
               data_agendamento: dataAgendamento,
               slot_numero: slotAgendamento,
@@ -223,14 +221,12 @@ serve(async (req) => {
             .single();
 
           if (agendamentoError) {
-            // Rollback: deletar contrato (cascade deleta adicionais)
             await supabase.from('contratos').delete().eq('id', contratoId);
             throw new Error(`Erro ao criar agendamento: ${agendamentoError.message}`);
           }
           
           agendamentoData = data;
 
-          // 4. Atualizar slot para vincular o agendamento
           const { error: slotUpdateError } = await supabase
             .from('slots')
             .update({ 
@@ -238,18 +234,19 @@ serve(async (req) => {
               agendamento_id: agendamentoData.id
             })
             .eq('data_disponivel', dataAgendamento)
-            .eq('slot_numero', slotAgendamento);
+            .eq('slot_numero', slotAgendamento)
+            .eq('provedor_id', provedorId);
 
           if (slotUpdateError) {
-            // Rollback: deletar contrato (cascade deleta agendamento e adicionais)
             await supabase.from('contratos').delete().eq('id', contratoId);
             throw new Error(`Erro ao atualizar vaga: ${slotUpdateError.message}`);
           }
         }
 
-        // 5. Registrar histórico de criação do contrato
+        // 5. Registrar histórico
         await supabase.from('historico_contratos').insert({
           contrato_id: contratoId,
+          provedor_id: provedorId,
           tipo_acao: 'criacao',
           campo_alterado: null,
           valor_anterior: null,
@@ -265,10 +262,10 @@ serve(async (req) => {
           entidade_nome: nomeCompleto
         });
 
-        // 6. Registrar histórico de adicionais
         if (adicionaisProcessados.length > 0) {
           const historicoAdicionais = adicionaisProcessados.map(adic => ({
             contrato_id: contratoId,
+            provedor_id: provedorId,
             adicional_codigo: adic.codigo,
             adicional_nome: adic.nome,
             adicional_valor: adic.valor,
@@ -280,7 +277,6 @@ serve(async (req) => {
           await supabase.from('historico_adicionais_contrato').insert(historicoAdicionais);
         }
 
-        // Sucesso!
         return new Response(
           JSON.stringify({ 
             success: true, 
@@ -307,6 +303,7 @@ serve(async (req) => {
             agendamentos (*)
           `)
           .eq('id', contratoId)
+          .eq('provedor_id', provedorId)
           .single();
 
         if (contratoError) throw contratoError;
@@ -323,6 +320,7 @@ serve(async (req) => {
         let query = supabase
           .from('contratos')
           .select('*', { count: 'exact' })
+          .eq('provedor_id', provedorId)
           .order('created_at', { ascending: false })
           .range(offset, offset + limit - 1);
 
@@ -350,14 +348,12 @@ serve(async (req) => {
           codigoContratoFilter 
         } = requestBody;
 
-        console.log('listContractsWithFilter - params:', { limit, offset, dataInicio, dataFim, codigoClienteFilter, codigoContratoFilter });
-
         let query = supabase
           .from('contratos')
           .select('id, nome_completo, celular, email, cpf, codigo_contrato, codigo_cliente, created_at', { count: 'exact' })
+          .eq('provedor_id', provedorId)
           .order('created_at', { ascending: false });
 
-        // Filtro de data
         if (dataInicio) {
           query = query.gte('created_at', dataInicio);
         }
@@ -365,31 +361,23 @@ serve(async (req) => {
           query = query.lte('created_at', dataFim + 'T23:59:59');
         }
 
-        // Filtro de código cliente (vazio/preenchido)
         if (codigoClienteFilter === 'vazio') {
           query = query.or('codigo_cliente.is.null,codigo_cliente.eq.');
         } else if (codigoClienteFilter === 'preenchido') {
           query = query.not('codigo_cliente', 'is', null).neq('codigo_cliente', '');
         }
 
-        // Filtro de código contrato (vazio/preenchido)
         if (codigoContratoFilter === 'vazio') {
           query = query.or('codigo_contrato.is.null,codigo_contrato.eq.');
         } else if (codigoContratoFilter === 'preenchido') {
           query = query.not('codigo_contrato', 'is', null).neq('codigo_contrato', '');
         }
 
-        // Aplicar paginação
         query = query.range(offset, offset + limit - 1);
 
         const { data, error, count } = await query;
 
-        if (error) {
-          console.error('listContractsWithFilter - error:', error);
-          throw error;
-        }
-
-        console.log('listContractsWithFilter - success, count:', count);
+        if (error) throw error;
 
         return new Response(
           JSON.stringify({ success: true, contratos: data, total: count }),
@@ -400,25 +388,21 @@ serve(async (req) => {
       case 'updateContractCodes': {
         const { contratoId, codigoContrato, codigoCliente, usuarioId } = requestBody;
 
-        console.log('updateContractCodes - params:', { contratoId, codigoContrato, codigoCliente, usuarioId });
-
         if (!contratoId) {
           throw new Error('ID do contrato é obrigatório');
         }
 
-        // Buscar valores atuais para histórico
         const { data: contratoAtual, error: fetchError } = await supabase
           .from('contratos')
           .select('codigo_contrato, codigo_cliente, nome_completo')
           .eq('id', contratoId)
+          .eq('provedor_id', provedorId)
           .single();
 
         if (fetchError) {
-          console.error('updateContractCodes - fetch error:', fetchError);
           throw new Error('Contrato não encontrado');
         }
 
-        // Atualizar contrato
         const { error: updateError } = await supabase
           .from('contratos')
           .update({
@@ -426,19 +410,19 @@ serve(async (req) => {
             codigo_cliente: codigoCliente || null,
             updated_at: new Date().toISOString()
           })
-          .eq('id', contratoId);
+          .eq('id', contratoId)
+          .eq('provedor_id', provedorId);
 
         if (updateError) {
-          console.error('updateContractCodes - update error:', updateError);
           throw new Error(`Erro ao atualizar contrato: ${updateError.message}`);
         }
 
-        // Registrar histórico de alterações
         const historicoInserts = [];
 
         if (contratoAtual.codigo_contrato !== (codigoContrato || null)) {
           historicoInserts.push({
             contrato_id: contratoId,
+            provedor_id: provedorId,
             tipo_acao: 'alteracao',
             campo_alterado: 'codigo_contrato',
             valor_anterior: contratoAtual.codigo_contrato || null,
@@ -451,6 +435,7 @@ serve(async (req) => {
         if (contratoAtual.codigo_cliente !== (codigoCliente || null)) {
           historicoInserts.push({
             contrato_id: contratoId,
+            provedor_id: provedorId,
             tipo_acao: 'alteracao',
             campo_alterado: 'codigo_cliente',
             valor_anterior: contratoAtual.codigo_cliente || null,
@@ -461,17 +446,8 @@ serve(async (req) => {
         }
 
         if (historicoInserts.length > 0) {
-          const { error: historicoError } = await supabase
-            .from('historico_contratos')
-            .insert(historicoInserts);
-
-          if (historicoError) {
-            console.error('updateContractCodes - historico error:', historicoError);
-            // Não lançar erro, apenas logar - o update já foi feito
-          }
+          await supabase.from('historico_contratos').insert(historicoInserts);
         }
-
-        console.log('updateContractCodes - success');
 
         return new Response(
           JSON.stringify({ success: true, message: 'Contrato atualizado com sucesso' }),
@@ -483,82 +459,45 @@ serve(async (req) => {
         const { 
           contratoId, 
           usuarioId,
-          // Plano e adicionais
-          planoCodigo,
-          planoNome,
-          planoValor,
-          adicionais, // array of { codigo, nome, valor }
-          taxaInstalacao,
-          diaVencimento,
-          // Informações pessoais
-          nomeCompleto,
-          tipoCliente,
-          cpf,
-          cnpj,
-          rg,
-          orgaoExpedicao,
-          razaoSocial,
-          inscricaoEstadual,
-          dataNascimento,
-          telefone,
-          celular,
-          email,
-          // Endereço residência
-          residenciaRua,
-          residenciaNumero,
-          residenciaBairro,
-          residenciaComplemento,
-          residenciaCep,
-          residenciaCidade,
-          residenciaUf,
-          // Endereço instalação
-          instalacaoMesmoEndereco,
-          instalacaoRua,
-          instalacaoNumero,
-          instalacaoBairro,
-          instalacaoComplemento,
-          instalacaoCep,
-          instalacaoCidade,
-          instalacaoUf,
-          // Outras informações
-          origem,
-          representanteVendas,
-          tipoVenda,
-          observacao
+          planoCodigo, planoNome, planoValor,
+          adicionais,
+          taxaInstalacao, diaVencimento,
+          nomeCompleto, tipoCliente, cpf, cnpj, rg, orgaoExpedicao,
+          razaoSocial, inscricaoEstadual, dataNascimento,
+          telefone, celular, email,
+          residenciaRua, residenciaNumero, residenciaBairro, residenciaComplemento,
+          residenciaCep, residenciaCidade, residenciaUf,
+          instalacaoMesmoEndereco, instalacaoRua, instalacaoNumero, instalacaoBairro,
+          instalacaoComplemento, instalacaoCep, instalacaoCidade, instalacaoUf,
+          origem, representanteVendas, tipoVenda, observacao
         } = requestBody;
-
-        console.log('updateContractFull - starting for contratoId:', contratoId);
 
         if (!contratoId) {
           throw new Error('ID do contrato é obrigatório');
         }
 
-        // 1. Buscar contrato atual para comparação
         const { data: contratoAtual, error: fetchError } = await supabase
           .from('contratos')
           .select('*')
           .eq('id', contratoId)
+          .eq('provedor_id', provedorId)
           .single();
 
         if (fetchError || !contratoAtual) {
-          console.error('updateContractFull - fetch error:', fetchError);
           throw new Error('Contrato não encontrado');
         }
 
-        // 2. Buscar adicionais atuais
         const { data: adicionaisAtuais } = await supabase
           .from('adicionais_contrato')
           .select('*')
           .eq('contrato_id', contratoId);
 
-        // 3. Calcular novo valor total
         const novoPlanoValor = planoValor || 0;
         const totalAdicionais = (adicionais || []).reduce(
           (acc: number, adic: { valor: number }) => acc + (adic.valor || 0), 0
         );
         const novoValorTotal = novoPlanoValor + totalAdicionais;
 
-        // 4. Preparar campos para atualização
         const updateData: Record<string, any> = {
           plano_codigo: planoCodigo || '',
           plano_nome: planoNome || 'Sem plano base',
@@ -600,18 +539,17 @@ serve(async (req) => {
           updated_at: new Date().toISOString()
         };
 
-        // 5. Atualizar contrato
         const { error: updateError } = await supabase
           .from('contratos')
           .update(updateData)
-          .eq('id', contratoId);
+          .eq('id', contratoId)
+          .eq('provedor_id', provedorId);
 
         if (updateError) {
-          console.error('updateContractFull - update error:', updateError);
           throw new Error(`Erro ao atualizar contrato: ${updateError.message}`);
         }
 
-        // 6. Registrar histórico de alterações nos campos
+        // Registrar histórico
         const historicoInserts = [];
         const camposComparar = [
           { campo: 'plano_codigo', anterior: contratoAtual.plano_codigo, novo: updateData.plano_codigo },
@@ -624,33 +562,9 @@ serve(async (req) => {
           { campo: 'tipo_cliente', anterior: contratoAtual.tipo_cliente, novo: updateData.tipo_cliente },
           { campo: 'cpf', anterior: contratoAtual.cpf, novo: updateData.cpf },
           { campo: 'cnpj', anterior: contratoAtual.cnpj, novo: updateData.cnpj },
-          { campo: 'rg', anterior: contratoAtual.rg, novo: updateData.rg },
-          { campo: 'orgao_expedicao', anterior: contratoAtual.orgao_expedicao, novo: updateData.orgao_expedicao },
-          { campo: 'razao_social', anterior: contratoAtual.razao_social, novo: updateData.razao_social },
-          { campo: 'inscricao_estadual', anterior: contratoAtual.inscricao_estadual, novo: updateData.inscricao_estadual },
-          { campo: 'data_nascimento', anterior: contratoAtual.data_nascimento, novo: updateData.data_nascimento },
-          { campo: 'telefone', anterior: contratoAtual.telefone, novo: updateData.telefone },
-          { campo: 'celular', anterior: contratoAtual.celular, novo: updateData.celular },
           { campo: 'email', anterior: contratoAtual.email, novo: updateData.email },
-          { campo: 'residencia_rua', anterior: contratoAtual.residencia_rua, novo: updateData.residencia_rua },
-          { campo: 'residencia_numero', anterior: contratoAtual.residencia_numero, novo: updateData.residencia_numero },
-          { campo: 'residencia_bairro', anterior: contratoAtual.residencia_bairro, novo: updateData.residencia_bairro },
-          { campo: 'residencia_complemento', anterior: contratoAtual.residencia_complemento, novo: updateData.residencia_complemento },
-          { campo: 'residencia_cep', anterior: contratoAtual.residencia_cep, novo: updateData.residencia_cep },
-          { campo: 'residencia_cidade', anterior: contratoAtual.residencia_cidade, novo: updateData.residencia_cidade },
-          { campo: 'residencia_uf', anterior: contratoAtual.residencia_uf, novo: updateData.residencia_uf },
-          { campo: 'instalacao_mesmo_endereco', anterior: String(contratoAtual.instalacao_mesmo_endereco), novo: String(updateData.instalacao_mesmo_endereco) },
-          { campo: 'instalacao_rua', anterior: contratoAtual.instalacao_rua, novo: updateData.instalacao_rua },
-          { campo: 'instalacao_numero', anterior: contratoAtual.instalacao_numero, novo: updateData.instalacao_numero },
-          { campo: 'instalacao_bairro', anterior: contratoAtual.instalacao_bairro, novo: updateData.instalacao_bairro },
-          { campo: 'instalacao_complemento', anterior: contratoAtual.instalacao_complemento, novo: updateData.instalacao_complemento },
-          { campo: 'instalacao_cep', anterior: contratoAtual.instalacao_cep, novo: updateData.instalacao_cep },
-          { campo: 'instalacao_cidade', anterior: contratoAtual.instalacao_cidade, novo: updateData.instalacao_cidade },
-          { campo: 'instalacao_uf', anterior: contratoAtual.instalacao_uf, novo: updateData.instalacao_uf },
+          { campo: 'celular', anterior: contratoAtual.celular, novo: updateData.celular },
           { campo: 'origem', anterior: contratoAtual.origem, novo: updateData.origem },
-          { campo: 'representante_vendas', anterior: contratoAtual.representante_vendas, novo: updateData.representante_vendas },
-          { campo: 'tipo_venda', anterior: contratoAtual.tipo_venda, novo: updateData.tipo_venda },
-          { campo: 'observacao', anterior: contratoAtual.observacao, novo: updateData.observacao },
         ];
 
         for (const { campo, anterior, novo } of camposComparar) {
@@ -659,6 +573,7 @@ serve(async (req) => {
           if (anteriorStr !== novoStr) {
             historicoInserts.push({
               contrato_id: contratoId,
+              provedor_id: provedorId,
               tipo_acao: 'alteracao',
               campo_alterado: campo,
               valor_anterior: anteriorStr,
@@ -673,7 +588,7 @@ serve(async (req) => {
           await supabase.from('historico_contratos').insert(historicoInserts);
         }
 
-        // 7. Processar adicionais - comparar e registrar alterações
+        // Processar adicionais
         const adicionaisAtuaisMap = new Map(
           (adicionaisAtuais || []).map(a => [a.adicional_codigo, a])
         );
@@ -681,13 +596,12 @@ serve(async (req) => {
           (adicionais || []).map((a: { codigo: string; nome: string; valor: number }) => [a.codigo, a])
         );
 
-        // Adicionais removidos
         const historicoAdicionaisInserts = [];
         for (const [codigo, adicionalAtual] of adicionaisAtuaisMap) {
           if (!novosAdicionaisMap.has(codigo)) {
-            // Adicional foi removido
             historicoAdicionaisInserts.push({
               contrato_id: contratoId,
+              provedor_id: provedorId,
               adicional_codigo: adicionalAtual.adicional_codigo,
               adicional_nome: adicionalAtual.adicional_nome,
               adicional_valor: adicionalAtual.adicional_valor,
@@ -698,13 +612,12 @@ serve(async (req) => {
           }
         }
 
-        // Adicionais adicionados
         for (const [codigo, novoAdicional] of novosAdicionaisMap) {
           if (!adicionaisAtuaisMap.has(codigo)) {
-            // Adicional foi adicionado
             const adicional = novoAdicional as { codigo: string; nome: string; valor: number };
             historicoAdicionaisInserts.push({
               contrato_id: contratoId,
+              provedor_id: provedorId,
               adicional_codigo: adicional.codigo,
               adicional_nome: adicional.nome,
               adicional_valor: adicional.valor,
@@ -719,7 +632,6 @@ serve(async (req) => {
           await supabase.from('historico_adicionais_contrato').insert(historicoAdicionaisInserts);
         }
 
-        // 8. Deletar adicionais antigos e inserir novos
         await supabase
           .from('adicionais_contrato')
           .delete()
@@ -728,6 +640,7 @@ serve(async (req) => {
         if (adicionais && adicionais.length > 0) {
           const adicionaisInserts = adicionais.map((a: { codigo: string; nome: string; valor: number }) => ({
             contrato_id: contratoId,
+            provedor_id: provedorId,
             adicional_codigo: a.codigo,
             adicional_nome: a.nome,
             adicional_valor: a.valor
@@ -735,8 +648,6 @@ serve(async (req) => {
 
           await supabase.from('adicionais_contrato').insert(adicionaisInserts);
         }
-
-        console.log('updateContractFull - success');
 
         return new Response(
           JSON.stringify({ success: true, message: 'Contrato atualizado com sucesso' }),
