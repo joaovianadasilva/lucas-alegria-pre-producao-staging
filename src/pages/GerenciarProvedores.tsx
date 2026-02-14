@@ -9,7 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Plus, Power, Building2 } from 'lucide-react';
+import { Plus, Power, Building2, Users } from 'lucide-react';
+import GerenciarUsuariosProvedorDialog from '@/components/GerenciarUsuariosProvedorDialog';
 
 interface Provedor {
   id: string;
@@ -23,6 +24,7 @@ export default function GerenciarProvedores() {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [formData, setFormData] = useState({ nome: '', slug: '', logoUrl: '' });
+  const [usuariosDialog, setUsuariosDialog] = useState<{ open: boolean; provedorId: string; provedorNome: string }>({ open: false, provedorId: '', provedorNome: '' });
 
   const { data: provedores, isLoading } = useQuery({
     queryKey: ['provedores-admin'],
@@ -125,7 +127,10 @@ export default function GerenciarProvedores() {
                   </TableCell>
                   <TableCell className="font-mono text-sm">{p.slug}</TableCell>
                   <TableCell><Badge variant={p.ativo ? 'default' : 'secondary'}>{p.ativo ? 'Ativo' : 'Inativo'}</Badge></TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right space-x-1">
+                    <Button variant="ghost" size="icon" onClick={() => setUsuariosDialog({ open: true, provedorId: p.id, provedorNome: p.nome })}>
+                      <Users className="h-4 w-4" />
+                    </Button>
                     <Button variant="ghost" size="icon" onClick={() => toggleMutation.mutate(p.id)} disabled={toggleMutation.isPending}>
                       <Power className="h-4 w-4" />
                     </Button>
@@ -136,6 +141,13 @@ export default function GerenciarProvedores() {
           </Table>
         </CardContent>
       </Card>
+
+      <GerenciarUsuariosProvedorDialog
+        open={usuariosDialog.open}
+        onOpenChange={(open) => setUsuariosDialog(prev => ({ ...prev, open }))}
+        provedorId={usuariosDialog.provedorId}
+        provedorNome={usuariosDialog.provedorNome}
+      />
     </div>
   );
 }
