@@ -38,10 +38,7 @@ export const AppLayout: React.FC = () => {
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8"
-                  onClick={() => {
-                    localStorage.removeItem('provedorAtivoId');
-                    navigate('/selecionar-provedor');
-                  }}
+                  onClick={() => navigate('/selecionar-provedor')}
                   title="Trocar provedor"
                 >
                   <ArrowLeftRight className="h-4 w-4" />

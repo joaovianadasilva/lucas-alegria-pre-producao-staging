@@ -10,13 +10,6 @@ export default function SelecionarProvedor() {
   const { provedoresDisponiveis, provedoresLoading, selecionarProvedor, provedorAtivo, isSuperAdmin } = useAuth();
   const navigate = useNavigate();
 
-  // Auto-redirect se já tem provedor ativo
-  useEffect(() => {
-    if (provedorAtivo) {
-      navigate('/', { replace: true });
-    }
-  }, [provedorAtivo, navigate]);
-
   // Auto-redirect se só tem 1 provedor
   useEffect(() => {
     if (!provedoresLoading && provedoresDisponiveis.length === 1 && !provedorAtivo) {

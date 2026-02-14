@@ -39,7 +39,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const PROVEDOR_STORAGE_KEY = 'provedorAtivoId';
+
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -121,16 +121,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       setProvedoresDisponiveis(provedores);
 
-      // Tentar restaurar provedor salvo no localStorage
-      const savedId = localStorage.getItem(PROVEDOR_STORAGE_KEY);
-      const savedProvedor = provedores.find(p => p.id === savedId);
-
-      if (savedProvedor) {
-        setProvedorAtivo(savedProvedor);
-      } else if (provedores.length === 1) {
-        // Auto-selecionar se só tem 1
+      if (provedores.length === 1) {
         setProvedorAtivo(provedores[0]);
-        localStorage.setItem(PROVEDOR_STORAGE_KEY, provedores[0].id);
       } else {
         setProvedorAtivo(null);
       }
@@ -215,8 +207,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setRoles([]);
       setProvedorAtivo(null);
       setProvedoresDisponiveis([]);
-      localStorage.removeItem(PROVEDOR_STORAGE_KEY);
-
       toast.success('Logout realizado com sucesso!');
       navigate('/auth');
     } catch (error: any) {
@@ -238,7 +228,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const provedor = provedoresDisponiveis.find(p => p.id === id);
     if (provedor) {
       setProvedorAtivo(provedor);
-      localStorage.setItem(PROVEDOR_STORAGE_KEY, id);
     }
   };
 
