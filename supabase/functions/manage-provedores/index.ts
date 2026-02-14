@@ -47,7 +47,6 @@ serve(async (req) => {
 
     switch (action) {
       case 'listProvedores': {
-        // Qualquer autenticado pode listar seus provedores
         if (isSuperAdmin) {
           const { data, error } = await supabaseAdmin
             .from('provedores')
@@ -59,7 +58,6 @@ serve(async (req) => {
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         } else {
-          // Buscar provedores do usuário via vínculo
           const { data: vinculos, error: vinculoError } = await supabaseAdmin
             .from('usuario_provedores')
             .select('provedor_id')
@@ -108,6 +106,11 @@ serve(async (req) => {
           .single();
 
         if (error) throw error;
+
+        // Auto-vincular criador ao novo provedor
+        await supabaseAdmin
+          .from('usuario_provedores')
+          .insert({ user_id: user.id, provedor_id: data.id });
 
         return new Response(
           JSON.stringify({ success: true, provedor: data }),
@@ -175,6 +178,124 @@ serve(async (req) => {
 
         return new Response(
           JSON.stringify({ success: true, ativo: !provedor.ativo }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'listUsuariosProvedor': {
+        if (!isSuperAdmin) {
+          return new Response(
+            JSON.stringify({ error: 'Apenas super_admin pode gerenciar usuários de provedores' }),
+            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const { provedorId } = params;
+        if (!provedorId) throw new Error('provedorId é obrigatório');
+
+        const { data: vinculos, error: vinculoError } = await supabaseAdmin
+          .from('usuario_provedores')
+          .select('user_id')
+          .eq('provedor_id', provedorId);
+
+        if (vinculoError) throw vinculoError;
+
+        const userIds = vinculos?.map(v => v.user_id) || [];
+        if (userIds.length === 0) {
+          return new Response(
+            JSON.stringify({ success: true, usuarios: [] }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const { data: profiles, error: profilesError } = await supabaseAdmin
+          .from('profiles')
+          .select('id, nome, sobrenome, email')
+          .in('id', userIds)
+          .order('nome');
+
+        if (profilesError) throw profilesError;
+
+        return new Response(
+          JSON.stringify({ success: true, usuarios: profiles }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'listAllUsers': {
+        if (!isSuperAdmin) {
+          return new Response(
+            JSON.stringify({ error: 'Apenas super_admin pode listar todos os usuários' }),
+            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const { data: profiles, error } = await supabaseAdmin
+          .from('profiles')
+          .select('id, nome, sobrenome, email')
+          .eq('ativo', true)
+          .order('nome');
+
+        if (error) throw error;
+
+        return new Response(
+          JSON.stringify({ success: true, usuarios: profiles }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'addUsuarioProvedor': {
+        if (!isSuperAdmin) {
+          return new Response(
+            JSON.stringify({ error: 'Apenas super_admin pode vincular usuários a provedores' }),
+            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const { provedorId, userId } = params;
+        if (!provedorId || !userId) throw new Error('provedorId e userId são obrigatórios');
+
+        const { error } = await supabaseAdmin
+          .from('usuario_provedores')
+          .insert({ user_id: userId, provedor_id: provedorId });
+
+        if (error) {
+          if (error.code === '23505') {
+            return new Response(
+              JSON.stringify({ error: 'Usuário já está vinculado a este provedor' }),
+              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          throw error;
+        }
+
+        return new Response(
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'removeUsuarioProvedor': {
+        if (!isSuperAdmin) {
+          return new Response(
+            JSON.stringify({ error: 'Apenas super_admin pode desvincular usuários de provedores' }),
+            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const { provedorId, userId } = params;
+        if (!provedorId || !userId) throw new Error('provedorId e userId são obrigatórios');
+
+        const { error } = await supabaseAdmin
+          .from('usuario_provedores')
+          .delete()
+          .eq('user_id', userId)
+          .eq('provedor_id', provedorId);
+
+        if (error) throw error;
+
+        return new Response(
+          JSON.stringify({ success: true }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
