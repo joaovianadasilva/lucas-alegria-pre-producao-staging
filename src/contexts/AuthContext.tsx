@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
@@ -51,6 +51,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [provedoresDisponiveis, setProvedoresDisponiveis] = useState<Provedor[]>([]);
   const [provedoresLoading, setProvedoresLoading] = useState(true);
   const navigate = useNavigate();
+  const initializedRef = useRef(false);
 
   const fetchProfileAndRoles = async (userId: string) => {
     try {
@@ -121,16 +122,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       setProvedoresDisponiveis(provedores);
 
-      if (provedores.length === 1) {
-        setProvedorAtivo(provedores[0]);
-      } else {
-        setProvedorAtivo(prev => {
-          if (prev && provedores.some(p => p.id === prev.id)) {
-            return prev;
-          }
-          return null;
-        });
-      }
+      // Restaurar provedor do localStorage ou manter seleção atual
+      const savedId = localStorage.getItem('provedorAtivoId');
+      setProvedorAtivo(prev => {
+        if (prev && provedores.some(p => p.id === prev.id)) return prev;
+        if (savedId) {
+          const saved = provedores.find(p => p.id === savedId);
+          if (saved) return saved;
+        }
+        return provedores.length === 1 ? provedores[0] : null;
+      });
     } catch (error) {
       console.error('Erro ao buscar provedores:', error);
     } finally {
@@ -151,7 +152,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setProvedorAtivo(null);
           setProvedoresDisponiveis([]);
           setProvedoresLoading(false);
-        } else if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+          initializedRef.current = false;
+        } else if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && !initializedRef.current) {
           if (currentSession?.user) {
             setTimeout(async () => {
               const userRoles = await fetchProfileAndRoles(currentSession.user.id);
@@ -172,6 +174,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (currentSession?.user) {
         const userRoles = await fetchProfileAndRoles(currentSession.user.id);
         await fetchProvedores(currentSession.user.id, userRoles);
+        initializedRef.current = true;
       }
       setLoading(false);
     });
@@ -208,12 +211,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
 
-      setUser(null);
-      setSession(null);
       setProfile(null);
       setRoles([]);
       setProvedorAtivo(null);
       setProvedoresDisponiveis([]);
+      localStorage.removeItem('provedorAtivoId');
+      initializedRef.current = false;
       toast.success('Logout realizado com sucesso!');
       navigate('/auth');
     } catch (error: any) {
@@ -235,6 +238,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const provedor = provedoresDisponiveis.find(p => p.id === id);
     if (provedor) {
       setProvedorAtivo(provedor);
+      localStorage.setItem('provedorAtivoId', id);
     }
   };
 
