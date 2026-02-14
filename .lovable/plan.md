@@ -1,20 +1,35 @@
 
 
-## Corrigir largura do modal e rolagem horizontal
+## Adicionar menu lateral na pagina Gerenciar Provedores
 
 ### Problema
-O `DialogContent` usa `max-w-lg` (32rem / 512px), que e estreito demais para a tabela com 3 colunas (Nome, Email, botao de remover). Os emails longos forcam rolagem horizontal.
+
+A rota `/gerenciar-provedores` esta definida fora do grupo que usa `<AppLayout />`, por isso nao tem sidebar nem header. As outras paginas protegidas estao dentro do bloco `<ProtectedRoute><AppLayout /></ProtectedRoute>`, que fornece o layout com sidebar.
 
 ### Alteracao
 
-**Arquivo: `src/components/GerenciarUsuariosProvedorDialog.tsx`**
+**Arquivo: `src/App.tsx`**
 
-1. Aumentar a largura maxima do dialog de `max-w-lg` para `max-w-2xl` (672px), dando espaco suficiente para a tabela sem rolagem horizontal
-2. Adicionar `overflow-x-hidden` no container da tabela para prevenir qualquer overflow residual
-3. Aplicar `truncate` na celula de email para que emails muito longos sejam cortados com reticencias em vez de forcar expansao horizontal
+Mover a rota `/gerenciar-provedores` para dentro do bloco que usa `<AppLayout />`, mantendo a restricao de `super_admin`. Trocar de:
 
-### Detalhes tecnicos
+```text
+<Route element={<ProtectedRoute requireProvedor={false} requiredRole="super_admin" />}>
+  <Route path="/gerenciar-provedores" element={<GerenciarProvedores />} />
+</Route>
+```
 
-- Linha 134: trocar `max-w-lg` por `max-w-2xl`
-- Linha 255: adicionar classe `truncate max-w-[200px]` na `TableCell` do email para truncar textos longos
+Para dentro do bloco existente com AppLayout:
+
+```text
+<Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+  ...
+  <Route element={<ProtectedRoute requiredRole="super_admin" />}>
+    <Route path="/gerenciar-provedores" element={<GerenciarProvedores />} />
+  </Route>
+</Route>
+```
+
+Isso faz com que a pagina herde o sidebar, header e todo o layout padrao, mantendo a protecao de role `super_admin`. O `requireProvedor` passa a ser `true` (padrao), o que e aceitavel pois o super_admin sempre tem pelo menos um provedor disponivel.
+
+Nenhum outro arquivo precisa ser alterado -- o `AppSidebar` ja exibe o link "Gerenciar Provedores" para super_admin.
 
