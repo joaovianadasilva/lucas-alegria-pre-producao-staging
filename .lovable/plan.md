@@ -1,67 +1,60 @@
 
 
-## Alteracoes globais: Tipos de Agendamento, Representantes e Tecnicos
+## Gerenciamento de status (ativo/inativo) nos catalogos
 
-Tres problemas identificados e suas solucoes:
+### Problema atual
 
----
+Todas as 4 paginas de configuracao (Planos, Adicionais, Tipos de Agendamento, Representantes) usam o botao "remover" que faz soft-delete (seta `ativo = false`). Porem:
+- Os itens inativos desaparecem da listagem (o backend filtra `ativo = true`)
+- Nao ha como reativar um item depois de inativado
+- O administrador nao tem visibilidade sobre quais itens estao ativos ou inativos
 
-### 1. Menu de configuracao de Tipos de Agendamento
+### Solucao
 
-**Problema:** Nao existe pagina para gerenciar os tipos de agendamento (tabela `catalogo_tipos_agendamento`), apesar do backend (edge function) ja suportar CRUD completo (`listTiposAgendamento`, `addTipoAgendamento`, `updateTipoAgendamento`, `removeTipoAgendamento`).
+Adicionar um controle de toggle (Switch) em cada linha da tabela para ativar/inativar itens, e exibir todos os itens (ativos e inativos) nas paginas de configuracao.
 
-**Solucao:**
+### Alteracoes
 
-- Criar pagina `src/pages/ConfigurarTiposAgendamento.tsx` seguindo o mesmo padrao de `ConfigurarAdicionais.tsx` (formulario de codigo/nome + tabela com editar/remover)
-- Adicionar rota `/configuracoes/tipos-agendamento` dentro do bloco de rotas admin em `src/App.tsx`
-- Adicionar item "Configurar Tipos de Agendamento" no menu de configuracoes em `src/components/AppSidebar.tsx`
+**Edge function `supabase/functions/manage-catalog/index.ts`:**
 
----
+1. Criar variantes "listAll" para cada entidade que retornam todos os registros (sem filtro `ativo = true`), para uso exclusivo nas paginas de admin:
+   - `listAllPlanos` - retorna todos os planos incluindo inativos
+   - `listAllAdicionais` - retorna todos os adicionais incluindo inativos
+   - `listAllTiposAgendamento` - retorna todos os tipos incluindo inativos
+   - `listAllRepresentantes` - retorna todos os representantes incluindo inativos
 
-### 2. Representantes exibindo dados de outro provedor + Menu de configuracao
+2. Criar action `toggleStatus` generica que recebe `tabela`, `itemId` e `ativo` (novo valor):
+   - Atualiza o campo `ativo` do registro na tabela indicada
+   - Valida que a tabela e uma das permitidas (whitelist)
 
-**Problema:** Em `NovoAgendamento.tsx` e `GerenciarAgendamentos.tsx`, a query de representantes faz `.from('catalogo_representantes').eq('ativo', true)` **sem filtrar por `provedor_id`**, retornando representantes de todos os provedores. Alem disso, nao existe pagina de configuracao para representantes.
+**Paginas de configuracao (frontend):**
 
-**Solucao - Filtro:**
+3. `src/pages/ConfigurarPlanos.tsx`:
+   - Usar action `listAllPlanos` em vez de `listPlans`
+   - Adicionar coluna com Switch para toggle ativo/inativo
+   - Remover botao de delete (o delete agora e feito via toggle)
 
-- `src/pages/NovoAgendamento.tsx`: adicionar `.eq('provedor_id', provedorAtivo?.id)` na query de representantes
-- `src/pages/GerenciarAgendamentos.tsx`: mesma correcao
-- `src/components/ContractEditDialog.tsx`: mesma correcao
+4. `src/pages/ConfigurarAdicionais.tsx`:
+   - Usar action `listAllAdicionais` em vez de `listAddOns`
+   - Adicionar Switch para toggle ativo/inativo
+   - Remover botao de delete
 
-**Solucao - Menu de configuracao:**
+5. `src/pages/ConfigurarTiposAgendamento.tsx`:
+   - Usar action `listAllTiposAgendamento` em vez de `listTiposAgendamento`
+   - Adicionar campo `ativo` na interface e coluna com Switch
+   - Remover botao de delete
 
-- Criar pagina `src/pages/ConfigurarRepresentantes.tsx` seguindo o padrao existente (formulario de nome + tabela com editar/remover). Usara as actions ja existentes no edge function (`addRepresentante`, `removeRepresentante`)
-- Adicionar rota `/configuracoes/representantes` no bloco admin em `src/App.tsx`
-- Adicionar item no menu de configuracoes em `src/components/AppSidebar.tsx`
+6. `src/pages/ConfigurarRepresentantes.tsx`:
+   - Usar action `listAllRepresentantes` em vez de `listRepresentantes`
+   - Adicionar campo `ativo` na interface e coluna com Switch
+   - Remover botao de delete
 
----
+**Importante:** As actions `list` originais (usadas nos formularios de agendamento, contratos etc.) continuam filtrando apenas ativos -- nenhuma alteracao nelas.
 
-### 3. Tecnicos exibindo dados de outro provedor
+### Comportamento resultante
 
-**Problema:** O hook `useTecnicos.ts` busca todos os usuarios com role `tecnico` sem filtrar por provedor. Ele consulta `user_roles` + `profiles`, mas ignora a tabela `usuario_provedores` que vincula usuarios a provedores.
+- Paginas de admin mostram todos os itens, com indicacao visual clara de ativo/inativo
+- Administrador pode ativar ou inativar qualquer item com um clique no Switch
+- Formularios de cadastro (agendamento, contrato) continuam exibindo apenas itens ativos
+- Nao ha mais exclusao permanente via interface -- tudo e soft-delete controlado pelo toggle
 
-**Solucao:**
-
-- Alterar `src/hooks/useTecnicos.ts` para receber `provedorId` como parametro
-- Adicionar um join com `usuario_provedores` filtrando pelo `provedor_id` ativo, garantindo que so retorne tecnicos vinculados ao provedor atual
-- Atualizar `src/components/TecnicoSelector.tsx` para passar o `provedorId` do contexto
-- A logica sera: buscar em `usuario_provedores` os `user_id` do provedor ativo, cruzar com `user_roles` onde role = 'tecnico', e buscar os perfis correspondentes
-
----
-
-### Detalhes tecnicos
-
-**Arquivos novos:**
-- `src/pages/ConfigurarTiposAgendamento.tsx`
-- `src/pages/ConfigurarRepresentantes.tsx`
-
-**Arquivos modificados:**
-- `src/App.tsx` - 2 novas rotas admin
-- `src/components/AppSidebar.tsx` - 2 novos itens no menu configuracoes
-- `src/pages/NovoAgendamento.tsx` - filtro provedor_id nos representantes
-- `src/pages/GerenciarAgendamentos.tsx` - filtro provedor_id nos representantes
-- `src/components/ContractEditDialog.tsx` - filtro provedor_id nos representantes
-- `src/hooks/useTecnicos.ts` - filtro por provedor via usuario_provedores
-- `src/components/TecnicoSelector.tsx` - passar provedorId ao hook
-
-**Edge function:** Nenhuma alteracao necessaria - todas as actions de CRUD ja existem no `manage-catalog`.
