@@ -11,6 +11,8 @@ import {
   Clock,
   ScrollText,
   Building2,
+  ClipboardList,
+  UserCheck,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -43,6 +45,8 @@ const mainMenuItems: MenuItem[] = [
 const adminOnlyMenuItems = [
   { title: 'Configurar Planos', url: '/configuracoes/planos', icon: Package },
   { title: 'Configurar Adicionais', url: '/configuracoes/adicionais', icon: PlusCircle },
+  { title: 'Tipos de Agendamento', url: '/configuracoes/tipos-agendamento', icon: ClipboardList },
+  { title: 'Representantes', url: '/configuracoes/representantes', icon: UserCheck },
   { title: 'Gerenciar Usuários', url: '/configuracoes/usuarios', icon: Users },
 ];
 

@@ -87,7 +87,7 @@ export default function GerenciarAgendamentos() {
   const ITEMS_PER_PAGE = 20;
   
   // Carregar técnicos
-  const { data: tecnicos = [] } = useTecnicos();
+  const { data: tecnicos = [] } = useTecnicos(provedorAtivo?.id);
   
   // Verificar se filtros foram aplicados
   const filtersApplied = 
@@ -165,6 +165,7 @@ export default function GerenciarAgendamentos() {
         .from('catalogo_representantes')
         .select('id, nome')
         .eq('ativo', true)
+        .eq('provedor_id', provedorAtivo?.id)
         .order('nome');
       
       if (reps && !repsError) {

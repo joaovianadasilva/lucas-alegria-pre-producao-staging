@@ -40,6 +40,7 @@ export default function NovoAgendamento() {
         .from('catalogo_representantes')
         .select('id, nome')
         .eq('ativo', true)
+        .eq('provedor_id', provedorAtivo?.id)
         .order('nome');
       
       if (reps && !repsError) {
