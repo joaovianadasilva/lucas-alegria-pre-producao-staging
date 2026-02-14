@@ -16,6 +16,8 @@ import ConfigurarAdicionais from "./pages/ConfigurarAdicionais";
 import GerenciarUsuarios from "./pages/GerenciarUsuarios";
 import ConfigurarSlots from "./pages/ConfigurarSlots";
 import Contratos from "./pages/Contratos";
+import SelecionarProvedor from "./pages/SelecionarProvedor";
+import GerenciarProvedores from "./pages/GerenciarProvedores";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,7 +33,17 @@ const App = () => (
             {/* Rotas Públicas */}
             <Route path="/auth" element={<Auth />} />
             
-            {/* Rotas Protegidas */}
+            {/* Seleção de Provedor - protegida, mas sem exigir provedor */}
+            <Route element={<ProtectedRoute requireProvedor={false} />}>
+              <Route path="/selecionar-provedor" element={<SelecionarProvedor />} />
+            </Route>
+
+            {/* Gerenciar Provedores - super_admin, sem exigir provedor */}
+            <Route element={<ProtectedRoute requireProvedor={false} requiredRole="super_admin" />}>
+              <Route path="/gerenciar-provedores" element={<GerenciarProvedores />} />
+            </Route>
+            
+            {/* Rotas Protegidas (exigem provedor ativo) */}
             <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
               <Route path="/" element={<Navigate to="/agendamentos/novo" replace />} />
               

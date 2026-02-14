@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { ChevronLeft, ChevronRight, Calendar, Clock, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatLocalDate, toISODateString } from '@/lib/dateUtils';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface CalendarSlotPickerProps {
   onSlotSelect: (date: string, slot: number) => void;
@@ -24,6 +25,7 @@ interface Slot {
 
 
 export function CalendarSlotPicker({ onSlotSelect, selectedDate, selectedSlot }: CalendarSlotPickerProps) {
+  const { provedorAtivo } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewingDate, setViewingDate] = useState<string | null>(null);
 
@@ -44,6 +46,7 @@ export function CalendarSlotPicker({ onSlotSelect, selectedDate, selectedSlot }:
       const { data, error } = await supabase.functions.invoke('manage-slots', {
         body: {
           action: 'getCalendarSlots',
+          provedorId: provedorAtivo?.id,
           data: {
             dataInicio: dateRange.startDate,
             dataFim: dateRange.endDate,

@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { Plus, Power, Shield, ShieldOff } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface User {
   id: string;
@@ -31,6 +32,7 @@ const availableRoles = [
 ];
 
 export default function GerenciarUsuarios() {
+  const { provedorAtivo } = useAuth();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -46,7 +48,7 @@ export default function GerenciarUsuarios() {
     queryKey: ['users-admin'],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('manage-users', {
-        body: { action: 'listUsers' },
+        body: { action: 'listUsers', provedorId: provedorAtivo?.id },
       });
 
       if (error) throw error;
@@ -59,6 +61,7 @@ export default function GerenciarUsuarios() {
       const { data, error } = await supabase.functions.invoke('manage-users', {
         body: {
           action: 'createUser',
+          provedorId: provedorAtivo?.id,
           email: formData.email,
           password: formData.password,
           nome: formData.nome,
