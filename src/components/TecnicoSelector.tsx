@@ -2,6 +2,7 @@ import React from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { useTecnicos } from '@/hooks/useTecnicos';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface TecnicoSelectorProps {
   value?: string;
@@ -14,7 +15,8 @@ export const TecnicoSelector: React.FC<TecnicoSelectorProps> = ({
   onValueChange,
   required = false,
 }) => {
-  const { data: tecnicos, isLoading } = useTecnicos();
+  const { provedorAtivo } = useAuth();
+  const { data: tecnicos, isLoading } = useTecnicos(provedorAtivo?.id);
 
   return (
     <div className="space-y-2">

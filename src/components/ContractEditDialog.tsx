@@ -133,7 +133,7 @@ export function ContractEditDialog({ open, onOpenChange, contract, onSaved }: Co
         supabase.from('catalogo_planos').select('id, codigo, nome, valor').eq('ativo', true),
         supabase.from('catalogo_adicionais').select('id, codigo, nome, valor').eq('ativo', true),
         supabase.from('catalogo_origem_vendas').select('id, nome').eq('ativo', true),
-        supabase.from('catalogo_representantes').select('id, nome').eq('ativo', true),
+        supabase.from('catalogo_representantes').select('id, nome').eq('ativo', true).eq('provedor_id', provedorAtivo?.id),
       ]);
 
       setPlanos(planosRes.data || []);

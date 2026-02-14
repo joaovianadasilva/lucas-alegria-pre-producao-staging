@@ -13,6 +13,8 @@ import GerenciarAgendamentos from "./pages/GerenciarAgendamentos";
 import Historico from "./pages/Historico";
 import ConfigurarPlanos from "./pages/ConfigurarPlanos";
 import ConfigurarAdicionais from "./pages/ConfigurarAdicionais";
+import ConfigurarTiposAgendamento from "./pages/ConfigurarTiposAgendamento";
+import ConfigurarRepresentantes from "./pages/ConfigurarRepresentantes";
 import GerenciarUsuarios from "./pages/GerenciarUsuarios";
 import ConfigurarSlots from "./pages/ConfigurarSlots";
 import Contratos from "./pages/Contratos";
@@ -67,6 +69,8 @@ const App = () => (
               <Route element={<ProtectedRoute requiredRole="admin" />}>
                 <Route path="/configuracoes/planos" element={<ConfigurarPlanos />} />
                 <Route path="/configuracoes/adicionais" element={<ConfigurarAdicionais />} />
+                <Route path="/configuracoes/tipos-agendamento" element={<ConfigurarTiposAgendamento />} />
+                <Route path="/configuracoes/representantes" element={<ConfigurarRepresentantes />} />
                 <Route path="/configuracoes/usuarios" element={<GerenciarUsuarios />} />
               </Route>
 
