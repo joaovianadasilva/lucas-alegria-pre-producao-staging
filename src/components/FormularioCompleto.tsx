@@ -17,6 +17,7 @@ import { CalendarSlotPicker } from './CalendarSlotPicker';
 import { carregarPlanos, carregarAdicionais, formatarItemCatalogo, carregarCidades, carregarRepresentantes, carregarOrigens, ItemCidade, ItemRepresentante, ItemOrigem, ItemCatalogo } from '@/lib/catalogoSupabase';
 import { supabase } from '@/integrations/supabase/client';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { useAuth } from '@/contexts/AuthContext';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 
@@ -372,6 +373,8 @@ interface Props {
 }
 
 export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId }) => {
+  const { provedorAtivo } = useAuth();
+  const provedorId = provedorAtivo?.id || '';
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [selectedSlot, setSelectedSlot] = useState<number>(0);
@@ -453,11 +456,12 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
   }, [planoSelecionado, adicionaisSelecionados, planosData, adicionaisData]);
 
   const loadOptions = async () => {
-    const planos = await carregarPlanos();
-    const adicionais = await carregarAdicionais();
-    const cidades = await carregarCidades();
-    const representantes = await carregarRepresentantes();
-    const origens = await carregarOrigens();
+    if (!provedorId) return;
+    const planos = await carregarPlanos(provedorId);
+    const adicionais = await carregarAdicionais(provedorId);
+    const cidades = await carregarCidades(provedorId);
+    const representantes = await carregarRepresentantes(provedorId);
+    const origens = await carregarOrigens(provedorId);
     setPlanosData(planos);
     setAdicionaisData(adicionais);
     setPlanosOptions(planos.map(formatarItemCatalogo));
@@ -469,7 +473,7 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
 
   useEffect(() => {
     loadOptions();
-  }, []);
+  }, [provedorId]);
 
   // Limpar campos condicionais quando o tipo de cliente muda
   useEffect(() => {
@@ -521,6 +525,7 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
       const { data: contractResult, error: contractError } = await supabase.functions.invoke('manage-contracts', {
         body: {
           action: 'createContract',
+          provedorId,
           ...data,
           taxaInstalacao: calcularTaxaInstalacao()
         }

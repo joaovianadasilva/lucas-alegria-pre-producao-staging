@@ -13,18 +13,33 @@ interface Profile {
   ativo: boolean;
 }
 
+interface Provedor {
+  id: string;
+  nome: string;
+  slug: string;
+  logo_url: string | null;
+  ativo: boolean;
+}
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   profile: Profile | null;
   roles: string[];
   loading: boolean;
+  provedorAtivo: Provedor | null;
+  provedoresDisponiveis: Provedor[];
+  provedoresLoading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   hasRole: (role: string) => boolean;
+  isSuperAdmin: () => boolean;
+  selecionarProvedor: (id: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+const PROVEDOR_STORAGE_KEY = 'provedorAtivoId';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -32,6 +47,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<Profile | null>(null);
   const [roles, setRoles] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [provedorAtivo, setProvedorAtivo] = useState<Provedor | null>(null);
+  const [provedoresDisponiveis, setProvedoresDisponiveis] = useState<Provedor[]>([]);
+  const [provedoresLoading, setProvedoresLoading] = useState(true);
   const navigate = useNavigate();
 
   const fetchProfileAndRoles = async (userId: string) => {
@@ -53,9 +71,73 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('user_id', userId);
 
       if (rolesError) throw rolesError;
-      setRoles(rolesData?.map(r => r.role) || []);
+      const userRoles = rolesData?.map(r => r.role) || [];
+      setRoles(userRoles);
+
+      return userRoles;
     } catch (error) {
       console.error('Erro ao buscar perfil e roles:', error);
+      return [];
+    }
+  };
+
+  const fetchProvedores = async (userId: string, userRoles: string[]) => {
+    setProvedoresLoading(true);
+    try {
+      const isSA = userRoles.includes('super_admin');
+
+      let provedores: Provedor[] = [];
+
+      if (isSA) {
+        // Super admin vê todos os provedores ativos
+        const { data, error } = await supabase
+          .from('provedores')
+          .select('*')
+          .eq('ativo', true)
+          .order('nome');
+        if (error) throw error;
+        provedores = data || [];
+      } else {
+        // Buscar provedores vinculados ao usuário
+        const { data: links, error: linksError } = await supabase
+          .from('usuario_provedores')
+          .select('provedor_id')
+          .eq('user_id', userId);
+
+        if (linksError) throw linksError;
+
+        if (links && links.length > 0) {
+          const ids = links.map(l => l.provedor_id);
+          const { data, error } = await supabase
+            .from('provedores')
+            .select('*')
+            .in('id', ids)
+            .eq('ativo', true)
+            .order('nome');
+          if (error) throw error;
+          provedores = data || [];
+        }
+      }
+
+      setProvedoresDisponiveis(provedores);
+
+      // Tentar restaurar provedor salvo no localStorage
+      const savedId = localStorage.getItem(PROVEDOR_STORAGE_KEY);
+      const savedProvedor = provedores.find(p => p.id === savedId);
+
+      if (savedProvedor) {
+        setProvedorAtivo(savedProvedor);
+      } else if (provedores.length === 1) {
+        // Auto-selecionar se só tem 1
+        setProvedorAtivo(provedores[0]);
+        localStorage.setItem(PROVEDOR_STORAGE_KEY, provedores[0].id);
+      } else {
+        setProvedorAtivo(null);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar provedores:', error);
+    } finally {
+      setProvedoresLoading(false);
     }
   };
 
@@ -66,14 +148,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
 
-        // Defer Supabase calls with setTimeout to prevent deadlock
         if (currentSession?.user) {
-          setTimeout(() => {
-            fetchProfileAndRoles(currentSession.user.id);
+          setTimeout(async () => {
+            const userRoles = await fetchProfileAndRoles(currentSession.user.id);
+            await fetchProvedores(currentSession.user.id, userRoles);
           }, 0);
         } else {
           setProfile(null);
           setRoles([]);
+          setProvedorAtivo(null);
+          setProvedoresDisponiveis([]);
+          setProvedoresLoading(false);
         }
 
         setLoading(false);
@@ -81,12 +166,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+    supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
 
       if (currentSession?.user) {
-        fetchProfileAndRoles(currentSession.user.id);
+        const userRoles = await fetchProfileAndRoles(currentSession.user.id);
+        await fetchProvedores(currentSession.user.id, userRoles);
       }
       setLoading(false);
     });
@@ -127,6 +213,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(null);
       setProfile(null);
       setRoles([]);
+      setProvedorAtivo(null);
+      setProvedoresDisponiveis([]);
+      localStorage.removeItem(PROVEDOR_STORAGE_KEY);
 
       toast.success('Logout realizado com sucesso!');
       navigate('/auth');
@@ -141,6 +230,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return roles.includes(role);
   };
 
+  const isSuperAdmin = (): boolean => {
+    return roles.includes('super_admin');
+  };
+
+  const selecionarProvedor = (id: string) => {
+    const provedor = provedoresDisponiveis.find(p => p.id === id);
+    if (provedor) {
+      setProvedorAtivo(provedor);
+      localStorage.setItem(PROVEDOR_STORAGE_KEY, id);
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -149,9 +250,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         profile,
         roles,
         loading,
+        provedorAtivo,
+        provedoresDisponiveis,
+        provedoresLoading,
         signIn,
         signOut,
         hasRole,
+        isSuperAdmin,
+        selecionarProvedor,
       }}
     >
       {children}

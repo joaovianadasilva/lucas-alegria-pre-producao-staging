@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { CreateSlotsDialog } from './CreateSlotsDialog';
 import { SlotDetailDialog } from './SlotDetailDialog';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus, Loader2 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, addDays, startOfWeek, endOfWeek, isSameMonth, isSameDay, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -39,6 +40,7 @@ interface SlotStats {
 type ViewMode = 'day' | 'week' | 'month';
 
 export function CalendarSlots() {
+  const { provedorAtivo } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<ViewMode>('week');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -76,6 +78,7 @@ export function CalendarSlots() {
       const { data, error } = await supabase.functions.invoke('manage-slots', {
         body: {
           action: 'getCalendarSlots',
+          provedorId: provedorAtivo?.id,
           data: {
             dataInicio: start,
             dataFim: end
@@ -95,7 +98,7 @@ export function CalendarSlots() {
     queryKey: ['slots-stats'],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('manage-slots', {
-        body: { action: 'getSlotsStats' }
+        body: { action: 'getSlotsStats', provedorId: provedorAtivo?.id }
       });
 
       if (error) throw error;

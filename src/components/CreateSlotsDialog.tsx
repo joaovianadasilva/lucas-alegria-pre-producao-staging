@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Calendar } from '@/components/ui/calendar';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { Plus, Loader2 } from 'lucide-react';
 import { addDays, format } from 'date-fns';
@@ -17,6 +18,7 @@ interface CreateSlotsDialogProps {
 }
 
 export function CreateSlotsDialog({ open, onOpenChange, onSuccess }: CreateSlotsDialogProps) {
+  const { provedorAtivo } = useAuth();
   const [selectedDate, setSelectedDate] = useState<Date>();
   const [quantidade, setQuantidade] = useState(10);
   const [isCreating, setIsCreating] = useState(false);
@@ -37,6 +39,7 @@ export function CreateSlotsDialog({ open, onOpenChange, onSuccess }: CreateSlots
       const { data, error } = await supabase.functions.invoke('manage-slots', {
         body: {
           action: 'createSlotsInBulk',
+          provedorId: provedorAtivo?.id,
           data: {
             dataDisponivel: format(selectedDate, 'yyyy-MM-dd'),
             quantidade

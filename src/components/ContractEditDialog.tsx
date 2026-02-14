@@ -13,6 +13,7 @@ import { Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { ContratoCompleto } from './ContractDetailsDialog';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Plano {
   id: string;
@@ -64,6 +65,7 @@ const FORM_TO_DB_TIPO_CLIENTE: Record<string, string> = {
 };
 
 export function ContractEditDialog({ open, onOpenChange, contract, onSaved }: ContractEditDialogProps) {
+  const { provedorAtivo } = useAuth();
   const [saving, setSaving] = useState(false);
   const [loadingCatalogs, setLoadingCatalogs] = useState(true);
   
@@ -229,6 +231,7 @@ export function ContractEditDialog({ open, onOpenChange, contract, onSaved }: Co
       const { data, error } = await supabase.functions.invoke('manage-contracts', {
         body: {
           action: 'updateContractFull',
+          provedorId: provedorAtivo?.id,
           contratoId: contract.id,
           usuarioId: user?.id,
           // Plano

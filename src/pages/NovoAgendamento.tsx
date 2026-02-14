@@ -11,8 +11,10 @@ import { TecnicoSelector } from '@/components/TecnicoSelector';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function NovoAgendamento() {
+  const { provedorAtivo } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -46,7 +48,7 @@ export default function NovoAgendamento() {
 
       // Carregar tipos de agendamento
       const { data: tiposData, error: tiposError } = await supabase.functions.invoke('manage-catalog', {
-        body: { action: 'listTiposAgendamento' }
+        body: { action: 'listTiposAgendamento', provedorId: provedorAtivo?.id }
       });
       
       if (tiposData?.success && tiposData.tipos) {
@@ -83,6 +85,7 @@ export default function NovoAgendamento() {
       const { data, error } = await supabase.functions.invoke('manage-appointments', {
         body: {
           action: 'createAppointment',
+          provedorId: provedorAtivo?.id,
           tipo,
           dataAgendamento: selectedDate,
           slotNumero: selectedSlot,

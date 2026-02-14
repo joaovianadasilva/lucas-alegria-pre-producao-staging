@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { Filter, Edit, ChevronLeft, ChevronRight, FileText, Eye } from 'lucide-react';
 import { ContractDetailsDialog, ContratoCompleto } from '@/components/ContractDetailsDialog';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Contrato {
   id: string;
@@ -26,6 +27,7 @@ interface Contrato {
 const ITEMS_PER_PAGE = 20;
 
 export default function Contratos() {
+  const { provedorAtivo } = useAuth();
   const queryClient = useQueryClient();
   
   // Filtros pendentes (UI)
@@ -96,6 +98,7 @@ export default function Contratos() {
       const { data, error } = await supabase.functions.invoke('manage-contracts', {
         body: {
           action: 'listContractsWithFilter',
+          provedorId: provedorAtivo?.id,
           limit: ITEMS_PER_PAGE,
           offset: (currentPage - 1) * ITEMS_PER_PAGE,
           dataInicio: appliedFilters.dataInicio || undefined,
@@ -127,6 +130,7 @@ export default function Contratos() {
       const { data, error } = await supabase.functions.invoke('manage-contracts', {
         body: {
           action: 'updateContractCodes',
+          provedorId: provedorAtivo?.id,
           contratoId: selectedContrato.id,
           codigoContrato: editCodigoContrato || null,
           codigoCliente: editCodigoCliente || null,
@@ -170,6 +174,7 @@ export default function Contratos() {
       const { data, error } = await supabase.functions.invoke('manage-contracts', {
         body: {
           action: 'getContract',
+          provedorId: provedorAtivo?.id,
           contratoId: contrato.id
         }
       });
@@ -193,6 +198,7 @@ export default function Contratos() {
         const { data, error } = await supabase.functions.invoke('manage-contracts', {
           body: {
             action: 'getContract',
+            provedorId: provedorAtivo?.id,
             contratoId: contractDetails.id
           }
         });

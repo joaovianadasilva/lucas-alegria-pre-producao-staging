@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { Lock, Unlock, Trash2, Loader2, Calendar as CalendarIcon, User, Mail } from 'lucide-react';
 import { format } from 'date-fns';
@@ -33,6 +34,7 @@ interface SlotDetailDialogProps {
 }
 
 export function SlotDetailDialog({ slot, open, onOpenChange, onSuccess }: SlotDetailDialogProps) {
+  const { provedorAtivo } = useAuth();
   const [isUpdating, setIsUpdating] = useState(false);
 
   if (!slot) return null;
@@ -47,10 +49,8 @@ export function SlotDetailDialog({ slot, open, onOpenChange, onSuccess }: SlotDe
       const { data, error } = await supabase.functions.invoke('manage-slots', {
         body: {
           action: 'updateSlotStatus',
-          data: {
-            slotId: slot.id,
-            status: newStatus
-          }
+          provedorId: provedorAtivo?.id,
+          data: { slotId: slot.id, status: newStatus }
         }
       });
 
@@ -82,9 +82,8 @@ export function SlotDetailDialog({ slot, open, onOpenChange, onSuccess }: SlotDe
       const { data, error } = await supabase.functions.invoke('manage-slots', {
         body: {
           action: 'deleteSlot',
-          data: {
-            slotId: slot.id
-          }
+          provedorId: provedorAtivo?.id,
+          data: { slotId: slot.id }
         }
       });
 

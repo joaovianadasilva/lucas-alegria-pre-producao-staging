@@ -28,7 +28,8 @@ export const useAgendamentos = (spreadsheetId: string) => {
       console.log('=== HOOK: Chamando edge function manage-slots ===');
       const { data, error } = await supabase.functions.invoke('manage-slots', {
         body: {
-          action: 'getDatesAndSlots'
+          action: 'getDatesAndSlots',
+          provedorId: spreadsheetId // Note: spreadsheetId is being used as a generic param here
         }
       });
 

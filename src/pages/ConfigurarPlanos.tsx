@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
 import { Pencil, Trash2, Plus } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Plano {
   id: string;
@@ -18,6 +19,7 @@ interface Plano {
 }
 
 export default function ConfigurarPlanos() {
+  const { provedorAtivo } = useAuth();
   const queryClient = useQueryClient();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -30,7 +32,7 @@ export default function ConfigurarPlanos() {
     queryKey: ['catalogo-planos-admin'],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('manage-catalog', {
-        body: { action: 'listPlans' },
+        body: { action: 'listPlans', provedorId: provedorAtivo?.id },
       });
 
       if (error) throw error;
@@ -43,6 +45,7 @@ export default function ConfigurarPlanos() {
       const { error } = await supabase.functions.invoke('manage-catalog', {
         body: {
           action: editingId ? 'updatePlan' : 'createPlan',
+          provedorId: provedorAtivo?.id,
           planId: editingId || undefined,
           codigo: formData.codigo,
           nome: formData.nome,
@@ -66,7 +69,7 @@ export default function ConfigurarPlanos() {
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.functions.invoke('manage-catalog', {
-        body: { action: 'deletePlan', planId: id },
+        body: { action: 'deletePlan', provedorId: provedorAtivo?.id, planId: id },
       });
 
       if (error) throw error;

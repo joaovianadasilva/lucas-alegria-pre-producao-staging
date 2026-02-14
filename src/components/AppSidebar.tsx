@@ -10,6 +10,7 @@ import {
   Users,
   Clock,
   ScrollText,
+  Building2,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -52,24 +53,18 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
   const location = useLocation();
-  const { hasRole } = useAuth();
+  const { hasRole, isSuperAdmin } = useAuth();
   const isAdmin = hasRole('admin');
   const isSupervisor = hasRole('supervisor');
   const isVendedorClique = hasRole('vendedor_clique');
   const isVendedorProvedor = hasRole('vendedor_provedor');
   
-  // Quem pode ver Cadastro de Venda (todos menos vendedor_provedor)
   const canAccessCadastroVenda = isAdmin || isSupervisor || isVendedorClique;
-  
-  // Quem pode ver Contratos (todas as 4 roles)
   const canAccessContratos = isAdmin || isSupervisor || isVendedorClique || isVendedorProvedor;
-  
-  // Quem pode ver Configurar Vagas (admin e supervisor apenas)
   const canAccessSlots = isAdmin || isSupervisor;
 
   const isActive = (path: string) => location.pathname === path;
   
-  // Montar itens de configuração baseado nas permissões
   const configMenuItems = isAdmin 
     ? [...adminOnlyMenuItems, slotsMenuItem]
     : canAccessSlots 
@@ -144,6 +139,24 @@ export function AppSidebar() {
               </CollapsibleContent>
             </SidebarGroup>
           </Collapsible>
+        )}
+
+        {isSuperAdmin() && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Super Admin</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <NavLink to="/gerenciar-provedores" className={getNavClass}>
+                      <Building2 className="h-4 w-4" />
+                      {!collapsed && <span>Gerenciar Provedores</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
         )}
       </SidebarContent>
     </Sidebar>

@@ -5,13 +5,19 @@ import { useAuth } from '@/contexts/AuthContext';
 interface ProtectedRouteProps {
   children?: React.ReactNode;
   requiredRole?: string;
-  requiredRoles?: string[]; // Permite múltiplas roles (OR condition)
+  requiredRoles?: string[];
+  requireProvedor?: boolean; // default true
 }
 
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole, requiredRoles }) => {
-  const { user, loading, hasRole } = useAuth();
+export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
+  children, 
+  requiredRole, 
+  requiredRoles, 
+  requireProvedor = true 
+}) => {
+  const { user, loading, hasRole, provedorAtivo, provedoresLoading } = useAuth();
 
-  if (loading) {
+  if (loading || provedoresLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -24,6 +30,11 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requir
 
   if (!user) {
     return <Navigate to="/auth" replace />;
+  }
+
+  // Verificar se precisa selecionar provedor
+  if (requireProvedor && !provedorAtivo) {
+    return <Navigate to="/selecionar-provedor" replace />;
   }
 
   // Verificar role única

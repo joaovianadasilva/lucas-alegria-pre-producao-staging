@@ -18,6 +18,7 @@ import { useTecnicos } from '@/hooks/useTecnicos';
 import { ArrowLeft, Edit, XCircle, Filter, Calendar, Clock, User, Search, X } from 'lucide-react';
 import { formatLocalDate } from '@/lib/dateUtils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useAuth } from '@/contexts/AuthContext';
 
 const STATUS_COLORS = {
   pendente: 'bg-yellow-500',
@@ -61,6 +62,7 @@ export default function GerenciarAgendamentos() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { provedorAtivo } = useAuth();
 
   // Filtros pendentes (selecionados na UI)
   const [pendingStatus, setPendingStatus] = useState('all');
@@ -171,7 +173,7 @@ export default function GerenciarAgendamentos() {
 
       // Carregar tipos de agendamento
       const { data: tiposData, error: tiposError } = await supabase.functions.invoke('manage-catalog', {
-        body: { action: 'listTiposAgendamento' }
+        body: { action: 'listTiposAgendamento', provedorId: provedorAtivo?.id }
       });
       
       if (tiposData?.success && tiposData.tipos) {
@@ -194,6 +196,7 @@ export default function GerenciarAgendamentos() {
       const { data, error } = await supabase.functions.invoke('manage-appointments', {
         body: {
           action: 'listAppointments',
+          provedorId: provedorAtivo?.id,
           limit: ITEMS_PER_PAGE,
           offset: (currentPage - 1) * ITEMS_PER_PAGE,
           status: appliedFilters.status !== 'all' ? appliedFilters.status : undefined,
@@ -219,6 +222,7 @@ export default function GerenciarAgendamentos() {
       const { data, error } = await supabase.functions.invoke('manage-appointments', {
         body: {
           action: 'getEditHistory',
+          provedorId: provedorAtivo?.id,
           agendamentoId: agendamentoId
         }
       });
@@ -383,6 +387,7 @@ export default function GerenciarAgendamentos() {
       const { data, error } = await supabase.functions.invoke('manage-appointments', {
         body: {
           action: 'updateAppointment',
+          provedorId: provedorAtivo?.id,
           agendamentoId: selectedAgendamento.id,
           updates: {
             tipo: novoTipo,
@@ -430,6 +435,7 @@ export default function GerenciarAgendamentos() {
       const { data, error } = await supabase.functions.invoke('manage-appointments', {
         body: {
           action: 'cancelAppointment',
+          provedorId: provedorAtivo?.id,
           agendamentoId: agendamento.id,
           usuarioId: user?.id
         }
@@ -471,6 +477,7 @@ export default function GerenciarAgendamentos() {
       const { data, error } = await supabase.functions.invoke('manage-appointments', {
         body: {
           action: 'rescheduleAppointment',
+          provedorId: provedorAtivo?.id,
           agendamentoId: selectedAgendamento.id,
           novaData: novaDataReagendamento,
           novoSlot: novoSlotReagendamento,

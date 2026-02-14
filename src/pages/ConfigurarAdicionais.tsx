@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { toast } from 'sonner';
 import { Pencil, Trash2, Plus, Calendar } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Adicional {
   id: string;
@@ -20,6 +21,7 @@ interface Adicional {
 }
 
 export default function ConfigurarAdicionais() {
+  const { provedorAtivo } = useAuth();
   const queryClient = useQueryClient();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -33,7 +35,7 @@ export default function ConfigurarAdicionais() {
     queryKey: ['catalogo-adicionais-admin'],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('manage-catalog', {
-        body: { action: 'listAddOns' },
+        body: { action: 'listAddOns', provedorId: provedorAtivo?.id },
       });
 
       if (error) throw error;
@@ -46,6 +48,7 @@ export default function ConfigurarAdicionais() {
       const { error } = await supabase.functions.invoke('manage-catalog', {
         body: {
           action: editingId ? 'updateAddOn' : 'createAddOn',
+          provedorId: provedorAtivo?.id,
           addOnId: editingId || undefined,
           codigo: formData.codigo,
           nome: formData.nome,
@@ -70,7 +73,7 @@ export default function ConfigurarAdicionais() {
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.functions.invoke('manage-catalog', {
-        body: { action: 'deleteAddOn', addOnId: id },
+        body: { action: 'deleteAddOn', provedorId: provedorAtivo?.id, addOnId: id },
       });
 
       if (error) throw error;
