@@ -824,29 +824,25 @@ export type Database = {
           },
         ]
       }
-      "Yara.chat_history": {
-        Row: {
-          id: number
-          message: Json
-          session_id: string
-        }
-        Insert: {
-          id?: number
-          message: Json
-          session_id: string
-        }
-        Update: {
-          id?: number
-          message?: Json
-          session_id?: string
-        }
-        Relationships: []
-      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      get_conversation_context: {
+        Args: { p_conversation_id: string; p_max_messages?: number }
+        Returns: Json
+      }
+      get_or_create_contact: {
+        Args: { p_phone: string; p_push_name?: string }
+        Returns: {
+          contact_id: string
+          conversation_id: string
+          current_step: string
+          is_new_contact: boolean
+          is_new_conversation: boolean
+        }[]
+      }
       get_slots_statistics: { Args: never; Returns: Json }
       has_role: {
         Args: {
@@ -863,6 +859,16 @@ export type Database = {
           metadata: Json
           similarity: number
         }[]
+      }
+      transition_step: {
+        Args: {
+          p_conversation_id: string
+          p_step_data_merge?: Json
+          p_to_step: string
+          p_trigger_data?: Json
+          p_trigger_type?: string
+        }
+        Returns: boolean
       }
     }
     Enums: {
