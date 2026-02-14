@@ -6,14 +6,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { Pencil, Trash2, Plus } from 'lucide-react';
+import { Pencil, Plus } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface TipoAgendamento {
   id: string;
   codigo: string;
   nome: string;
+  ativo: boolean;
 }
 
 export default function ConfigurarTiposAgendamento() {
@@ -26,7 +28,7 @@ export default function ConfigurarTiposAgendamento() {
     queryKey: ['catalogo-tipos-agendamento-admin'],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('manage-catalog', {
-        body: { action: 'listTiposAgendamento', provedorId: provedorAtivo?.id },
+        body: { action: 'listAllTiposAgendamento', provedorId: provedorAtivo?.id },
       });
       if (error) throw error;
       return data.tipos as TipoAgendamento[];
@@ -51,41 +53,31 @@ export default function ConfigurarTiposAgendamento() {
       toast.success(editingId ? 'Tipo atualizado!' : 'Tipo criado!');
       resetForm();
     },
-    onError: (error: any) => {
-      toast.error('Erro: ' + error.message);
-    },
+    onError: (error: any) => toast.error('Erro: ' + error.message),
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
+  const toggleMutation = useMutation({
+    mutationFn: async ({ itemId, ativo }: { itemId: string; ativo: boolean }) => {
       const { error } = await supabase.functions.invoke('manage-catalog', {
-        body: { action: 'removeTipoAgendamento', provedorId: provedorAtivo?.id, tipoId: id },
+        body: { action: 'toggleStatus', provedorId: provedorAtivo?.id, tabela: 'catalogo_tipos_agendamento', itemId, ativo },
       });
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['catalogo-tipos-agendamento-admin'] });
-      toast.success('Tipo removido!');
+      toast.success('Status atualizado!');
     },
-    onError: (error: any) => {
-      toast.error('Erro: ' + error.message);
-    },
+    onError: (error: any) => toast.error('Erro: ' + error.message),
   });
 
-  const resetForm = () => {
-    setFormData({ codigo: '', nome: '' });
-    setEditingId(null);
-  };
+  const resetForm = () => { setFormData({ codigo: '', nome: '' }); setEditingId(null); };
 
   const handleEdit = (tipo: TipoAgendamento) => {
     setEditingId(tipo.id);
     setFormData({ codigo: tipo.codigo, nome: tipo.nome });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    saveMutation.mutate();
-  };
+  const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); saveMutation.mutate(); };
 
   if (isLoading) return <div>Carregando...</div>;
 
@@ -105,70 +97,51 @@ export default function ConfigurarTiposAgendamento() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="codigo">Código</Label>
-                <Input
-                  id="codigo"
-                  value={formData.codigo}
-                  onChange={(e) => setFormData({ ...formData, codigo: e.target.value })}
-                  required
-                />
+                <Input id="codigo" value={formData.codigo} onChange={(e) => setFormData({ ...formData, codigo: e.target.value })} required />
               </div>
               <div>
                 <Label htmlFor="nome">Nome</Label>
-                <Input
-                  id="nome"
-                  value={formData.nome}
-                  onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                  required
-                />
+                <Input id="nome" value={formData.nome} onChange={(e) => setFormData({ ...formData, nome: e.target.value })} required />
               </div>
             </div>
             <div className="flex gap-2">
               <Button type="submit" disabled={saveMutation.isPending}>
-                <Plus className="mr-2 h-4 w-4" />
-                {editingId ? 'Atualizar' : 'Adicionar'}
+                <Plus className="mr-2 h-4 w-4" />{editingId ? 'Atualizar' : 'Adicionar'}
               </Button>
-              {editingId && (
-                <Button type="button" variant="outline" onClick={resetForm}>
-                  Cancelar
-                </Button>
-              )}
+              {editingId && <Button type="button" variant="outline" onClick={resetForm}>Cancelar</Button>}
             </div>
           </form>
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Tipos Cadastrados</CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle>Tipos Cadastrados</CardTitle></CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Código</TableHead>
                 <TableHead>Nome</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {tipos?.map((tipo) => (
-                <TableRow key={tipo.id}>
+                <TableRow key={tipo.id} className={!tipo.ativo ? 'opacity-50' : ''}>
                   <TableCell>{tipo.codigo}</TableCell>
                   <TableCell>{tipo.nome}</TableCell>
+                  <TableCell>
+                    <Switch
+                      checked={tipo.ativo}
+                      onCheckedChange={(checked) => toggleMutation.mutate({ itemId: tipo.id, ativo: checked })}
+                      disabled={toggleMutation.isPending}
+                    />
+                  </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon" onClick={() => handleEdit(tipo)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => deleteMutation.mutate(tipo.id)}
-                        disabled={deleteMutation.isPending}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    <Button variant="ghost" size="icon" onClick={() => handleEdit(tipo)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}

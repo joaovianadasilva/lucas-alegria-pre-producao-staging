@@ -429,6 +429,79 @@ serve(async (req) => {
         );
       }
 
+      // === LIST ALL (admin - includes inactive) ===
+      case 'listAllPlanos': {
+        const { data, error } = await supabase
+          .from('catalogo_planos')
+          .select('*')
+          .eq('provedor_id', provedorId)
+          .order('codigo', { ascending: true });
+        if (error) throw error;
+        return new Response(
+          JSON.stringify({ success: true, plans: data }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'listAllAdicionais': {
+        const { data, error } = await supabase
+          .from('catalogo_adicionais')
+          .select('*')
+          .eq('provedor_id', provedorId)
+          .order('codigo', { ascending: true });
+        if (error) throw error;
+        return new Response(
+          JSON.stringify({ success: true, addOns: data }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'listAllTiposAgendamento': {
+        const { data, error } = await supabase
+          .from('catalogo_tipos_agendamento')
+          .select('*')
+          .eq('provedor_id', provedorId)
+          .order('nome', { ascending: true });
+        if (error) throw error;
+        return new Response(
+          JSON.stringify({ success: true, tipos: data }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'listAllRepresentantes': {
+        const { data, error } = await supabase
+          .from('catalogo_representantes')
+          .select('*')
+          .eq('provedor_id', provedorId)
+          .order('nome', { ascending: true });
+        if (error) throw error;
+        return new Response(
+          JSON.stringify({ success: true, data }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // === TOGGLE STATUS ===
+      case 'toggleStatus': {
+        const { tabela, itemId, ativo } = body;
+        const allowedTables = ['catalogo_planos', 'catalogo_adicionais', 'catalogo_tipos_agendamento', 'catalogo_representantes'];
+        if (!allowedTables.includes(tabela)) throw new Error('Tabela não permitida');
+        if (!itemId) throw new Error('itemId é obrigatório');
+        if (typeof ativo !== 'boolean') throw new Error('ativo deve ser boolean');
+
+        const { error } = await supabase
+          .from(tabela)
+          .update({ ativo })
+          .eq('id', itemId)
+          .eq('provedor_id', provedorId);
+        if (error) throw error;
+        return new Response(
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       default:
         throw new Error('Ação inválida');
     }

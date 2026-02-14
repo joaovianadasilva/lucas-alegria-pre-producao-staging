@@ -6,13 +6,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { Trash2, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface Representante {
   id: string;
   nome: string;
+  ativo: boolean;
 }
 
 export default function ConfigurarRepresentantes() {
@@ -24,7 +26,7 @@ export default function ConfigurarRepresentantes() {
     queryKey: ['catalogo-representantes-admin'],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('manage-catalog', {
-        body: { action: 'listRepresentantes', provedorId: provedorAtivo?.id },
+        body: { action: 'listAllRepresentantes', provedorId: provedorAtivo?.id },
       });
       if (error) throw error;
       return data.data as Representante[];
@@ -43,25 +45,21 @@ export default function ConfigurarRepresentantes() {
       toast.success('Representante adicionado!');
       setNome('');
     },
-    onError: (error: any) => {
-      toast.error('Erro: ' + error.message);
-    },
+    onError: (error: any) => toast.error('Erro: ' + error.message),
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
+  const toggleMutation = useMutation({
+    mutationFn: async ({ itemId, ativo }: { itemId: string; ativo: boolean }) => {
       const { error } = await supabase.functions.invoke('manage-catalog', {
-        body: { action: 'removeRepresentante', provedorId: provedorAtivo?.id, id },
+        body: { action: 'toggleStatus', provedorId: provedorAtivo?.id, tabela: 'catalogo_representantes', itemId, ativo },
       });
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['catalogo-representantes-admin'] });
-      toast.success('Representante removido!');
+      toast.success('Status atualizado!');
     },
-    onError: (error: any) => {
-      toast.error('Erro: ' + error.message);
-    },
+    onError: (error: any) => toast.error('Erro: ' + error.message),
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -80,55 +78,42 @@ export default function ConfigurarRepresentantes() {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Adicionar Representante</CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle>Adicionar Representante</CardTitle></CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="nome">Nome</Label>
-                <Input
-                  id="nome"
-                  value={nome}
-                  onChange={(e) => setNome(e.target.value)}
-                  required
-                />
+                <Input id="nome" value={nome} onChange={(e) => setNome(e.target.value)} required />
               </div>
             </div>
             <Button type="submit" disabled={addMutation.isPending}>
-              <Plus className="mr-2 h-4 w-4" />
-              Adicionar
+              <Plus className="mr-2 h-4 w-4" /> Adicionar
             </Button>
           </form>
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Representantes Cadastrados</CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle>Representantes Cadastrados</CardTitle></CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
+                <TableHead>Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {representantes?.map((rep) => (
-                <TableRow key={rep.id}>
+                <TableRow key={rep.id} className={!rep.ativo ? 'opacity-50' : ''}>
                   <TableCell>{rep.nome}</TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => deleteMutation.mutate(rep.id)}
-                      disabled={deleteMutation.isPending}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                  <TableCell>
+                    <Switch
+                      checked={rep.ativo}
+                      onCheckedChange={(checked) => toggleMutation.mutate({ itemId: rep.id, ativo: checked })}
+                      disabled={toggleMutation.isPending}
+                    />
                   </TableCell>
                 </TableRow>
               ))}
