@@ -124,7 +124,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (provedores.length === 1) {
         setProvedorAtivo(provedores[0]);
       } else {
-        setProvedorAtivo(null);
+        setProvedorAtivo(prev => {
+          if (prev && provedores.some(p => p.id === prev.id)) {
+            return prev;
+          }
+          return null;
+        });
       }
     } catch (error) {
       console.error('Erro ao buscar provedores:', error);
@@ -140,17 +145,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
 
-        if (currentSession?.user) {
-          setTimeout(async () => {
-            const userRoles = await fetchProfileAndRoles(currentSession.user.id);
-            await fetchProvedores(currentSession.user.id, userRoles);
-          }, 0);
-        } else {
+        if (event === 'SIGNED_OUT') {
           setProfile(null);
           setRoles([]);
           setProvedorAtivo(null);
           setProvedoresDisponiveis([]);
           setProvedoresLoading(false);
+        } else if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+          if (currentSession?.user) {
+            setTimeout(async () => {
+              const userRoles = await fetchProfileAndRoles(currentSession.user.id);
+              await fetchProvedores(currentSession.user.id, userRoles);
+            }, 0);
+          }
         }
 
         setLoading(false);
