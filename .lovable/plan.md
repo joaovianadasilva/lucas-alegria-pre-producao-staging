@@ -1,19 +1,21 @@
 
 
-## Atribuir role `super_admin` ao usuário joaoviana.silva@outlook.com
+## Adicionar campo de URL da Logo no cadastro de provedores
 
-### O que sera feito
-Inserir a role `super_admin` na tabela `user_roles` para o usuario Joao Viana (ID: `70bf42d5-f395-42b8-b300-f17805e3fd62`).
+### Alteracoes necessarias
+
+**1. Formulario de criacao (`GerenciarProvedores.tsx`)**
+- Adicionar `logoUrl` ao state `formData` (inicializado como string vazia)
+- Adicionar campo `Input` com label "URL da Logo" e placeholder (ex: `https://exemplo.com/logo.png`) no dialog de criacao
+- Passar `logoUrl` no body da chamada `createProvedor` para a edge function
+
+**2. Nenhuma alteracao no backend**
+- A edge function `manage-provedores` ja aceita o parametro `logoUrl` na action `createProvedor` e salva como `logo_url` na tabela. Nao precisa de nenhuma mudanca.
 
 ### Detalhes tecnicos
-- Executar um `INSERT` na tabela `user_roles` com `role = 'super_admin'` para o `user_id` correspondente.
-- A role `admin` existente sera mantida (as roles nao sao mutuamente exclusivas).
-- Apos a alteracao, o usuario tera acesso ao menu "Super Admin" e a pagina "Gerenciar Provedores".
 
-### SQL a ser executado
-```text
-INSERT INTO public.user_roles (user_id, role)
-VALUES ('70bf42d5-f395-42b8-b300-f17805e3fd62', 'super_admin')
-ON CONFLICT (user_id, role) DO NOTHING;
-```
+- O state `formData` passa de `{ nome: '', slug: '' }` para `{ nome: '', slug: '', logoUrl: '' }`
+- O campo sera opcional (sem `required`), pois nem todo provedor tem logo
+- O body da mutation incluira `logoUrl: formData.logoUrl || null`
+- O reset do form apos sucesso limpara o campo tambem
 
