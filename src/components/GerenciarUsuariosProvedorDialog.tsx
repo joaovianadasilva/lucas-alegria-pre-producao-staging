@@ -131,7 +131,7 @@ export default function GerenciarUsuariosProvedorDialog({ open, onOpenChange, pr
 
   return (
     <Dialog open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) setShowCreateForm(false); }}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Usuários - {provedorNome}</DialogTitle>
           <DialogDescription>Gerencie os usuários vinculados a este provedor.</DialogDescription>
@@ -232,7 +232,7 @@ export default function GerenciarUsuariosProvedorDialog({ open, onOpenChange, pr
             loadingVinculados ? (
               <p className="text-sm text-muted-foreground">Carregando...</p>
             ) : (
-              <div className="h-[400px] overflow-y-scroll rounded-md border">
+              <div className="h-[400px] overflow-y-scroll overflow-x-hidden rounded-md border">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -252,7 +252,7 @@ export default function GerenciarUsuariosProvedorDialog({ open, onOpenChange, pr
                     {usuariosVinculados?.map(u => (
                       <TableRow key={u.id}>
                         <TableCell>{u.nome} {u.sobrenome}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{u.email}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground truncate max-w-[200px]">{u.email}</TableCell>
                         <TableCell>
                           <Button
                             variant="ghost"
