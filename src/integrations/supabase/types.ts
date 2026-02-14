@@ -22,6 +22,7 @@ export type Database = {
           contrato_id: string
           created_at: string | null
           id: string
+          provedor_id: string
         }
         Insert: {
           adicional_codigo: string
@@ -30,6 +31,7 @@ export type Database = {
           contrato_id: string
           created_at?: string | null
           id?: string
+          provedor_id: string
         }
         Update: {
           adicional_codigo?: string
@@ -38,6 +40,7 @@ export type Database = {
           contrato_id?: string
           created_at?: string | null
           id?: string
+          provedor_id?: string
         }
         Relationships: [
           {
@@ -45,6 +48,13 @@ export type Database = {
             columns: ["contrato_id"]
             isOneToOne: false
             referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "adicionais_contrato_provedor_id_fkey"
+            columns: ["provedor_id"]
+            isOneToOne: false
+            referencedRelation: "provedores"
             referencedColumns: ["id"]
           },
         ]
@@ -61,6 +71,7 @@ export type Database = {
           nome_cliente: string
           observacao: string | null
           origem: string | null
+          provedor_id: string
           rede: string | null
           representante_vendas: string | null
           slot_numero: number
@@ -81,6 +92,7 @@ export type Database = {
           nome_cliente: string
           observacao?: string | null
           origem?: string | null
+          provedor_id: string
           rede?: string | null
           representante_vendas?: string | null
           slot_numero: number
@@ -101,6 +113,7 @@ export type Database = {
           nome_cliente?: string
           observacao?: string | null
           origem?: string | null
+          provedor_id?: string
           rede?: string | null
           representante_vendas?: string | null
           slot_numero?: number
@@ -119,6 +132,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "agendamentos_provedor_id_fkey"
+            columns: ["provedor_id"]
+            isOneToOne: false
+            referencedRelation: "provedores"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "agendamentos_tecnico_responsavel_id_fkey"
             columns: ["tecnico_responsavel_id"]
             isOneToOne: false
@@ -134,6 +154,7 @@ export type Database = {
           created_at: string | null
           id: string
           nome: string
+          provedor_id: string
           requer_agendamento: boolean
           updated_at: string | null
           valor: number
@@ -144,6 +165,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           nome: string
+          provedor_id: string
           requer_agendamento?: boolean
           updated_at?: string | null
           valor: number
@@ -154,11 +176,20 @@ export type Database = {
           created_at?: string | null
           id?: string
           nome?: string
+          provedor_id?: string
           requer_agendamento?: boolean
           updated_at?: string | null
           valor?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "catalogo_adicionais_provedor_id_fkey"
+            columns: ["provedor_id"]
+            isOneToOne: false
+            referencedRelation: "provedores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       catalogo_cidades: {
         Row: {
@@ -166,6 +197,7 @@ export type Database = {
           created_at: string | null
           id: string
           nome: string
+          provedor_id: string
           uf: string
           updated_at: string | null
         }
@@ -174,6 +206,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           nome: string
+          provedor_id: string
           uf: string
           updated_at?: string | null
         }
@@ -182,10 +215,19 @@ export type Database = {
           created_at?: string | null
           id?: string
           nome?: string
+          provedor_id?: string
           uf?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "catalogo_cidades_provedor_id_fkey"
+            columns: ["provedor_id"]
+            isOneToOne: false
+            referencedRelation: "provedores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       catalogo_grupos_mensagem: {
         Row: {
@@ -195,6 +237,7 @@ export type Database = {
           image_url: string | null
           message: string | null
           order: number
+          provedor_id: string
           updated_at: string | null
         }
         Insert: {
@@ -204,6 +247,7 @@ export type Database = {
           image_url?: string | null
           message?: string | null
           order: number
+          provedor_id: string
           updated_at?: string | null
         }
         Update: {
@@ -213,9 +257,18 @@ export type Database = {
           image_url?: string | null
           message?: string | null
           order?: number
+          provedor_id?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "catalogo_grupos_mensagem_provedor_id_fkey"
+            columns: ["provedor_id"]
+            isOneToOne: false
+            referencedRelation: "provedores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       catalogo_origem_vendas: {
         Row: {
@@ -223,6 +276,7 @@ export type Database = {
           created_at: string | null
           id: string
           nome: string
+          provedor_id: string
           updated_at: string | null
         }
         Insert: {
@@ -230,6 +284,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           nome: string
+          provedor_id: string
           updated_at?: string | null
         }
         Update: {
@@ -237,9 +292,18 @@ export type Database = {
           created_at?: string | null
           id?: string
           nome?: string
+          provedor_id?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "catalogo_origem_vendas_provedor_id_fkey"
+            columns: ["provedor_id"]
+            isOneToOne: false
+            referencedRelation: "provedores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       catalogo_planos: {
         Row: {
@@ -250,6 +314,7 @@ export type Database = {
           created_at: string | null
           id: string
           nome: string
+          provedor_id: string
           taxa_instalacao: string | null
           taxa_instalacao_especal: string | null
           taxa_instalacao_negociavel: string | null
@@ -269,6 +334,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           nome: string
+          provedor_id: string
           taxa_instalacao?: string | null
           taxa_instalacao_especal?: string | null
           taxa_instalacao_negociavel?: string | null
@@ -288,6 +354,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           nome?: string
+          provedor_id?: string
           taxa_instalacao?: string | null
           taxa_instalacao_especal?: string | null
           taxa_instalacao_negociavel?: string | null
@@ -299,7 +366,15 @@ export type Database = {
           velocidade_download?: string | null
           velocidade_upload?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "catalogo_planos_provedor_id_fkey"
+            columns: ["provedor_id"]
+            isOneToOne: false
+            referencedRelation: "provedores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       catalogo_representantes: {
         Row: {
@@ -307,6 +382,7 @@ export type Database = {
           created_at: string | null
           id: string
           nome: string
+          provedor_id: string
           updated_at: string | null
         }
         Insert: {
@@ -314,6 +390,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           nome: string
+          provedor_id: string
           updated_at?: string | null
         }
         Update: {
@@ -321,9 +398,18 @@ export type Database = {
           created_at?: string | null
           id?: string
           nome?: string
+          provedor_id?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "catalogo_representantes_provedor_id_fkey"
+            columns: ["provedor_id"]
+            isOneToOne: false
+            referencedRelation: "provedores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       catalogo_tipos_agendamento: {
         Row: {
@@ -332,6 +418,7 @@ export type Database = {
           created_at: string | null
           id: string
           nome: string
+          provedor_id: string
           updated_at: string | null
         }
         Insert: {
@@ -340,6 +427,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           nome: string
+          provedor_id: string
           updated_at?: string | null
         }
         Update: {
@@ -348,9 +436,18 @@ export type Database = {
           created_at?: string | null
           id?: string
           nome?: string
+          provedor_id?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "catalogo_tipos_agendamento_provedor_id_fkey"
+            columns: ["provedor_id"]
+            isOneToOne: false
+            referencedRelation: "provedores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       contratos: {
         Row: {
@@ -388,6 +485,7 @@ export type Database = {
           plano_codigo: string
           plano_nome: string
           plano_valor: number
+          provedor_id: string
           razao_social: string | null
           recebimento_efetivado: boolean | null
           reembolsavel: boolean | null
@@ -445,6 +543,7 @@ export type Database = {
           plano_codigo: string
           plano_nome: string
           plano_valor: number
+          provedor_id: string
           razao_social?: string | null
           recebimento_efetivado?: boolean | null
           reembolsavel?: boolean | null
@@ -502,6 +601,7 @@ export type Database = {
           plano_codigo?: string
           plano_nome?: string
           plano_valor?: number
+          provedor_id?: string
           razao_social?: string | null
           recebimento_efetivado?: boolean | null
           reembolsavel?: boolean | null
@@ -524,7 +624,15 @@ export type Database = {
           updated_at?: string | null
           valor_total?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "contratos_provedor_id_fkey"
+            columns: ["provedor_id"]
+            isOneToOne: false
+            referencedRelation: "provedores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       historico_adicionais_contrato: {
         Row: {
@@ -535,6 +643,7 @@ export type Database = {
           created_at: string | null
           entidade_nome: string | null
           id: string
+          provedor_id: string
           tipo_acao: string
           usuario_id: string | null
         }
@@ -546,6 +655,7 @@ export type Database = {
           created_at?: string | null
           entidade_nome?: string | null
           id?: string
+          provedor_id: string
           tipo_acao: string
           usuario_id?: string | null
         }
@@ -557,6 +667,7 @@ export type Database = {
           created_at?: string | null
           entidade_nome?: string | null
           id?: string
+          provedor_id?: string
           tipo_acao?: string
           usuario_id?: string | null
         }
@@ -566,6 +677,13 @@ export type Database = {
             columns: ["contrato_id"]
             isOneToOne: false
             referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "historico_adicionais_contrato_provedor_id_fkey"
+            columns: ["provedor_id"]
+            isOneToOne: false
+            referencedRelation: "provedores"
             referencedColumns: ["id"]
           },
           {
@@ -584,6 +702,7 @@ export type Database = {
           created_at: string | null
           entidade_nome: string | null
           id: string
+          provedor_id: string
           tipo_acao: string
           usuario_id: string | null
           valor_anterior: string | null
@@ -595,6 +714,7 @@ export type Database = {
           created_at?: string | null
           entidade_nome?: string | null
           id?: string
+          provedor_id: string
           tipo_acao: string
           usuario_id?: string | null
           valor_anterior?: string | null
@@ -606,6 +726,7 @@ export type Database = {
           created_at?: string | null
           entidade_nome?: string | null
           id?: string
+          provedor_id?: string
           tipo_acao?: string
           usuario_id?: string | null
           valor_anterior?: string | null
@@ -617,6 +738,13 @@ export type Database = {
             columns: ["contrato_id"]
             isOneToOne: false
             referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "historico_contratos_provedor_id_fkey"
+            columns: ["provedor_id"]
+            isOneToOne: false
+            referencedRelation: "provedores"
             referencedColumns: ["id"]
           },
           {
@@ -634,6 +762,7 @@ export type Database = {
           campo_alterado: string
           created_at: string | null
           id: string
+          provedor_id: string
           usuario_id: string | null
           valor_anterior: string | null
           valor_novo: string | null
@@ -643,6 +772,7 @@ export type Database = {
           campo_alterado: string
           created_at?: string | null
           id?: string
+          provedor_id: string
           usuario_id?: string | null
           valor_anterior?: string | null
           valor_novo?: string | null
@@ -652,6 +782,7 @@ export type Database = {
           campo_alterado?: string
           created_at?: string | null
           id?: string
+          provedor_id?: string
           usuario_id?: string | null
           valor_anterior?: string | null
           valor_novo?: string | null
@@ -662,6 +793,13 @@ export type Database = {
             columns: ["agendamento_id"]
             isOneToOne: false
             referencedRelation: "agendamentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "historico_edicoes_agendamentos_provedor_id_fkey"
+            columns: ["provedor_id"]
+            isOneToOne: false
+            referencedRelation: "provedores"
             referencedColumns: ["id"]
           },
           {
@@ -681,6 +819,7 @@ export type Database = {
           data_nova: string
           id: string
           motivo: string | null
+          provedor_id: string
           slot_anterior: number
           slot_novo: number
           usuario_id: string | null
@@ -692,6 +831,7 @@ export type Database = {
           data_nova: string
           id?: string
           motivo?: string | null
+          provedor_id: string
           slot_anterior: number
           slot_novo: number
           usuario_id?: string | null
@@ -703,6 +843,7 @@ export type Database = {
           data_nova?: string
           id?: string
           motivo?: string | null
+          provedor_id?: string
           slot_anterior?: number
           slot_novo?: number
           usuario_id?: string | null
@@ -713,6 +854,13 @@ export type Database = {
             columns: ["agendamento_id"]
             isOneToOne: false
             referencedRelation: "agendamentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "historico_reagendamentos_provedor_id_fkey"
+            columns: ["provedor_id"]
+            isOneToOne: false
+            referencedRelation: "provedores"
             referencedColumns: ["id"]
           },
           {
@@ -757,6 +905,36 @@ export type Database = {
         }
         Relationships: []
       }
+      provedores: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          id: string
+          logo_url: string | null
+          nome: string
+          slug: string
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          id?: string
+          logo_url?: string | null
+          nome: string
+          slug: string
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          id?: string
+          logo_url?: string | null
+          nome?: string
+          slug?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       slots: {
         Row: {
           agendamento_id: string | null
@@ -764,6 +942,7 @@ export type Database = {
           data_disponivel: string
           id: string
           observacao: string | null
+          provedor_id: string
           slot_numero: number
           status: string
           updated_at: string | null
@@ -774,6 +953,7 @@ export type Database = {
           data_disponivel: string
           id?: string
           observacao?: string | null
+          provedor_id: string
           slot_numero: number
           status?: string
           updated_at?: string | null
@@ -784,6 +964,7 @@ export type Database = {
           data_disponivel?: string
           id?: string
           observacao?: string | null
+          provedor_id?: string
           slot_numero?: number
           status?: string
           updated_at?: string | null
@@ -794,6 +975,13 @@ export type Database = {
             columns: ["agendamento_id"]
             isOneToOne: false
             referencedRelation: "agendamentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "slots_provedor_id_fkey"
+            columns: ["provedor_id"]
+            isOneToOne: false
+            referencedRelation: "provedores"
             referencedColumns: ["id"]
           },
         ]
@@ -824,6 +1012,35 @@ export type Database = {
           },
         ]
       }
+      usuario_provedores: {
+        Row: {
+          created_at: string | null
+          id: string
+          provedor_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          provedor_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          provedor_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "usuario_provedores_provedor_id_fkey"
+            columns: ["provedor_id"]
+            isOneToOne: false
+            referencedRelation: "provedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -844,6 +1061,7 @@ export type Database = {
         }[]
       }
       get_slots_statistics: { Args: never; Returns: Json }
+      get_user_provedor_ids: { Args: { _user_id: string }; Returns: string[] }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
