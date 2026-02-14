@@ -23,7 +23,7 @@ interface Provedor {
 export default function GerenciarProvedores() {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [formData, setFormData] = useState({ nome: '', slug: '', logoUrl: '' });
+  const [formData, setFormData] = useState({ nome: '', logoUrl: '' });
   const [usuariosDialog, setUsuariosDialog] = useState<{ open: boolean; provedorId: string; provedorNome: string }>({ open: false, provedorId: '', provedorNome: '' });
 
   const { data: provedores, isLoading } = useQuery({
@@ -40,7 +40,7 @@ export default function GerenciarProvedores() {
   const createMutation = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke('manage-provedores', {
-        body: { action: 'createProvedor', nome: formData.nome, slug: formData.slug, logoUrl: formData.logoUrl || null },
+        body: { action: 'createProvedor', nome: formData.nome, logoUrl: formData.logoUrl || null },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
@@ -49,7 +49,7 @@ export default function GerenciarProvedores() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['provedores-admin'] });
       toast.success('Provedor criado!');
-      setFormData({ nome: '', slug: '', logoUrl: '' });
+      setFormData({ nome: '', logoUrl: '' });
       setIsDialogOpen(false);
     },
     onError: (e: any) => toast.error('Erro: ' + e.message),
@@ -91,10 +91,6 @@ export default function GerenciarProvedores() {
                 <Input value={formData.nome} onChange={(e) => setFormData({ ...formData, nome: e.target.value })} required />
               </div>
               <div>
-                <Label>Slug</Label>
-                <Input value={formData.slug} onChange={(e) => setFormData({ ...formData, slug: e.target.value })} required placeholder="ex: meu-provedor" />
-              </div>
-              <div>
                 <Label>URL da Logo</Label>
                 <Input value={formData.logoUrl} onChange={(e) => setFormData({ ...formData, logoUrl: e.target.value })} placeholder="https://exemplo.com/logo.png" />
               </div>
@@ -113,7 +109,6 @@ export default function GerenciarProvedores() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
-                <TableHead>Slug</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
@@ -125,7 +120,6 @@ export default function GerenciarProvedores() {
                     {p.logo_url ? <img src={p.logo_url} className="h-6" alt="" /> : <Building2 className="h-5 w-5 text-muted-foreground" />}
                     {p.nome}
                   </TableCell>
-                  <TableCell className="font-mono text-sm">{p.slug}</TableCell>
                   <TableCell><Badge variant={p.ativo ? 'default' : 'secondary'}>{p.ativo ? 'Ativo' : 'Inativo'}</Badge></TableCell>
                   <TableCell className="text-right space-x-1">
                     <Button variant="ghost" size="icon" onClick={() => setUsuariosDialog({ open: true, provedorId: p.id, provedorNome: p.nome })}>
