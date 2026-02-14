@@ -1,38 +1,67 @@
 
 
-## Remover localStorage do provedor ativo e corrigir redirecionamento
+## Alteracoes globais: Tipos de Agendamento, Representantes e Tecnicos
 
-### Problema
+Tres problemas identificados e suas solucoes:
 
-O provedor ativo esta sendo salvo no `localStorage`, o que causa dois problemas:
-1. Ao acessar `/selecionar-provedor`, o provedor ja esta restaurado e a pagina redireciona automaticamente
-2. Ao trocar de provedor, o estado antigo persiste e pode causar inconsistencias
+---
 
-### Solucao
+### 1. Menu de configuracao de Tipos de Agendamento
 
-Remover completamente o uso de `localStorage` para o provedor. O provedor sera mantido apenas em memoria (estado React). Ao recarregar a pagina ou fazer novo login, o sistema redireciona para `/selecionar-provedor` (ou auto-seleciona se so tem 1 provedor).
+**Problema:** Nao existe pagina para gerenciar os tipos de agendamento (tabela `catalogo_tipos_agendamento`), apesar do backend (edge function) ja suportar CRUD completo (`listTiposAgendamento`, `addTipoAgendamento`, `updateTipoAgendamento`, `removeTipoAgendamento`).
 
-### Alteracoes
+**Solucao:**
 
-**Arquivo: `src/contexts/AuthContext.tsx`**
+- Criar pagina `src/pages/ConfigurarTiposAgendamento.tsx` seguindo o mesmo padrao de `ConfigurarAdicionais.tsx` (formulario de codigo/nome + tabela com editar/remover)
+- Adicionar rota `/configuracoes/tipos-agendamento` dentro do bloco de rotas admin em `src/App.tsx`
+- Adicionar item "Configurar Tipos de Agendamento" no menu de configuracoes em `src/components/AppSidebar.tsx`
 
-1. Remover a constante `PROVEDOR_STORAGE_KEY`
-2. Na funcao `fetchProvedores`: remover a logica de restaurar provedor do `localStorage` (linhas que fazem `localStorage.getItem`). Manter apenas a auto-selecao quando ha exatamente 1 provedor
-3. Na funcao `selecionarProvedor`: remover `localStorage.setItem`
-4. Na funcao `signOut`: remover `localStorage.removeItem(PROVEDOR_STORAGE_KEY)`
+---
 
-**Arquivo: `src/pages/SelecionarProvedor.tsx`**
+### 2. Representantes exibindo dados de outro provedor + Menu de configuracao
 
-1. Remover o primeiro `useEffect` que redireciona quando `provedorAtivo` ja existe (linhas 14-18) -- esse efeito causava o redirecionamento indesejado
-2. Manter o segundo `useEffect` que auto-seleciona quando ha apenas 1 provedor
+**Problema:** Em `NovoAgendamento.tsx` e `GerenciarAgendamentos.tsx`, a query de representantes faz `.from('catalogo_representantes').eq('ativo', true)` **sem filtrar por `provedor_id`**, retornando representantes de todos os provedores. Alem disso, nao existe pagina de configuracao para representantes.
 
-**Arquivo: `src/components/AppLayout.tsx`**
+**Solucao - Filtro:**
 
-1. No botao de trocar provedor, remover `localStorage.removeItem('provedorAtivoId')` -- basta navegar para `/selecionar-provedor`
+- `src/pages/NovoAgendamento.tsx`: adicionar `.eq('provedor_id', provedorAtivo?.id)` na query de representantes
+- `src/pages/GerenciarAgendamentos.tsx`: mesma correcao
+- `src/components/ContractEditDialog.tsx`: mesma correcao
 
-### Comportamento resultante
+**Solucao - Menu de configuracao:**
 
-- Login com 1 provedor: auto-seleciona, vai direto para o sistema
-- Login com 2+ provedores: mostra tela de selecao
-- Trocar provedor: clica no botao, vai para tela de selecao, escolhe outro
-- Recarregar pagina (F5): como nao ha provedor em memoria, redireciona para selecao (ou auto-seleciona se so tem 1)
+- Criar pagina `src/pages/ConfigurarRepresentantes.tsx` seguindo o padrao existente (formulario de nome + tabela com editar/remover). Usara as actions ja existentes no edge function (`addRepresentante`, `removeRepresentante`)
+- Adicionar rota `/configuracoes/representantes` no bloco admin em `src/App.tsx`
+- Adicionar item no menu de configuracoes em `src/components/AppSidebar.tsx`
+
+---
+
+### 3. Tecnicos exibindo dados de outro provedor
+
+**Problema:** O hook `useTecnicos.ts` busca todos os usuarios com role `tecnico` sem filtrar por provedor. Ele consulta `user_roles` + `profiles`, mas ignora a tabela `usuario_provedores` que vincula usuarios a provedores.
+
+**Solucao:**
+
+- Alterar `src/hooks/useTecnicos.ts` para receber `provedorId` como parametro
+- Adicionar um join com `usuario_provedores` filtrando pelo `provedor_id` ativo, garantindo que so retorne tecnicos vinculados ao provedor atual
+- Atualizar `src/components/TecnicoSelector.tsx` para passar o `provedorId` do contexto
+- A logica sera: buscar em `usuario_provedores` os `user_id` do provedor ativo, cruzar com `user_roles` onde role = 'tecnico', e buscar os perfis correspondentes
+
+---
+
+### Detalhes tecnicos
+
+**Arquivos novos:**
+- `src/pages/ConfigurarTiposAgendamento.tsx`
+- `src/pages/ConfigurarRepresentantes.tsx`
+
+**Arquivos modificados:**
+- `src/App.tsx` - 2 novas rotas admin
+- `src/components/AppSidebar.tsx` - 2 novos itens no menu configuracoes
+- `src/pages/NovoAgendamento.tsx` - filtro provedor_id nos representantes
+- `src/pages/GerenciarAgendamentos.tsx` - filtro provedor_id nos representantes
+- `src/components/ContractEditDialog.tsx` - filtro provedor_id nos representantes
+- `src/hooks/useTecnicos.ts` - filtro por provedor via usuario_provedores
+- `src/components/TecnicoSelector.tsx` - passar provedorId ao hook
+
+**Edge function:** Nenhuma alteracao necessaria - todas as actions de CRUD ja existem no `manage-catalog`.
