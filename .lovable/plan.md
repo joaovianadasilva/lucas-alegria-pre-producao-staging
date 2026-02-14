@@ -1,58 +1,27 @@
 
-## Gerenciamento de Usuarios por Provedor
 
-### Problema identificado
-1. Ao criar um provedor, ninguem e vinculado a ele automaticamente na tabela `usuario_provedores`
-2. Nao existe interface para vincular/desvincular usuarios a provedores
-3. Sem vinculo, nenhum usuario (exceto super_admin que ve tudo) consegue acessar o novo provedor
+## Corrigir overflow e melhorar UX do dialog de usuarios por provedor
 
-### Solucao proposta
+### Problemas identificados
 
-#### 1. Auto-vincular criador ao novo provedor (Backend)
-Na edge function `manage-provedores`, na action `createProvedor`, apos inserir o provedor, inserir automaticamente um registro em `usuario_provedores` vinculando o usuario que criou ao novo provedor.
+1. **Sem rolagem no dialog (provedor W2A):** O provedor W2A tem 20 usuarios vinculados. A tabela cresce sem limite, ultrapassando a tela.
+2. **UX confusa para adicionar usuarios:** O select + botao de adicionar existem, mas podem nao ser claros o suficiente. Quando todos os usuarios ja estao vinculados, o select mostra "Nenhum usuario disponivel" e o botao fica desabilitado, o que pode parecer que nao existe funcionalidade de adicionar.
 
-#### 2. Adicionar actions de gerenciamento de vinculos (Backend)
-Adicionar na edge function `manage-provedores` tres novas actions:
-- `listUsuariosProvedor` - listar usuarios vinculados a um provedor (com dados do profile)
-- `addUsuarioProvedor` - vincular um usuario a um provedor
-- `removeUsuarioProvedor` - desvincular um usuario de um provedor
+### Alteracoes
 
-#### 3. Interface de gerenciamento de usuarios por provedor (Frontend)
-Na pagina `GerenciarProvedores.tsx`, adicionar para cada provedor na tabela um botao "Gerenciar Usuarios" que abre um dialog com:
-- Lista de usuarios ja vinculados ao provedor (com opcao de remover)
-- Campo para buscar e adicionar novos usuarios (por email ou nome)
+**1. Adicionar rolagem ao dialog (`GerenciarUsuariosProvedorDialog.tsx`)**
+- Aplicar `max-h-[90vh]` e `overflow-y-auto` no `DialogContent`
+- Envolver a tabela de usuarios vinculados em um `ScrollArea` com `max-h-[400px]` para que a lista role independentemente
+- Manter o select de adicionar usuario sempre visivel no topo, fora da area de rolagem
+
+**2. Melhorar clareza visual do controle de adicionar**
+- Adicionar um label "Adicionar usuario" acima do select
+- Trocar o botao de icone por um botao com texto "Adicionar" para ficar mais obvio
 
 ### Detalhes tecnicos
 
-**Edge Function (`manage-provedores/index.ts`):**
-
-```text
-case 'createProvedor':
-  // ... insercao existente ...
-  // NOVO: auto-vincular criador
-  await supabaseAdmin
-    .from('usuario_provedores')
-    .insert({ user_id: user.id, provedor_id: data.id });
-
-case 'listUsuariosProvedor':
-  // Buscar vinculos + join com profiles
-  // Parametros: provedorId
-
-case 'addUsuarioProvedor':
-  // Inserir em usuario_provedores
-  // Parametros: provedorId, userId
-
-case 'removeUsuarioProvedor':
-  // Deletar de usuario_provedores
-  // Parametros: provedorId, userId
-```
-
-**Frontend (`GerenciarProvedores.tsx`):**
-- Novo componente/dialog `GerenciarUsuariosProvedorDialog`
-- Botao "Usuarios" na coluna de acoes de cada provedor na tabela
-- Dialog com lista de usuarios vinculados e opcao de adicionar/remover
-- Busca de usuarios via edge function `manage-users` (listUsers) ou nova action
-
-**Busca de usuarios disponiveis:**
-- Utilizar a edge function `manage-users` existente (action `listUsers`) para listar usuarios do sistema
-- No dialog, mostrar um select/combobox com usuarios que ainda nao estao vinculados ao provedor
+- Importar `ScrollArea` de `@/components/ui/scroll-area`
+- Aplicar `max-h-[90vh] overflow-y-auto` no `DialogContent`
+- Envolver o bloco `<Table>` em `<ScrollArea className="max-h-[400px]">`
+- Adicionar `<DialogDescription>` para resolver o warning de acessibilidade nos console logs
+- Substituir `<Button size="icon">` por `<Button>` com texto "Adicionar"
