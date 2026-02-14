@@ -6,7 +6,7 @@ import { UserMenu } from './UserMenu';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Building2, ArrowLeftRight } from 'lucide-react';
-import logoW2A from '@/assets/logo_W2A.svg';
+import logoW2A from '@/assets/logo_cliquefibra.jpeg';
 
 export const AppLayout: React.FC = () => {
   const { provedorAtivo, provedoresDisponiveis } = useAuth();

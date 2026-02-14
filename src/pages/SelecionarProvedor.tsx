@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Building2, Settings } from 'lucide-react';
-import logoW2A from '@/assets/logo_W2A.svg';
+import logoW2A from '@/assets/logo_cliquefibra.jpeg';
 
 export default function SelecionarProvedor() {
   const { provedoresDisponiveis, provedoresLoading, selecionarProvedor, provedorAtivo, isSuperAdmin } = useAuth();
