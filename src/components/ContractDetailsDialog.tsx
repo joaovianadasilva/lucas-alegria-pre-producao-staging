@@ -215,10 +215,10 @@ export function ContractDetailsDialog({
                   {contract.tipo_cliente === 'estrangeiro' && (
                     <>
                       <InfoRow label="Documento" value={contract.cpf} />
-                      <InfoRow label="Data de Nascimento" value={formatDate(contract.data_nascimento)} />
                     </>
                   )}
                   
+                  <InfoRow label="Data de Nascimento" value={formatDate(contract.data_nascimento)} />
                   <InfoRow label="Telefone" value={contract.telefone} />
                   <InfoRow label="Celular" value={contract.celular} />
                   <InfoRow label="Email" value={contract.email} />
