@@ -171,10 +171,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
 
-      if (currentSession?.user) {
+  if (currentSession?.user) {
+        initializedRef.current = true;
         const userRoles = await fetchProfileAndRoles(currentSession.user.id);
         await fetchProvedores(currentSession.user.id, userRoles);
-        initializedRef.current = true;
       }
       setLoading(false);
     });
