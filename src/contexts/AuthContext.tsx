@@ -155,12 +155,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           initializedRef.current = false;
         } else if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && !initializedRef.current) {
           if (currentSession?.user) {
-            setTimeout(async () => {
-              const userRoles = await fetchProfileAndRoles(currentSession.user.id);
-              await fetchProvedores(currentSession.user.id, userRoles);
-            }, 0);
-          }
-        }
+    setTimeout(async () => {
+      const userRoles = await fetchProfileAndRoles(currentSession.user.id);
+      await fetchProvedores(currentSession.user.id, userRoles);
+    }, 0);
+  } else {
+    setProvedoresLoading(false);
+  }
+}
 
         setLoading(false);
       }
@@ -175,6 +177,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         initializedRef.current = true;
         const userRoles = await fetchProfileAndRoles(currentSession.user.id);
         await fetchProvedores(currentSession.user.id, userRoles);
+      } else {
+        setProvedoresLoading(false);
       }
       setLoading(false);
     });
