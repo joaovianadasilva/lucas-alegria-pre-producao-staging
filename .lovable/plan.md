@@ -1,46 +1,34 @@
 
-## Problema: Race condition entre `getSession` e `onAuthStateChange`
 
-### O que está acontecendo
+## Problema: Tela branca infinita em aba anônima
 
-Ao carregar a aplicação, dois fluxos rodam quase simultaneamente:
+### Causa raiz
 
-1. `onAuthStateChange` dispara `INITIAL_SESSION` e como `initializedRef.current` ainda é `false`, entra no bloco e chama `fetchProvedores` dentro de um `setTimeout` — **mas sem as roles ainda carregadas** (roles chegam vazia `[]`).
-2. `getSession` roda de forma síncrona, busca as roles corretamente (incluindo `super_admin`) e chama `fetchProvedores` com roles corretas, depois marca `initializedRef.current = true`.
+No `AuthContext`, o estado `provedoresLoading` começa como `true` e so e definido como `false` dentro da funcao `fetchProvedores`. Quando nao ha sessao (aba anonima ou navegador novo), `fetchProvedores` nunca e chamado, entao `provedoresLoading` fica `true` para sempre.
 
-O problema: qual das duas chamadas de `fetchProvedores` termina por **último** define o estado final. Se o `onAuthStateChange` (com roles vazias, portanto `isSA = false`) terminar depois do `getSession`, o resultado é `provedoresDisponiveis` com apenas os provedores via `usuario_provedores` — sem detecção de `super_admin` — e a lista pode aparecer incompleta dependendo da velocidade de cada chamada.
-
-No banco confirmamos: o usuário tem 3 provedores nos dois caminhos (tanto super_admin quanto usuario_provedores), mas a inconsistência de roles no segundo fetch pode causar comportamento imprevisível.
-
-### Solução
-
-Marcar `initializedRef.current = true` **imediatamente** antes de fazer qualquer chamada assíncrona no bloco `getSession`, para garantir que quando o `onAuthStateChange` verificar a flag, ela já esteja marcada como `true` e o segundo fetch seja ignorado.
-
-**Arquivo: `src/contexts/AuthContext.tsx`**
-
-Linha atual (problema):
-```typescript
-supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
-  setSession(currentSession);
-  setUser(currentSession?.user ?? null);
-
-  if (currentSession?.user) {
-    const userRoles = await fetchProfileAndRoles(currentSession.user.id);
-    await fetchProvedores(currentSession.user.id, userRoles);
-    initializedRef.current = true;  // <- marcado só APÓS os fetches
-  }
-  setLoading(false);
-});
+No `ProtectedRoute`, a condicao de loading e:
+```
+if (loading || provedoresLoading) { /* mostra spinner */ }
 ```
 
-Correção (marcar ANTES dos fetches):
+Como `provedoresLoading` nunca vira `false`, o spinner fica infinito e o redirect para `/auth` nunca acontece.
+
+### Solucao
+
+No bloco `getSession` dentro do `useEffect` em `AuthContext.tsx`, quando **nao ha sessao**, definir `provedoresLoading` como `false` explicitamente.
+
+### Alteracao
+
+**Arquivo:** `src/contexts/AuthContext.tsx`
+
+Trecho atual (linhas 170-180):
 ```typescript
 supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
   setSession(currentSession);
   setUser(currentSession?.user ?? null);
 
   if (currentSession?.user) {
-    initializedRef.current = true;  // <- marcado ANTES, bloqueando o onAuthStateChange
+    initializedRef.current = true;
     const userRoles = await fetchProfileAndRoles(currentSession.user.id);
     await fetchProvedores(currentSession.user.id, userRoles);
   }
@@ -48,10 +36,53 @@ supabase.auth.getSession().then(async ({ data: { session: currentSession } }) =>
 });
 ```
 
-### Por que funciona
+Correcao:
+```typescript
+supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
+  setSession(currentSession);
+  setUser(currentSession?.user ?? null);
 
-Com `initializedRef.current = true` marcado antes dos awaits, quando o `onAuthStateChange` disparar `INITIAL_SESSION` (que ocorre logo em seguida), a condição `!initializedRef.current` já será `false` e o segundo `fetchProvedores` nunca será executado — eliminando a race condition.
+  if (currentSession?.user) {
+    initializedRef.current = true;
+    const userRoles = await fetchProfileAndRoles(currentSession.user.id);
+    await fetchProvedores(currentSession.user.id, userRoles);
+  } else {
+    setProvedoresLoading(false);  // Sem sessao, nao ha provedores para carregar
+  }
+  setLoading(false);
+});
+```
 
-### Arquivo alterado
+Tambem adicionar o mesmo tratamento no `onAuthStateChange` para o evento `INITIAL_SESSION` sem sessao:
 
-- `src/contexts/AuthContext.tsx` (apenas mover uma linha de código)
+Trecho atual (linhas 156-163):
+```typescript
+} else if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && !initializedRef.current) {
+  if (currentSession?.user) {
+    setTimeout(async () => {
+      const userRoles = await fetchProfileAndRoles(currentSession.user.id);
+      await fetchProvedores(currentSession.user.id, userRoles);
+    }, 0);
+  }
+}
+```
+
+Correcao:
+```typescript
+} else if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && !initializedRef.current) {
+  if (currentSession?.user) {
+    setTimeout(async () => {
+      const userRoles = await fetchProfileAndRoles(currentSession.user.id);
+      await fetchProvedores(currentSession.user.id, userRoles);
+    }, 0);
+  } else {
+    setProvedoresLoading(false);
+  }
+}
+```
+
+### Resumo
+
+- 1 arquivo alterado: `src/contexts/AuthContext.tsx`
+- 2 blocos `else` adicionados para garantir que `provedoresLoading` seja `false` quando nao ha usuario logado
+- Corrige a tela branca infinita em abas anonimas e navegadores novos
