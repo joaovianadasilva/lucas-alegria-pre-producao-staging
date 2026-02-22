@@ -1,88 +1,20 @@
 
 
-## Problema: Tela branca infinita em aba anônima
+## Adicionar campo "Data de Nascimento" para todos os tipos de cliente no modal de edicao
 
-### Causa raiz
+### Problema
 
-No `AuthContext`, o estado `provedoresLoading` começa como `true` e so e definido como `false` dentro da funcao `fetchProvedores`. Quando nao ha sessao (aba anonima ou navegador novo), `fetchProvedores` nunca e chamado, entao `provedoresLoading` fica `true` para sempre.
-
-No `ProtectedRoute`, a condicao de loading e:
-```
-if (loading || provedoresLoading) { /* mostra spinner */ }
-```
-
-Como `provedoresLoading` nunca vira `false`, o spinner fica infinito e o redirect para `/auth` nunca acontece.
+No `ContractEditDialog.tsx`, o campo "Data de Nascimento" so aparece quando o tipo de cliente e "Estrangeiro" (linha 477). Para clientes PF e PJ, o campo nao e exibido, impossibilitando a edicao.
 
 ### Solucao
 
-No bloco `getSession` dentro do `useEffect` em `AuthContext.tsx`, quando **nao ha sessao**, definir `provedoresLoading` como `false` explicitamente.
+Mover o campo "Data de Nascimento" para fora dos blocos condicionais de tipo de cliente, colocando-o como campo comum visivel para todos os tipos (PF, PJ e Estrangeiro), logo apos o bloco do tipo de cliente e antes dos campos de telefone/celular.
 
 ### Alteracao
 
-**Arquivo:** `src/contexts/AuthContext.tsx`
+**Arquivo:** `src/components/ContractEditDialog.tsx`
 
-Trecho atual (linhas 170-180):
-```typescript
-supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
-  setSession(currentSession);
-  setUser(currentSession?.user ?? null);
+1. Remover o campo "Data de Nascimento" de dentro do bloco `tipoCliente === 'estrangeiro'` (linhas 477-479)
+2. Adicionar o campo "Data de Nascimento" como campo independente, visivel para todos os tipos de cliente, entre o bloco condicional de tipo de cliente e os campos de telefone/celular (antes da linha 483)
 
-  if (currentSession?.user) {
-    initializedRef.current = true;
-    const userRoles = await fetchProfileAndRoles(currentSession.user.id);
-    await fetchProvedores(currentSession.user.id, userRoles);
-  }
-  setLoading(false);
-});
-```
-
-Correcao:
-```typescript
-supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
-  setSession(currentSession);
-  setUser(currentSession?.user ?? null);
-
-  if (currentSession?.user) {
-    initializedRef.current = true;
-    const userRoles = await fetchProfileAndRoles(currentSession.user.id);
-    await fetchProvedores(currentSession.user.id, userRoles);
-  } else {
-    setProvedoresLoading(false);  // Sem sessao, nao ha provedores para carregar
-  }
-  setLoading(false);
-});
-```
-
-Tambem adicionar o mesmo tratamento no `onAuthStateChange` para o evento `INITIAL_SESSION` sem sessao:
-
-Trecho atual (linhas 156-163):
-```typescript
-} else if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && !initializedRef.current) {
-  if (currentSession?.user) {
-    setTimeout(async () => {
-      const userRoles = await fetchProfileAndRoles(currentSession.user.id);
-      await fetchProvedores(currentSession.user.id, userRoles);
-    }, 0);
-  }
-}
-```
-
-Correcao:
-```typescript
-} else if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && !initializedRef.current) {
-  if (currentSession?.user) {
-    setTimeout(async () => {
-      const userRoles = await fetchProfileAndRoles(currentSession.user.id);
-      await fetchProvedores(currentSession.user.id, userRoles);
-    }, 0);
-  } else {
-    setProvedoresLoading(false);
-  }
-}
-```
-
-### Resumo
-
-- 1 arquivo alterado: `src/contexts/AuthContext.tsx`
-- 2 blocos `else` adicionados para garantir que `provedoresLoading` seja `false` quando nao ha usuario logado
-- Corrige a tela branca infinita em abas anonimas e navegadores novos
+O campo continuara usando `<Input type="date">` com o estado `dataNascimento` que ja existe e ja e enviado no payload de salvamento.
