@@ -473,12 +473,13 @@ export function ContractEditDialog({ open, onOpenChange, contract, onSaved }: Co
                     <Label>Documento (CNRM/RNE)</Label>
                     <Input value={cpf} onChange={(e) => setCpf(e.target.value)} />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Data de Nascimento</Label>
-                    <Input type="date" value={dataNascimento} onChange={(e) => setDataNascimento(e.target.value)} />
-                  </div>
                 </>
               )}
+
+              <div className="space-y-2">
+                <Label>Data de Nascimento</Label>
+                <Input type="date" value={dataNascimento} onChange={(e) => setDataNascimento(e.target.value)} />
+              </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
