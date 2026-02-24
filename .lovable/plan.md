@@ -1,20 +1,40 @@
 
 
-## Adicionar campo "Data de Nascimento" para todos os tipos de cliente no modal de edicao
+## Corrigir data de nascimento exibida 1 dia atrasada na visualizacao do contrato
 
-### Problema
+### Causa raiz
 
-No `ContractEditDialog.tsx`, o campo "Data de Nascimento" so aparece quando o tipo de cliente e "Estrangeiro" (linha 477). Para clientes PF e PJ, o campo nao e exibido, impossibilitando a edicao.
+No `ContractDetailsDialog.tsx` (linha 72-75), a funcao `formatDate` faz:
+```typescript
+const formatDate = (dateString: string | null) => {
+  if (!dateString) return '-';
+  return new Date(dateString).toLocaleDateString('pt-BR');
+};
+```
+
+`new Date("1986-10-14")` interpreta a string como UTC (meia-noite UTC). No fuso horario do Brasil (UTC-3), isso vira `13/10/1986 21:00`, exibindo o dia anterior.
+
+O projeto ja possui `src/lib/dateUtils.ts` com a funcao `formatLocalDate` que faz o parsing correto sem conversao de timezone.
 
 ### Solucao
 
-Mover o campo "Data de Nascimento" para fora dos blocos condicionais de tipo de cliente, colocando-o como campo comum visivel para todos os tipos (PF, PJ e Estrangeiro), logo apos o bloco do tipo de cliente e antes dos campos de telefone/celular.
+**Arquivo:** `src/components/ContractDetailsDialog.tsx`
 
-### Alteracao
+1. Importar `formatLocalDate` de `@/lib/dateUtils`
+2. Substituir a funcao local `formatDate` para usar `formatLocalDate` internamente
 
-**Arquivo:** `src/components/ContractEditDialog.tsx`
+Funcao corrigida:
+```typescript
+const formatDate = (dateString: string | null) => {
+  if (!dateString) return '-';
+  return formatLocalDate(dateString);
+};
+```
 
-1. Remover o campo "Data de Nascimento" de dentro do bloco `tipoCliente === 'estrangeiro'` (linhas 477-479)
-2. Adicionar o campo "Data de Nascimento" como campo independente, visivel para todos os tipos de cliente, entre o bloco condicional de tipo de cliente e os campos de telefone/celular (antes da linha 483)
+### Resumo
 
-O campo continuara usando `<Input type="date">` com o estado `dataNascimento` que ja existe e ja e enviado no payload de salvamento.
+- 1 arquivo alterado: `src/components/ContractDetailsDialog.tsx`
+- Adicionar import de `formatLocalDate`
+- Alterar `formatDate` para usar `formatLocalDate` em vez de `new Date()`
+- Corrige a exibicao da data de nascimento (e todas as outras datas) no modal de visualizacao do contrato
+
