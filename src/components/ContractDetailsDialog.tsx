@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Loader2, Pencil } from 'lucide-react';
 import { ContractEditDialog } from './ContractEditDialog';
+import { formatLocalDate } from '@/lib/dateUtils';
 
 interface Adicional {
   id: string;
@@ -76,7 +77,7 @@ const formatCurrency = (value: number | null | undefined) => {
 
 const formatDate = (dateString: string | null) => {
   if (!dateString) return '-';
-  return new Date(dateString).toLocaleDateString('pt-BR');
+  return formatLocalDate(dateString);
 };
 
 const InfoRow = ({ label, value }: { label: string; value: React.ReactNode }) => (
