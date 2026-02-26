@@ -116,7 +116,7 @@ export function ContractDetailsDialog({
     'estrangeiro': 'Estrangeiro'
   }[contract.tipo_cliente] || contract.tipo_cliente;
 
-  const totalAdicionais = contract.adicionais?.reduce((sum, a) => sum + a.adicional_valor, 0) || 0;
+  const totalAdicionais = contract.adicionais_contrato?.reduce((sum, a) => sum + a.adicional_valor, 0) || 0;
 
   const handleEditSaved = () => {
     setEditDialogOpen(false);
