@@ -59,7 +59,7 @@ export interface ContratoCompleto {
   codigo_cliente: string | null;
   observacao: string | null;
   created_at: string;
-  adicionais: Adicional[];
+  adicionais_contrato: Adicional[];
 }
 
 interface ContractDetailsDialogProps {
@@ -116,7 +116,7 @@ export function ContractDetailsDialog({
     'estrangeiro': 'Estrangeiro'
   }[contract.tipo_cliente] || contract.tipo_cliente;
 
-  const totalAdicionais = contract.adicionais?.reduce((sum, a) => sum + a.adicional_valor, 0) || 0;
+  const totalAdicionais = contract.adicionais_contrato?.reduce((sum, a) => sum + a.adicional_valor, 0) || 0;
 
   const handleEditSaved = () => {
     setEditDialogOpen(false);
@@ -147,12 +147,12 @@ export function ContractDetailsDialog({
                     <span className="font-semibold text-primary">{formatCurrency(contract.plano_valor)}</span>
                   </div>
                   
-                  {contract.adicionais && contract.adicionais.length > 0 && (
+                  {contract.adicionais_contrato && contract.adicionais_contrato.length > 0 && (
                     <>
                       <Separator />
                       <div className="space-y-2">
                         <p className="text-sm font-medium text-muted-foreground">Adicionais:</p>
-                        {contract.adicionais.map((adicional) => (
+                        {contract.adicionais_contrato.map((adicional) => (
                           <div key={adicional.id} className="flex justify-between text-sm">
                             <span>{adicional.adicional_nome}</span>
                             <span>{formatCurrency(adicional.adicional_valor)}</span>

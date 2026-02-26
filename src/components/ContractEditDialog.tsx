@@ -152,7 +152,7 @@ export function ContractEditDialog({ open, onOpenChange, contract, onSaved }: Co
     // Plano e adicionais
     setPlanoCodigo(contract.plano_codigo || '');
     setAdicionaisSelecionados(
-      contract.adicionais?.map(a => a.adicional_codigo) || []
+      contract.adicionais_contrato?.map(a => a.adicional_codigo) || []
     );
     setTaxaInstalacao(String(contract.taxa_instalacao || 0));
     setDiaVencimento(contract.dia_vencimento || '');
