@@ -59,7 +59,7 @@ export interface ContratoCompleto {
   codigo_cliente: string | null;
   observacao: string | null;
   created_at: string;
-  adicionais: Adicional[];
+  adicionais_contrato: Adicional[];
 }
 
 interface ContractDetailsDialogProps {
