@@ -147,12 +147,12 @@ export function ContractDetailsDialog({
                     <span className="font-semibold text-primary">{formatCurrency(contract.plano_valor)}</span>
                   </div>
                   
-                  {contract.adicionais && contract.adicionais.length > 0 && (
+                  {contract.adicionais_contrato && contract.adicionais_contrato.length > 0 && (
                     <>
                       <Separator />
                       <div className="space-y-2">
                         <p className="text-sm font-medium text-muted-foreground">Adicionais:</p>
-                        {contract.adicionais.map((adicional) => (
+                        {contract.adicionais_contrato.map((adicional) => (
                           <div key={adicional.id} className="flex justify-between text-sm">
                             <span>{adicional.adicional_nome}</span>
                             <span>{formatCurrency(adicional.adicional_valor)}</span>
