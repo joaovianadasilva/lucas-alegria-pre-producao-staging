@@ -1,0 +1,1 @@
+ALTER VIEW public.vw_contratos_completos SET (security_invoker = on);
