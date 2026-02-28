@@ -51,6 +51,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "adicionais_contrato_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "vw_contratos_completos"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "adicionais_contrato_provedor_id_fkey"
             columns: ["provedor_id"]
             isOneToOne: false
@@ -129,6 +136,13 @@ export type Database = {
             columns: ["contrato_id"]
             isOneToOne: true
             referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agendamentos_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: true
+            referencedRelation: "vw_contratos_completos"
             referencedColumns: ["id"]
           },
           {
@@ -680,6 +694,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "historico_adicionais_contrato_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "vw_contratos_completos"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "historico_adicionais_contrato_provedor_id_fkey"
             columns: ["provedor_id"]
             isOneToOne: false
@@ -741,6 +762,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "historico_contratos_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "vw_contratos_completos"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "historico_contratos_provedor_id_fkey"
             columns: ["provedor_id"]
             isOneToOne: false
@@ -794,6 +822,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "agendamentos"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "historico_edicoes_agendamentos_agendamento_id_fkey"
+            columns: ["agendamento_id"]
+            isOneToOne: false
+            referencedRelation: "vw_contratos_completos"
+            referencedColumns: ["ultimo_agendamento_id"]
           },
           {
             foreignKeyName: "historico_edicoes_agendamentos_provedor_id_fkey"
@@ -855,6 +890,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "agendamentos"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "historico_reagendamentos_agendamento_id_fkey"
+            columns: ["agendamento_id"]
+            isOneToOne: false
+            referencedRelation: "vw_contratos_completos"
+            referencedColumns: ["ultimo_agendamento_id"]
           },
           {
             foreignKeyName: "historico_reagendamentos_provedor_id_fkey"
@@ -978,6 +1020,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "slots_agendamento_id_fkey"
+            columns: ["agendamento_id"]
+            isOneToOne: false
+            referencedRelation: "vw_contratos_completos"
+            referencedColumns: ["ultimo_agendamento_id"]
+          },
+          {
             foreignKeyName: "slots_provedor_id_fkey"
             columns: ["provedor_id"]
             isOneToOne: false
@@ -1043,7 +1092,82 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      vw_contratos_completos: {
+        Row: {
+          celular: string | null
+          cnpj: string | null
+          codigo_cliente: string | null
+          codigo_contrato: string | null
+          cpf: string | null
+          created_at: string | null
+          data_ativacao: string | null
+          data_cancelamento: string | null
+          data_nascimento: string | null
+          data_pgto_primeira_mensalidade: string | null
+          data_pgto_segunda_mensalidade: string | null
+          data_pgto_terceira_mensalidade: string | null
+          data_recebimento: string | null
+          data_reembolso: string | null
+          dia_vencimento: string | null
+          email: string | null
+          id: string | null
+          inscricao_estadual: string | null
+          instalacao_bairro: string | null
+          instalacao_cep: string | null
+          instalacao_cidade: string | null
+          instalacao_complemento: string | null
+          instalacao_mesmo_endereco: boolean | null
+          instalacao_numero: string | null
+          instalacao_rua: string | null
+          instalacao_uf: string | null
+          motivo_cancelamento: string | null
+          nome_completo: string | null
+          nomes_adicionais: string | null
+          observacao: string | null
+          orgao_expedicao: string | null
+          origem: string | null
+          plano_codigo: string | null
+          plano_nome: string | null
+          plano_valor: number | null
+          provedor_id: string | null
+          razao_social: string | null
+          recebimento_efetivado: boolean | null
+          reembolsavel: boolean | null
+          reembolso_efetivado: boolean | null
+          representante_vendas: string | null
+          residencia_bairro: string | null
+          residencia_cep: string | null
+          residencia_cidade: string | null
+          residencia_complemento: string | null
+          residencia_numero: string | null
+          residencia_rua: string | null
+          residencia_uf: string | null
+          rg: string | null
+          soma_adicionais: number | null
+          status: string | null
+          status_contrato: string | null
+          taxa_instalacao: number | null
+          telefone: string | null
+          tipo_cliente: string | null
+          tipo_venda: string | null
+          ultima_data_agendamento: string | null
+          ultimo_agendamento_confirmacao: string | null
+          ultimo_agendamento_id: string | null
+          ultimo_agendamento_status: string | null
+          ultimo_agendamento_tipo: string | null
+          updated_at: string | null
+          valor_total: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contratos_provedor_id_fkey"
+            columns: ["provedor_id"]
+            isOneToOne: false
+            referencedRelation: "provedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       get_conversation_context: {

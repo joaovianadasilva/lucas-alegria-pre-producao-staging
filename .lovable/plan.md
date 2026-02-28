@@ -1,49 +1,40 @@
 
 
-## Criar view `vw_contratos_completos`
+## Corrigir data de nascimento exibida 1 dia atrasada na visualizacao do contrato
 
-### SQL Migration
+### Causa raiz
 
-Criar uma view que agrega dados do contrato, adicionais e último agendamento:
-
-```sql
-CREATE OR REPLACE VIEW public.vw_contratos_completos AS
-SELECT
-  c.*,
-  COALESCE(ad.nomes_adicionais, '') AS nomes_adicionais,
-  COALESCE(ad.soma_adicionais, 0) AS soma_adicionais,
-  ag.ultimo_agendamento_id,
-  ag.ultima_data_agendamento,
-  ag.ultimo_agendamento_status,
-  ag.ultimo_agendamento_tipo,
-  ag.ultimo_agendamento_confirmacao
-FROM contratos c
-LEFT JOIN LATERAL (
-  SELECT
-    string_agg(ac.adicional_nome, ', ' ORDER BY ac.adicional_nome) AS nomes_adicionais,
-    SUM(ac.adicional_valor) AS soma_adicionais
-  FROM adicionais_contrato ac
-  WHERE ac.contrato_id = c.id
-) ad ON true
-LEFT JOIN LATERAL (
-  SELECT
-    a.id AS ultimo_agendamento_id,
-    a.data_agendamento AS ultima_data_agendamento,
-    a.status AS ultimo_agendamento_status,
-    a.tipo AS ultimo_agendamento_tipo,
-    a.confirmacao AS ultimo_agendamento_confirmacao
-  FROM agendamentos a
-  WHERE a.contrato_id = c.id
-  ORDER BY a.created_at DESC
-  LIMIT 1
-) ag ON true;
+No `ContractDetailsDialog.tsx` (linha 72-75), a funcao `formatDate` faz:
+```typescript
+const formatDate = (dateString: string | null) => {
+  if (!dateString) return '-';
+  return new Date(dateString).toLocaleDateString('pt-BR');
+};
 ```
 
-A view herda as RLS policies da tabela `contratos`, portanto apenas usuarios autenticados com acesso ao provedor conseguirao consultar.
+`new Date("1986-10-14")` interpreta a string como UTC (meia-noite UTC). No fuso horario do Brasil (UTC-3), isso vira `13/10/1986 21:00`, exibindo o dia anterior.
+
+O projeto ja possui `src/lib/dateUtils.ts` com a funcao `formatLocalDate` que faz o parsing correto sem conversao de timezone.
+
+### Solucao
+
+**Arquivo:** `src/components/ContractDetailsDialog.tsx`
+
+1. Importar `formatLocalDate` de `@/lib/dateUtils`
+2. Substituir a funcao local `formatDate` para usar `formatLocalDate` internamente
+
+Funcao corrigida:
+```typescript
+const formatDate = (dateString: string | null) => {
+  if (!dateString) return '-';
+  return formatLocalDate(dateString);
+};
+```
 
 ### Resumo
 
-- 1 migration: criar view `vw_contratos_completos`
-- Campos agregados: `nomes_adicionais` (texto separado por virgula), `soma_adicionais` (numeric), dados do ultimo agendamento
-- Nenhuma alteracao em codigo frontend nesta etapa
+- 1 arquivo alterado: `src/components/ContractDetailsDialog.tsx`
+- Adicionar import de `formatLocalDate`
+- Alterar `formatDate` para usar `formatLocalDate` em vez de `new Date()`
+- Corrige a exibicao da data de nascimento (e todas as outras datas) no modal de visualizacao do contrato
 
