@@ -1,40 +1,42 @@
 
 
-## Corrigir data de nascimento exibida 1 dia atrasada na visualizacao do contrato
+## Corrigir constraints UNIQUE em `slots` e `agendamentos` para multi-provedor
 
-### Causa raiz
+### Problema
 
-No `ContractDetailsDialog.tsx` (linha 72-75), a funcao `formatDate` faz:
-```typescript
-const formatDate = (dateString: string | null) => {
-  if (!dateString) return '-';
-  return new Date(dateString).toLocaleDateString('pt-BR');
-};
-```
+Duas tabelas possuem constraints/indices UNIQUE que nao incluem `provedor_id`, impedindo que provedores diferentes usem os mesmos numeros de slot ou agendem na mesma data/slot:
 
-`new Date("1986-10-14")` interpreta a string como UTC (meia-noite UTC). No fuso horario do Brasil (UTC-3), isso vira `13/10/1986 21:00`, exibindo o dia anterior.
+| Tabela | Index atual | Deveria ser |
+|---|---|---|
+| `slots` | `UNIQUE(data_disponivel, slot_numero)` | `UNIQUE(data_disponivel, slot_numero, provedor_id)` |
+| `agendamentos` | `UNIQUE(data_agendamento, slot_numero) WHERE status != 'cancelado'` | `UNIQUE(data_agendamento, slot_numero, provedor_id) WHERE status != 'cancelado'` |
 
-O projeto ja possui `src/lib/dateUtils.ts` com a funcao `formatLocalDate` que faz o parsing correto sem conversao de timezone.
+A constraint `agendamentos_contrato_id_key` em `UNIQUE(contrato_id)` nao precisa de alteracao pois `contrato_id` ja e UUID globalmente unico.
 
 ### Solucao
 
-**Arquivo:** `src/components/ContractDetailsDialog.tsx`
+Uma migration SQL que:
 
-1. Importar `formatLocalDate` de `@/lib/dateUtils`
-2. Substituir a funcao local `formatDate` para usar `formatLocalDate` internamente
+1. Remove o indice `unique_slot_per_date` da tabela `slots`
+2. Recria incluindo `provedor_id`
+3. Remove o indice parcial `agendamentos_data_slot_unique_active` da tabela `agendamentos`
+4. Recria incluindo `provedor_id`
 
-Funcao corrigida:
-```typescript
-const formatDate = (dateString: string | null) => {
-  if (!dateString) return '-';
-  return formatLocalDate(dateString);
-};
+```sql
+-- slots
+DROP INDEX IF EXISTS unique_slot_per_date;
+CREATE UNIQUE INDEX unique_slot_per_date ON slots (data_disponivel, slot_numero, provedor_id);
+
+-- agendamentos
+DROP INDEX IF EXISTS agendamentos_data_slot_unique_active;
+CREATE UNIQUE INDEX agendamentos_data_slot_unique_active
+  ON agendamentos (data_agendamento, slot_numero, provedor_id)
+  WHERE (status <> 'cancelado');
 ```
 
 ### Resumo
 
-- 1 arquivo alterado: `src/components/ContractDetailsDialog.tsx`
-- Adicionar import de `formatLocalDate`
-- Alterar `formatDate` para usar `formatLocalDate` em vez de `new Date()`
-- Corrige a exibicao da data de nascimento (e todas as outras datas) no modal de visualizacao do contrato
+- 1 migration com 4 statements (2 DROP + 2 CREATE)
+- Nenhuma alteracao em edge functions ou frontend
+- Corrige o isolamento multi-tenant para slots e agendamentos
 
