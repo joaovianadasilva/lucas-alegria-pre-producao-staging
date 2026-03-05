@@ -1,40 +1,56 @@
 
 
-## Corrigir data de nascimento exibida 1 dia atrasada na visualizacao do contrato
+## Corrigir constraints UNIQUE que impedem cadastro multi-provedor
 
 ### Causa raiz
 
-No `ContractDetailsDialog.tsx` (linha 72-75), a funcao `formatDate` faz:
-```typescript
-const formatDate = (dateString: string | null) => {
-  if (!dateString) return '-';
-  return new Date(dateString).toLocaleDateString('pt-BR');
-};
-```
+As tabelas de catalogo possuem constraints UNIQUE apenas na coluna de identificacao (sem incluir `provedor_id`), o que impede que dois provedores diferentes cadastrem itens com o mesmo nome/codigo:
 
-`new Date("1986-10-14")` interpreta a string como UTC (meia-noite UTC). No fuso horario do Brasil (UTC-3), isso vira `13/10/1986 21:00`, exibindo o dia anterior.
-
-O projeto ja possui `src/lib/dateUtils.ts` com a funcao `formatLocalDate` que faz o parsing correto sem conversao de timezone.
+| Tabela | Constraint atual | Deveria ser |
+|---|---|---|
+| `catalogo_planos` | `UNIQUE(codigo)` | `UNIQUE(codigo, provedor_id)` |
+| `catalogo_adicionais` | `UNIQUE(codigo)` | `UNIQUE(codigo, provedor_id)` |
+| `catalogo_representantes` | `UNIQUE(nome)` | `UNIQUE(nome, provedor_id)` |
+| `catalogo_origem_vendas` | `UNIQUE(nome)` | `UNIQUE(nome, provedor_id)` |
+| `catalogo_tipos_agendamento` | `UNIQUE(codigo)` | `UNIQUE(codigo, provedor_id)` |
+| `catalogo_cidades` | `UNIQUE(nome, uf)` | `UNIQUE(nome, uf, provedor_id)` |
 
 ### Solucao
 
-**Arquivo:** `src/components/ContractDetailsDialog.tsx`
+Uma unica migration SQL que:
 
-1. Importar `formatLocalDate` de `@/lib/dateUtils`
-2. Substituir a funcao local `formatDate` para usar `formatLocalDate` internamente
+1. Remove as 6 constraints UNIQUE antigas
+2. Recria cada uma incluindo `provedor_id` na composicao
 
-Funcao corrigida:
-```typescript
-const formatDate = (dateString: string | null) => {
-  if (!dateString) return '-';
-  return formatLocalDate(dateString);
-};
+```sql
+-- catalogo_planos
+ALTER TABLE catalogo_planos DROP CONSTRAINT catalogo_planos_codigo_key;
+ALTER TABLE catalogo_planos ADD CONSTRAINT catalogo_planos_codigo_provedor_key UNIQUE (codigo, provedor_id);
+
+-- catalogo_adicionais
+ALTER TABLE catalogo_adicionais DROP CONSTRAINT catalogo_adicionais_codigo_key;
+ALTER TABLE catalogo_adicionais ADD CONSTRAINT catalogo_adicionais_codigo_provedor_key UNIQUE (codigo, provedor_id);
+
+-- catalogo_representantes
+ALTER TABLE catalogo_representantes DROP CONSTRAINT catalogo_representantes_nome_key;
+ALTER TABLE catalogo_representantes ADD CONSTRAINT catalogo_representantes_nome_provedor_key UNIQUE (nome, provedor_id);
+
+-- catalogo_origem_vendas
+ALTER TABLE catalogo_origem_vendas DROP CONSTRAINT catalogo_origem_vendas_nome_key;
+ALTER TABLE catalogo_origem_vendas ADD CONSTRAINT catalogo_origem_vendas_nome_provedor_key UNIQUE (nome, provedor_id);
+
+-- catalogo_tipos_agendamento
+ALTER TABLE catalogo_tipos_agendamento DROP CONSTRAINT catalogo_tipos_agendamento_codigo_key;
+ALTER TABLE catalogo_tipos_agendamento ADD CONSTRAINT catalogo_tipos_agendamento_codigo_provedor_key UNIQUE (codigo, provedor_id);
+
+-- catalogo_cidades
+ALTER TABLE catalogo_cidades DROP CONSTRAINT catalogo_cidades_nome_uf_key;
+ALTER TABLE catalogo_cidades ADD CONSTRAINT catalogo_cidades_nome_uf_provedor_key UNIQUE (nome, uf, provedor_id);
 ```
 
 ### Resumo
 
-- 1 arquivo alterado: `src/components/ContractDetailsDialog.tsx`
-- Adicionar import de `formatLocalDate`
-- Alterar `formatDate` para usar `formatLocalDate` em vez de `new Date()`
-- Corrige a exibicao da data de nascimento (e todas as outras datas) no modal de visualizacao do contrato
+- 1 migration com 12 statements (6 DROP + 6 ADD)
+- Nenhuma alteracao em edge functions ou frontend (a logica de verificacao de duplicatas ja filtra por `provedor_id`)
+- Corrige o erro para todas as tabelas de catalogo de uma vez
 
