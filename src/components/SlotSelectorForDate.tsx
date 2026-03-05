@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface SlotSelectorForDateProps {
   selectedDate: string;
@@ -13,21 +14,24 @@ interface SlotSelectorForDateProps {
 
 
 export function SlotSelectorForDate({ selectedDate, selectedSlot, onSlotSelect }: SlotSelectorForDateProps) {
+  const { provedorAtivo } = useAuth();
+
   const { data: slotsData, isLoading } = useQuery({
-    queryKey: ['slots-for-date', selectedDate],
+    queryKey: ['slots-for-date', selectedDate, provedorAtivo?.id],
     queryFn: async () => {
-      if (!selectedDate) return null;
+      if (!selectedDate || !provedorAtivo?.id) return null;
 
       const { data, error } = await supabase
         .from('slots')
         .select('*')
         .eq('data_disponivel', selectedDate)
+        .eq('provedor_id', provedorAtivo.id)
         .order('slot_numero', { ascending: true });
 
       if (error) throw error;
       return data;
     },
-    enabled: !!selectedDate,
+    enabled: !!selectedDate && !!provedorAtivo?.id,
   });
 
   if (!selectedDate) {
