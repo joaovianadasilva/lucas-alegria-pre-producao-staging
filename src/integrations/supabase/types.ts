@@ -1090,6 +1090,24 @@ export type Database = {
           },
         ]
       }
+      "Yara.chat_history": {
+        Row: {
+          id: number
+          message: Json
+          session_id: string
+        }
+        Insert: {
+          id?: number
+          message: Json
+          session_id: string
+        }
+        Update: {
+          id?: number
+          message?: Json
+          session_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       vw_contratos_completos: {
