@@ -155,13 +155,22 @@ serve(async (req) => {
       }
 
       case 'updateUser': {
-        const { userId, nome, sobrenome, telefone, ativo } = params;
+        const { userId, nome, sobrenome, telefone, ativo, email } = params;
+
+        // Update auth.users email if provided
+        if (email) {
+          const { error: authUpdateError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+            email,
+          });
+          if (authUpdateError) throw authUpdateError;
+        }
 
         const updateData: any = {};
         if (nome !== undefined) updateData.nome = nome;
         if (sobrenome !== undefined) updateData.sobrenome = sobrenome;
         if (telefone !== undefined) updateData.telefone = telefone;
         if (ativo !== undefined) updateData.ativo = ativo;
+        if (email !== undefined) updateData.email = email;
 
         const { error: updateError } = await supabaseAdmin
           .from('profiles')
