@@ -1,40 +1,34 @@
 
 
-## Corrigir data de nascimento exibida 1 dia atrasada na visualizacao do contrato
+## Problem
 
-### Causa raiz
+When a sale is registered via "Cadastro de Venda", the contract correctly stores `origem` and `representante_vendas`. However, the linked appointment (`agendamentos`) does not receive these fields because they are omitted from the insert on lines 207-221 of `manage-contracts/index.ts`.
 
-No `ContractDetailsDialog.tsx` (linha 72-75), a funcao `formatDate` faz:
+The `agendamentos` table already has `origem` and `representante_vendas` columns, so the fix is straightforward.
+
+## Plan
+
+**Edit `supabase/functions/manage-contracts/index.ts`** (lines 207-221):
+
+Add `origem` and `representante_vendas` to the agendamento insert:
+
 ```typescript
-const formatDate = (dateString: string | null) => {
-  if (!dateString) return '-';
-  return new Date(dateString).toLocaleDateString('pt-BR');
-};
+.insert({
+  provedor_id: provedorId,
+  contrato_id: contratoId,
+  data_agendamento: dataAgendamento,
+  slot_numero: slotAgendamento,
+  nome_cliente: nomeCompleto,
+  email_cliente: email,
+  telefone_cliente: celular || telefone,
+  status: 'pendente',
+  confirmacao: 'pre-agendado',
+  origem: origem || null,
+  representante_vendas: representanteVendas || null,
+})
 ```
 
-`new Date("1986-10-14")` interpreta a string como UTC (meia-noite UTC). No fuso horario do Brasil (UTC-3), isso vira `13/10/1986 21:00`, exibindo o dia anterior.
+Then redeploy the `manage-contracts` edge function.
 
-O projeto ja possui `src/lib/dateUtils.ts` com a funcao `formatLocalDate` que faz o parsing correto sem conversao de timezone.
-
-### Solucao
-
-**Arquivo:** `src/components/ContractDetailsDialog.tsx`
-
-1. Importar `formatLocalDate` de `@/lib/dateUtils`
-2. Substituir a funcao local `formatDate` para usar `formatLocalDate` internamente
-
-Funcao corrigida:
-```typescript
-const formatDate = (dateString: string | null) => {
-  if (!dateString) return '-';
-  return formatLocalDate(dateString);
-};
-```
-
-### Resumo
-
-- 1 arquivo alterado: `src/components/ContractDetailsDialog.tsx`
-- Adicionar import de `formatLocalDate`
-- Alterar `formatDate` para usar `formatLocalDate` em vez de `new Date()`
-- Corrige a exibicao da data de nascimento (e todas as outras datas) no modal de visualizacao do contrato
+This is a single-file change with no database modifications needed.
 
