@@ -213,9 +213,11 @@ serve(async (req) => {
               slot_numero: slotAgendamento,
               nome_cliente: nomeCompleto,
               email_cliente: email,
-              telefone_cliente: telefone,
+              telefone_cliente: celular || telefone,
               status: 'pendente',
-              confirmacao: 'pre-agendado'
+              confirmacao: 'pre-agendado',
+              origem: origem || null,
+              representante_vendas: representanteVendas || null,
             })
             .select()
             .single();
