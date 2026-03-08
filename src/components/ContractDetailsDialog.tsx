@@ -77,7 +77,9 @@ const formatCurrency = (value: number | null | undefined) => {
 
 const formatDate = (dateString: string | null) => {
   if (!dateString) return '-';
-  return formatLocalDate(dateString);
+  // Handle both YYYY-MM-DD and full ISO timestamps
+  const dateOnly = dateString.includes('T') ? dateString.split('T')[0] : dateString;
+  return formatLocalDate(dateOnly);
 };
 
 const InfoRow = ({ label, value }: { label: string; value: React.ReactNode }) => (
