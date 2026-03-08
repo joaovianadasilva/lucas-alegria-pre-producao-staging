@@ -113,7 +113,7 @@ export default function GerenciarUsuarios() {
   const assignRoleMutation = useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
       const { error } = await supabase.functions.invoke('manage-users', {
-        body: { action: 'assignRole', userId, role },
+        body: { action: 'assignRole', provedorId: provedorAtivo?.id, userId, role },
       });
 
       if (error) throw error;
@@ -130,7 +130,7 @@ export default function GerenciarUsuarios() {
   const removeRoleMutation = useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
       const { error } = await supabase.functions.invoke('manage-users', {
-        body: { action: 'removeRole', userId, role },
+        body: { action: 'removeRole', provedorId: provedorAtivo?.id, userId, role },
       });
 
       if (error) throw error;
