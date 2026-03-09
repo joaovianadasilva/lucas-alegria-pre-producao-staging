@@ -1,69 +1,39 @@
 
 
-## Modificar seletor de adicionais para suportar quantidade
+## Modificar seletor de adicionais para suportar quantidade (com linhas duplicadas)
 
-### Problema atual
-O seletor de adicionais funciona como um multi-select simples (checkbox), onde cada adicional pode ser apenas selecionado ou não. Não há como informar a quantidade de cada adicional.
+### Abordagem
 
-### Proposta de design
+Em vez de armazenar quantidade como campo, ao selecionar um adicional com quantidade 3, inserimos 3 linhas idênticas na tabela `adicionais_contrato`. Isso mantém compatibilidade total com o schema atual sem alterações no banco.
 
-Substituir o popover com checkboxes por uma lista interativa onde, ao selecionar um adicional, aparece um controle de quantidade (stepper com botões - / +). O design seria:
+### Mudanças
 
-```text
-┌─────────────────────────────────────────────┐
-│ Adicionais Contratados                      │
-│ ┌─────────────────────────────────────────┐ │
-│ │ 2 adicional(is) selecionado(s)      ▼   │ │
-│ └─────────────────────────────────────────┘ │
-│                                             │
-│ ┌─ Popover ─────────────────────────────┐   │
-│ │ ☑ [01] - Roteador - R$ 10,00         │   │
-│ │     Qtd: [ - ]  2  [ + ]             │   │
-│ │                                       │   │
-│ │ ☑ [02] - IP Fixo - R$ 30,00          │   │
-│ │     Qtd: [ - ]  1  [ + ]             │   │
-│ │                                       │   │
-│ │ ☐ [03] - TV Box - R$ 25,00           │   │
-│ └───────────────────────────────────────┘   │
-│                                             │
-│ Badges selecionados:                        │
-│ [Roteador (x2) ✕] [IP Fixo (x1) ✕]        │
-│                                             │
-│ No resumo do contrato:                      │
-│   Roteador (x2)           R$ 20,00          │
-│   IP Fixo (x1)            R$ 30,00          │
-└─────────────────────────────────────────────┘
-```
+**1. Schema do formulário (`FormularioCompleto.tsx`)**
+- Mudar `adicionaisContratados` de `z.array(z.string())` para `z.array(z.object({ item: z.string(), quantidade: z.number().min(1) }))`
 
-### Mudanças técnicas
+**2. UI do seletor de adicionais (`FormularioCompleto.tsx`)**
+- Ao marcar checkbox, exibir stepper (- / +) com quantidade mínima 1
+- Badges mostram `"Nome (x2)"` com botão de remover
+- Desmarcar remove o adicional
 
-**1. Alterar o schema do formulário (`FormularioCompleto.tsx`)**
-- Mudar `adicionaisContratados` de `z.array(z.string())` para `z.array(z.object({ item: z.string(), quantidade: z.number().min(1) }))` para armazenar a quantidade junto com cada adicional.
+**3. Resumo do contrato (`FormularioCompleto.tsx`)**
+- Multiplicar valor pela quantidade: `"Roteador (x2) — R$ 20,00"`
+- Total mensal soma `valor * quantidade` de cada adicional
 
-**2. Atualizar o seletor de adicionais (UI)**
-- Dentro do Popover, ao marcar o checkbox de um adicional, exibir um stepper de quantidade (min: 1) logo abaixo do item.
-- Desmarcar o checkbox remove o adicional da lista.
+**4. `algumAdicionalRequerAgenda` (`FormularioCompleto.tsx`)**
+- Adaptar para ler `item` do objeto em vez de string direta
 
-**3. Atualizar os badges de seleção**
-- Exibir o nome do adicional com a quantidade: `"Roteador (x2)"`.
+**5. Backend (`manage-contracts/index.ts`)**
+- Aceitar novo formato `{ item: string, quantidade: number }`
+- Para cada adicional, criar N linhas em `adicionais_contrato` (uma por unidade)
+- Exemplo: quantidade 3 gera 3 inserts com mesmo código/nome/valor
+- `valorTotalAdicionais = sum(valor * quantidade)`
 
-**4. Atualizar o resumo do contrato**
-- Multiplicar o valor do adicional pela quantidade no cálculo do total.
-- Exibir `"Roteador (x2) — R$ 20,00"` no resumo.
-
-**5. Atualizar o cálculo de `algumAdicionalRequerAgenda`**
-- Adaptar para o novo formato de objeto ao verificar se algum adicional requer agendamento.
-
-**6. Atualizar o backend (`manage-contracts/index.ts`)**
-- Aceitar o novo formato com quantidade.
-- Ao inserir em `adicionais_contrato`, criar uma linha por unidade ou armazenar a quantidade (preferível: uma linha por adicional com o valor já multiplicado, mantendo compatibilidade).
-- Ajustar o cálculo de `valorTotalAdicionais` para considerar a quantidade.
-
-**7. Atualizar o envio do formulário (`onSubmit`)**
-- Garantir que o novo formato é enviado corretamente ao backend.
+**6. Tipo (`src/types/formulario.ts`)**
+- Atualizar `adicionaisContratados` para `{ item: string; quantidade: number }[]`
 
 ### Arquivos afetados
-- `src/components/FormularioCompleto.tsx` — schema, UI do seletor, resumo, submit
-- `src/types/formulario.ts` — tipo do campo adicionais
-- `supabase/functions/manage-contracts/index.ts` — parsing e cálculo com quantidade
+- `src/components/FormularioCompleto.tsx` — schema, UI, resumo, submit
+- `src/types/formulario.ts` — tipo
+- `supabase/functions/manage-contracts/index.ts` — parsing e inserção de N linhas
 
