@@ -429,7 +429,7 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
   // Cálculo do resumo do contrato
   const resumoContrato = useMemo(() => {
     let planoInfo: { nome: string; valor: number } | null = null;
-    let adicionaisInfo: { nome: string; valor: number }[] = [];
+    let adicionaisInfo: { nome: string; valor: number; quantidade: number; subtotal: number }[] = [];
     let totalMensal = 0;
 
     if (planoSelecionado) {
