@@ -45,7 +45,7 @@ export interface FormularioCompleto {
 
   // Informações do Contrato
   planoContratado: string;
-  adicionaisContratados?: string[];
+  adicionaisContratados?: { item: string; quantidade: number }[];
   diaVencimento: string;
   observacao?: string;
 

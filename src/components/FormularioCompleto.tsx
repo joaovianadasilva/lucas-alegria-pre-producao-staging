@@ -1532,8 +1532,10 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
                     <p className="text-sm text-muted-foreground mb-2">Adicionais</p>
                     {resumoContrato.adicionaisInfo.map((adicional, index) => (
                       <div key={index} className="flex justify-between items-center py-1">
-                        <p className="font-medium">{adicional.nome}</p>
-                        <p className="text-primary">R$ {adicional.valor.toFixed(2)}</p>
+                        <p className="font-medium">
+                          {adicional.nome} {adicional.quantidade > 1 ? `(x${adicional.quantidade})` : ''}
+                        </p>
+                        <p className="text-primary">R$ {adicional.subtotal.toFixed(2)}</p>
                       </div>
                     ))}
                   </div>
