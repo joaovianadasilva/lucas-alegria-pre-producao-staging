@@ -83,7 +83,7 @@ const formularioSchema = z.object({
   documentoEstrangeiro: z.string().optional(),
 
   planoContratado: z.string().optional(),
-  adicionaisContratados: z.array(z.string()).optional(),
+  adicionaisContratados: z.array(z.object({ item: z.string(), quantidade: z.number().min(1) })).optional(),
   diaVencimento: z.string().min(1, 'Dia de vencimento é obrigatório'),
   observacao: z.string().optional(),
   
