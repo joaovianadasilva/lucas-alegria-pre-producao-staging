@@ -442,12 +442,13 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
     }
 
     if (adicionaisSelecionados && adicionaisSelecionados.length > 0) {
-      adicionaisSelecionados.forEach(adicionalFormatado => {
-        const codigo = extrairCodigoDoItem(adicionalFormatado);
+      adicionaisSelecionados.forEach(adicObj => {
+        const codigo = extrairCodigoDoItem(adicObj.item);
         const adicional = adicionaisData.find(a => a.id === codigo);
         if (adicional) {
-          adicionaisInfo.push({ nome: adicional.nome, valor: adicional.valor });
-          totalMensal += adicional.valor;
+          const subtotal = adicional.valor * adicObj.quantidade;
+          adicionaisInfo.push({ nome: adicional.nome, valor: adicional.valor, quantidade: adicObj.quantidade, subtotal });
+          totalMensal += subtotal;
         }
       });
     }
