@@ -1299,76 +1299,113 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
               <FormField
                 control={form.control}
                 name="adicionaisContratados"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Adicionais Contratados</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            className="w-full justify-between font-normal"
-                          >
-                            {field.value && field.value.length > 0
-                              ? `${field.value.length} adicional(is) selecionado(s)`
-                              : "Selecione adicionais (opcional)"}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-full p-0">
-                        <div className="max-h-64 overflow-auto p-4 space-y-2">
-                          {adicionaisOptions.map((adicional) => (
-                            <div
-                              key={adicional}
-                              className="flex items-center space-x-2"
+                render={({ field }) => {
+                  const currentValue = field.value || [];
+                  const isSelected = (adicional: string) => currentValue.some(v => v.item === adicional);
+                  const getQuantidade = (adicional: string) => currentValue.find(v => v.item === adicional)?.quantidade || 1;
+
+                  const toggleAdicional = (adicional: string, checked: boolean) => {
+                    if (checked) {
+                      field.onChange([...currentValue, { item: adicional, quantidade: 1 }]);
+                    } else {
+                      field.onChange(currentValue.filter(v => v.item !== adicional));
+                    }
+                  };
+
+                  const setQuantidade = (adicional: string, qty: number) => {
+                    if (qty < 1) return;
+                    field.onChange(currentValue.map(v => v.item === adicional ? { ...v, quantidade: qty } : v));
+                  };
+
+                  return (
+                    <FormItem>
+                      <FormLabel>Adicionais Contratados</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              className="w-full justify-between font-normal"
                             >
-                              <Checkbox
-                                checked={field.value?.includes(adicional) || false}
-                                onCheckedChange={(checked) => {
-                                  const currentValue = field.value || [];
-                                  if (checked) {
-                                    field.onChange([...currentValue, adicional]);
-                                  } else {
-                                    field.onChange(
-                                      currentValue.filter((val) => val !== adicional)
-                                    );
-                                  }
-                                }}
-                              />
-                              <label className="text-sm cursor-pointer flex-1">
-                                {adicional}
-                              </label>
-                            </div>
-                          ))}
+                              {currentValue.length > 0
+                                ? `${currentValue.length} adicional(is) selecionado(s)`
+                                : "Selecione adicionais (opcional)"}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-full p-0">
+                          <div className="max-h-64 overflow-auto p-4 space-y-3">
+                            {adicionaisOptions.map((adicional) => (
+                              <div key={adicional} className="space-y-1">
+                                <div className="flex items-center space-x-2">
+                                  <Checkbox
+                                    checked={isSelected(adicional)}
+                                    onCheckedChange={(checked) => toggleAdicional(adicional, !!checked)}
+                                  />
+                                  <label className="text-sm cursor-pointer flex-1">
+                                    {adicional}
+                                  </label>
+                                </div>
+                                {isSelected(adicional) && (
+                                  <div className="flex items-center gap-2 ml-6">
+                                    <span className="text-xs text-muted-foreground">Qtd:</span>
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="icon"
+                                      className="h-6 w-6"
+                                      onClick={() => setQuantidade(adicional, getQuantidade(adicional) - 1)}
+                                      disabled={getQuantidade(adicional) <= 1}
+                                    >
+                                      -
+                                    </Button>
+                                    <span className="text-sm font-medium w-6 text-center">
+                                      {getQuantidade(adicional)}
+                                    </span>
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="icon"
+                                      className="h-6 w-6"
+                                      onClick={() => setQuantidade(adicional, getQuantidade(adicional) + 1)}
+                                    >
+                                      +
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                      {currentValue.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {currentValue.map((adicObj) => {
+                            const nome = adicObj.item.split(' - ')[1] || adicObj.item;
+                            return (
+                              <Badge
+                                key={adicObj.item}
+                                variant="secondary"
+                                className="gap-1"
+                              >
+                                {nome} (x{adicObj.quantidade})
+                                <X
+                                  className="h-3 w-3 cursor-pointer"
+                                  onClick={() => {
+                                    field.onChange(currentValue.filter(v => v.item !== adicObj.item));
+                                  }}
+                                />
+                              </Badge>
+                            );
+                          })}
                         </div>
-                      </PopoverContent>
-                    </Popover>
-                    {field.value && field.value.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {field.value.map((adicional) => (
-                          <Badge
-                            key={adicional}
-                            variant="secondary"
-                            className="gap-1"
-                          >
-                            {adicional.split(' - ')[1] || adicional}
-                            <X
-                              className="h-3 w-3 cursor-pointer"
-                              onClick={() => {
-                                field.onChange(
-                                  field.value?.filter((val) => val !== adicional) || []
-                                );
-                              }}
-                            />
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                    <FormMessage />
-                  </FormItem>
-                )}
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
               
               <FormField
