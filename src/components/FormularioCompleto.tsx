@@ -408,8 +408,8 @@ export const FormularioCompleto: React.FC<Props> = ({ webhookUrl, spreadsheetId 
   const algumAdicionalRequerAgenda = useMemo(() => {
     if (!adicionaisSelecionados || adicionaisSelecionados.length === 0) return false;
     
-    return adicionaisSelecionados.some(adicionalFormatado => {
-      const codigo = extrairCodigoDoItem(adicionalFormatado);
+    return adicionaisSelecionados.some(adicObj => {
+      const codigo = extrairCodigoDoItem(adicObj.item);
       const adicional = adicionaisData.find(a => a.id === codigo);
       return adicional?.requerAgendamento === true;
     });
