@@ -463,6 +463,96 @@ export type Database = {
           },
         ]
       }
+      contacts: {
+        Row: {
+          bairro: string | null
+          celular: string | null
+          cep: string | null
+          cidade: string | null
+          como_conheceu: string | null
+          complemento: string | null
+          cpf: string | null
+          created_at: string | null
+          current_step: string | null
+          data_instalacao: string | null
+          data_nasc: string | null
+          data_vencimento: number | null
+          desconto_pont: number | null
+          email: string | null
+          endereco: string | null
+          id: number
+          internet_anterior: string | null
+          nome: string | null
+          opcionais: Json | null
+          orgao_emissor: string | null
+          phone: string
+          plano_escolhido: string | null
+          rg: string | null
+          telefone: string | null
+          updated_at: string | null
+          valor_mensal: number | null
+          viabilidade_cep: string | null
+        }
+        Insert: {
+          bairro?: string | null
+          celular?: string | null
+          cep?: string | null
+          cidade?: string | null
+          como_conheceu?: string | null
+          complemento?: string | null
+          cpf?: string | null
+          created_at?: string | null
+          current_step?: string | null
+          data_instalacao?: string | null
+          data_nasc?: string | null
+          data_vencimento?: number | null
+          desconto_pont?: number | null
+          email?: string | null
+          endereco?: string | null
+          id?: number
+          internet_anterior?: string | null
+          nome?: string | null
+          opcionais?: Json | null
+          orgao_emissor?: string | null
+          phone: string
+          plano_escolhido?: string | null
+          rg?: string | null
+          telefone?: string | null
+          updated_at?: string | null
+          valor_mensal?: number | null
+          viabilidade_cep?: string | null
+        }
+        Update: {
+          bairro?: string | null
+          celular?: string | null
+          cep?: string | null
+          cidade?: string | null
+          como_conheceu?: string | null
+          complemento?: string | null
+          cpf?: string | null
+          created_at?: string | null
+          current_step?: string | null
+          data_instalacao?: string | null
+          data_nasc?: string | null
+          data_vencimento?: number | null
+          desconto_pont?: number | null
+          email?: string | null
+          endereco?: string | null
+          id?: number
+          internet_anterior?: string | null
+          nome?: string | null
+          opcionais?: Json | null
+          orgao_emissor?: string | null
+          phone?: string
+          plano_escolhido?: string | null
+          rg?: string | null
+          telefone?: string | null
+          updated_at?: string | null
+          valor_mensal?: number | null
+          viabilidade_cep?: string | null
+        }
+        Relationships: []
+      }
       contratos: {
         Row: {
           celular: string
@@ -914,6 +1004,44 @@ export type Database = {
           },
         ]
       }
+      messages: {
+        Row: {
+          contact_id: number | null
+          content: string
+          created_at: string | null
+          id: number
+          role: string
+          step_at: string | null
+          tools_used: Json | null
+        }
+        Insert: {
+          contact_id?: number | null
+          content: string
+          created_at?: string | null
+          id?: number
+          role: string
+          step_at?: string | null
+          tools_used?: Json | null
+        }
+        Update: {
+          contact_id?: number | null
+          content?: string
+          created_at?: string | null
+          id?: number
+          role?: string
+          step_at?: string | null
+          tools_used?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           ativo: boolean | null
@@ -1089,24 +1217,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      "Yara.chat_history": {
-        Row: {
-          id: number
-          message: Json
-          session_id: string
-        }
-        Insert: {
-          id?: number
-          message: Json
-          session_id: string
-        }
-        Update: {
-          id?: number
-          message?: Json
-          session_id?: string
-        }
-        Relationships: []
       }
     }
     Views: {
