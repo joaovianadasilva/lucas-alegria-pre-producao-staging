@@ -76,7 +76,11 @@ serve(async (req) => {
 
         const adicionaisProcessados = [];
         if (adicionaisContratados && adicionaisContratados.length > 0) {
-          for (const adicionalStr of adicionaisContratados) {
+          for (const adicionalEntry of adicionaisContratados) {
+            // Support new format { item: string, quantidade: number } or legacy string format
+            const adicionalStr = typeof adicionalEntry === 'string' ? adicionalEntry : adicionalEntry.item;
+            const quantidade = typeof adicionalEntry === 'object' ? (adicionalEntry.quantidade || 1) : 1;
+            
             const adicionalMatch = adicionalStr.match(/\[(\d+)\]\s*-\s*\[([^\]]+)\]\s*-\s*\[R\$\s*([\d,.]+)\]/);
             if (adicionalMatch) {
               const adicionalCodigo = adicionalMatch[1];
@@ -92,11 +96,14 @@ serve(async (req) => {
                 .single();
 
               if (adicionalData) {
-                adicionaisProcessados.push({
-                  codigo: adicionalCodigo,
-                  nome: adicionalNome,
-                  valor: adicionalValor
-                });
+                // Create N entries (one per unit) for duplicate row insertion
+                for (let i = 0; i < quantidade; i++) {
+                  adicionaisProcessados.push({
+                    codigo: adicionalCodigo,
+                    nome: adicionalNome,
+                    valor: adicionalValor
+                  });
+                }
               }
             }
           }

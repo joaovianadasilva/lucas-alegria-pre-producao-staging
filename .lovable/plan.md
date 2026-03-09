@@ -1,39 +1,40 @@
 
 
-## Modificar seletor de adicionais para suportar quantidade (com linhas duplicadas)
+## Corrigir data de nascimento exibida 1 dia atrasada na visualizacao do contrato
 
-### Abordagem
+### Causa raiz
 
-Em vez de armazenar quantidade como campo, ao selecionar um adicional com quantidade 3, inserimos 3 linhas idênticas na tabela `adicionais_contrato`. Isso mantém compatibilidade total com o schema atual sem alterações no banco.
+No `ContractDetailsDialog.tsx` (linha 72-75), a funcao `formatDate` faz:
+```typescript
+const formatDate = (dateString: string | null) => {
+  if (!dateString) return '-';
+  return new Date(dateString).toLocaleDateString('pt-BR');
+};
+```
 
-### Mudanças
+`new Date("1986-10-14")` interpreta a string como UTC (meia-noite UTC). No fuso horario do Brasil (UTC-3), isso vira `13/10/1986 21:00`, exibindo o dia anterior.
 
-**1. Schema do formulário (`FormularioCompleto.tsx`)**
-- Mudar `adicionaisContratados` de `z.array(z.string())` para `z.array(z.object({ item: z.string(), quantidade: z.number().min(1) }))`
+O projeto ja possui `src/lib/dateUtils.ts` com a funcao `formatLocalDate` que faz o parsing correto sem conversao de timezone.
 
-**2. UI do seletor de adicionais (`FormularioCompleto.tsx`)**
-- Ao marcar checkbox, exibir stepper (- / +) com quantidade mínima 1
-- Badges mostram `"Nome (x2)"` com botão de remover
-- Desmarcar remove o adicional
+### Solucao
 
-**3. Resumo do contrato (`FormularioCompleto.tsx`)**
-- Multiplicar valor pela quantidade: `"Roteador (x2) — R$ 20,00"`
-- Total mensal soma `valor * quantidade` de cada adicional
+**Arquivo:** `src/components/ContractDetailsDialog.tsx`
 
-**4. `algumAdicionalRequerAgenda` (`FormularioCompleto.tsx`)**
-- Adaptar para ler `item` do objeto em vez de string direta
+1. Importar `formatLocalDate` de `@/lib/dateUtils`
+2. Substituir a funcao local `formatDate` para usar `formatLocalDate` internamente
 
-**5. Backend (`manage-contracts/index.ts`)**
-- Aceitar novo formato `{ item: string, quantidade: number }`
-- Para cada adicional, criar N linhas em `adicionais_contrato` (uma por unidade)
-- Exemplo: quantidade 3 gera 3 inserts com mesmo código/nome/valor
-- `valorTotalAdicionais = sum(valor * quantidade)`
+Funcao corrigida:
+```typescript
+const formatDate = (dateString: string | null) => {
+  if (!dateString) return '-';
+  return formatLocalDate(dateString);
+};
+```
 
-**6. Tipo (`src/types/formulario.ts`)**
-- Atualizar `adicionaisContratados` para `{ item: string; quantidade: number }[]`
+### Resumo
 
-### Arquivos afetados
-- `src/components/FormularioCompleto.tsx` — schema, UI, resumo, submit
-- `src/types/formulario.ts` — tipo
-- `supabase/functions/manage-contracts/index.ts` — parsing e inserção de N linhas
+- 1 arquivo alterado: `src/components/ContractDetailsDialog.tsx`
+- Adicionar import de `formatLocalDate`
+- Alterar `formatDate` para usar `formatLocalDate` em vez de `new Date()`
+- Corrige a exibicao da data de nascimento (e todas as outras datas) no modal de visualizacao do contrato
 
