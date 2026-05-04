@@ -326,9 +326,9 @@ export default function RelatorioVisaoGeralVendas() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {relatorio.rankings.origens.length === 0 ? (
+                    {(relatorio.rankings.origens?.length ?? 0) === 0 ? (
                       <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground py-6">—</TableCell></TableRow>
-                    ) : relatorio.rankings.origens.map(o => (
+                    ) : relatorio.rankings.origens!.map(o => (
                       <TableRow key={o.chave}>
                         <TableCell className="font-medium">{o.chave}</TableCell>
                         <TableCell className="text-right">{o.cadastrados}</TableCell>
@@ -351,9 +351,9 @@ export default function RelatorioVisaoGeralVendas() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {relatorio.rankings.representantes.length === 0 ? (
+                    {(relatorio.rankings.representantes?.length ?? 0) === 0 ? (
                       <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground py-6">—</TableCell></TableRow>
-                    ) : relatorio.rankings.representantes.map(r => (
+                    ) : relatorio.rankings.representantes!.map(r => (
                       <TableRow key={r.chave}>
                         <TableCell className="font-medium">{r.chave}</TableCell>
                         <TableCell className="text-right">{r.cadastrados}</TableCell>
