@@ -209,8 +209,8 @@ serve(async (req) => {
         };
 
         const [cadastrados, instalados, cancelados] = await Promise.all([
-          fetchAll(() => baseFilter(supabase.from('contratos').select('id, provedor_id, created_at, plano_codigo, plano_nome, plano_valor, taxa_instalacao').gte('created_at', inicioISO).lte('created_at', fimISO))),
-          fetchAll(() => baseFilter(supabase.from('contratos').select('id, provedor_id, data_ativacao, plano_codigo, plano_nome, plano_valor').gte('data_ativacao', dataInicio).lte('data_ativacao', dataFim).not('data_ativacao', 'is', null))),
+          fetchAll(() => baseFilter(supabase.from('contratos').select('id, provedor_id, created_at, plano_codigo, plano_nome, plano_valor, taxa_instalacao, origem, representante_vendas').gte('created_at', inicioISO).lte('created_at', fimISO))),
+          fetchAll(() => baseFilter(supabase.from('contratos').select('id, provedor_id, data_ativacao, plano_codigo, plano_nome, plano_valor, origem, representante_vendas').gte('data_ativacao', dataInicio).lte('data_ativacao', dataFim).not('data_ativacao', 'is', null))),
           fetchAll(() => baseFilter(supabase.from('contratos').select('id, provedor_id, data_cancelamento, motivo_cancelamento').gte('data_cancelamento', dataInicio).lte('data_cancelamento', dataFim).not('data_cancelamento', 'is', null))),
         ]);
 
@@ -330,6 +330,20 @@ serve(async (req) => {
         const adicCadastrados = adicionais.filter(a => cadIds.has(a.contrato_id));
         const rankingAdicionais = tally(adicCadastrados, a => a.adicional_codigo, a => a.adicional_nome);
 
+        // Origem e Representante: agrupar cadastrados + instalados
+        const buildGroup = (field: 'origem' | 'representante_vendas') => {
+          const m = new Map<string, { chave: string; cadastrados: number; instalados: number }>();
+          const get = (k: string) => {
+            if (!m.has(k)) m.set(k, { chave: k, cadastrados: 0, instalados: 0 });
+            return m.get(k)!;
+          };
+          for (const c of cadastrados) get(((c as any)[field] || '').trim() || 'Não informado').cadastrados++;
+          for (const c of instalados) get(((c as any)[field] || '').trim() || 'Não informado').instalados++;
+          return Array.from(m.values()).sort((a, b) => (b.cadastrados + b.instalados) - (a.cadastrados + a.instalados));
+        };
+        const rankingOrigens = buildGroup('origem');
+        const rankingRepresentantes = buildGroup('representante_vendas');
+
         // ===== Cancelamentos por motivo =====
         const motivosMap = new Map<string, number>();
         for (const c of cancelados) {
@@ -345,7 +359,7 @@ serve(async (req) => {
           kpis,
           serieTemporal,
           composicao: { semAdicionais: semAdic, comAdicionais: comAdic },
-          rankings: { planos: rankingPlanos, adicionais: rankingAdicionais },
+          rankings: { planos: rankingPlanos, adicionais: rankingAdicionais, origens: rankingOrigens, representantes: rankingRepresentantes },
           cancelamentosPorMotivo,
         });
       }
