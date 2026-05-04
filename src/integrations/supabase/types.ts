@@ -1085,6 +1085,36 @@ export type Database = {
         }
         Relationships: []
       }
+      regras_operacionais_provedor: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          id: string
+          provedor_id: string
+          regra: Json
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          provedor_id: string
+          regra?: Json
+          tipo: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          provedor_id?: string
+          regra?: Json
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       slots: {
         Row: {
           agendamento_id: string | null
