@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Filter, Edit, ChevronLeft, ChevronRight, FileText, Eye } from 'lucide-react';
 import { ContractDetailsDialog, ContratoCompleto } from '@/components/ContractDetailsDialog';
@@ -22,6 +23,11 @@ interface Contrato {
   codigo_contrato: string | null;
   codigo_cliente: string | null;
   created_at: string;
+  recebimento_efetivado?: boolean;
+  reembolso_efetivado?: boolean;
+  reembolsavel?: boolean;
+  elegivel_recebimento?: boolean;
+  elegivel_reembolso?: boolean;
 }
 
 const ITEMS_PER_PAGE = 20;
