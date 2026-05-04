@@ -359,7 +359,7 @@ serve(async (req) => {
 
         let query = supabase
           .from('contratos')
-          .select('id, nome_completo, celular, email, cpf, codigo_contrato, codigo_cliente, created_at', { count: 'exact' })
+          .select('id, nome_completo, celular, email, cpf, codigo_contrato, codigo_cliente, created_at, recebimento_efetivado, reembolso_efetivado, reembolsavel, status_contrato, data_ativacao, data_cancelamento, data_pgto_primeira_mensalidade, data_pgto_segunda_mensalidade, data_pgto_terceira_mensalidade', { count: 'exact' })
           .eq('provedor_id', provedorId)
           .order('created_at', { ascending: false });
 
