@@ -1,98 +1,42 @@
-## Central do Super Admin (área externa aos provedores)
+## Módulo "Todos os Contratos" na Central
 
-Criar uma nova área de navegação acessível **apenas a `super_admin`**, totalmente separada do contexto de provedor ativo. Servirá como hub para múltiplos módulos operacionais e relatórios, começando pelo controle de **recebimento e reembolso** de contratos com filtro por provedor.
+Nova área `/central/contratos` (super_admin) com filtro base por **provedor** e visão consolidada cross-provedor.
 
-### 1. Estrutura de navegação
+### Backend — `supabase/functions/central-operacional/index.ts`
 
-- Nova rota raiz: `/central` (com sub-rotas), protegida por `requiredRole="super_admin"` e `requireProvedor={false}` — não depende de provedor ativo.
-- Novo layout `CentralLayout` (separado do `AppLayout` dos provedores) com sidebar própria contendo:
-  - **Operacional**
-    - Recebimentos
-    - Reembolsos
-  - **Relatórios** (placeholder, vazio por enquanto)
-  - Botão "Voltar para área do provedor" (volta ao `AppLayout` normal)
-- No `AppSidebar` atual (área dos provedores), adicionar para super_admin um item "Central de Controle" que leva a `/central`.
+Adicionar action **`listContratos`** com paginação server-side:
 
-### 2. Módulo: Controle Operacional de Planos
-
-Duas telas irmãs:
-
-**`/central/operacional/recebimentos`**
-- Lista contratos **elegíveis para recebimento** (ainda sem `recebimento_efetivado = true`) que satisfazem a regra do provedor.
-- Colunas: Provedor · Código contrato · Cliente · Plano · Valor · Data ativação · Datas de pagamento (1ª/2ª/3ª) · Status · Ação.
-- Ação principal: **Confirmar recebimento** → abre dialog para escolher `data_recebimento` (default hoje) e marca `recebimento_efetivado = true`.
-- Aba/secção secundária: "Já recebidos" (histórico) com filtro de período.
-
-**`/central/operacional/reembolsos`**
-- Lista contratos **elegíveis para reembolso** (`reembolsavel = true` e `reembolso_efetivado != true`) conforme regra.
-- Ação principal: **Confirmar reembolso** → escolher `data_reembolso` e marca `reembolso_efetivado = true`.
-- Secção "Já reembolsados".
-
-**Filtros comuns nas duas telas:**
-- Multi-select de **Provedor** (default: todos)
-- Período (data ativação ou cancelamento)
-- Busca por nome / CPF / código contrato
-- Status do contrato
-
-### 3. Regras de elegibilidade por provedor
-
-Como as regras variam por provedor e ainda serão definidas, vamos preparar a infraestrutura agora e deixar as regras configuráveis:
-
-- Nova tabela `regras_operacionais_provedor`:
-  - `id uuid pk`
-  - `provedor_id uuid not null`
-  - `tipo text not null` — `'recebimento'` | `'reembolso'`
-  - `regra jsonb not null` — descrição declarativa da regra (ex.: `{ "exige_pagamentos": 3, "dias_apos_ativacao": 90, "status_contrato_in": ["ativo"] }`)
-  - `ativo boolean default true`
-  - `created_at`, `updated_at`
-  - RLS: leitura por usuários do provedor + super_admin; escrita só via edge function.
-- Avaliação no backend: edge function aplica a regra (jsonb) sobre cada contrato e devolve apenas os elegíveis. Por enquanto, default fallback se não houver regra cadastrada (ex.: recebimento ⇒ tem `data_pgto_primeira_mensalidade` preenchida e `recebimento_efetivado != true`; reembolso ⇒ `reembolsavel = true` e `data_cancelamento` preenchida e `reembolso_efetivado != true`).
-- (Opcional, fase 2) Tela `/central/operacional/regras` para editar regras por provedor via UI — fora do escopo inicial.
-
-### 4. Backend: nova edge function `central-operacional`
-
-Ações:
-- `listElegiveisRecebimento({ provedorIds?, periodo?, busca? })`
-- `listElegiveisReembolso({ provedorIds?, periodo?, busca? })`
-- `listJaRecebidos(...)` / `listJaReembolsados(...)`
-- `confirmarRecebimento({ contratoId, dataRecebimento })`
-- `confirmarReembolso({ contratoId, dataReembolso })`
+Parâmetros: `provedorIds?`, `status?`, `statusContrato?`, `tipoVenda?`, `dataInicio?`, `dataFim?`, `busca?`, `page` (default 1), `pageSize` (default 20).
 
 Implementação:
-- Validar JWT no código e exigir role `super_admin` (consultando `user_roles`). Rejeitar com 403 caso contrário.
-- Usar `SUPABASE_SERVICE_ROLE_KEY` para escrever em `contratos` (RLS bloqueia anon).
-- Toda mutação grava entrada em `historico_contratos` (tipo_acao `'recebimento_confirmado'` / `'reembolso_confirmado'`) com `usuario_id` e `provedor_id` do contrato.
-- CORS conforme padrão do projeto.
+- Query `from('contratos').select('*', { count: 'exact' })`
+- Aplica filtros: `.in('provedor_id', ...)`, `.eq(...)` para status/status_contrato/tipo_venda, range em `created_at`
+- Busca: `.or('nome_completo.ilike.%s%,cpf.ilike.%s%,codigo_contrato.ilike.%s%,codigo_cliente.ilike.%s%,email.ilike.%s%,celular.ilike.%s%')`
+- `.order('created_at', { ascending: false }).range(from, to)`
+- Retorna `{ contratos, total }`
+- Auth: super_admin (já validado no início da função)
 
-### 5. Frontend
+### Frontend — nova página `src/pages/central/ContratosCentral.tsx`
 
-Arquivos novos:
-- `src/components/CentralLayout.tsx` — layout com sidebar própria para a central.
-- `src/components/CentralSidebar.tsx`
-- `src/pages/central/Recebimentos.tsx`
-- `src/pages/central/Reembolsos.tsx`
-- (placeholder) `src/pages/central/CentralHome.tsx`
-- `src/hooks/useCentralOperacional.ts` — wrappers React Query para a edge function.
+- Filtros (com botão "Aplicar Filtros" — sem auto-apply, conforme padrão do projeto):
+  - **Provedores** — multi-select (popover com checkboxes), reutilizando a UX já usada em Recebimentos/Reembolsos.
+  - Status, Status contrato, Tipo de venda — selects
+  - Data início / Data fim (created_at)
+  - Busca livre (nome, CPF, código contrato/cliente, e-mail, celular)
+- Tabela paginada (20 por página): Provedor · Contrato · Cliente (nome + CPF/celular) · Plano · Valor · Status · Status contrato · Criado · Ativação · Ações
+- Botão **Exportar CSV** dos resultados filtrados (lado direito do título)
+- Ação por linha: **Ver detalhes** → reaproveita `ContractDetailsDialog` chamando `manage-contracts:getContract` com `provedorId` da linha (super_admin tem acesso via RLS).
+- Datas via `formatLocalDate` (timezone safety).
 
-Alterações:
-- `src/App.tsx`: adicionar bloco de rotas `/central/*` protegido por `super_admin` e `requireProvedor={false}`.
-- `src/components/AppSidebar.tsx`: adicionar atalho "Central de Controle" no grupo Super Admin.
-- `src/components/ProtectedRoute.tsx`: já suporta `requireProvedor={false}` + `requiredRole`, sem mudanças.
+### Roteamento e navegação
 
-### 6. Migrações de banco
+- `src/App.tsx`: adicionar `<Route path="contratos" element={<ContratosCentral />} />` dentro do bloco `/central` já protegido por `super_admin`.
+- `src/components/CentralSidebar.tsx`: novo grupo **"Dados"** com item "Contratos" (ícone `FileText`) → `/central/contratos`.
+- `src/pages/central/CentralHome.tsx`: adicionar card "Todos os Contratos".
 
-1. `create table regras_operacionais_provedor` com RLS (SELECT por usuário do provedor ou super_admin; INSERT/UPDATE/DELETE bloqueado para anon — apenas via service role nas edge functions).
-2. (Sem mudanças nos contratos — campos `recebimento_efetivado`, `data_recebimento`, `reembolso_efetivado`, `data_reembolso`, `reembolsavel` já existem.)
-
-### Detalhes técnicos resumidos
-
-- Roteamento: `/central` fora do `AppLayout`; usa `CentralLayout` próprio. Não exige `provedorAtivo`.
-- Permissão dupla: rota protegida + edge function valida `super_admin`.
-- Filtro de provedor é client-side (multi-select), enviado ao backend que filtra a query.
-- Regras inicialmente "default" no código; quando o usuário definir as regras finais por provedor, basta inserir linhas em `regras_operacionais_provedor` sem mudar código.
-
-### Próximas iterações (fora do escopo agora)
-
-- UI para CRUD das regras por provedor.
-- Relatórios consolidados (faturamento, churn, etc.) sob `/central/relatorios`.
-- Exportação CSV.
+### Arquivos afetados
+- `supabase/functions/central-operacional/index.ts` — nova action `listContratos`
+- `src/pages/central/ContratosCentral.tsx` — novo
+- `src/pages/central/CentralHome.tsx` — card adicional
+- `src/components/CentralSidebar.tsx` — item de menu
+- `src/App.tsx` — rota
