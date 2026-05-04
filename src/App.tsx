@@ -25,6 +25,7 @@ import { CentralLayout } from "./components/CentralLayout";
 import CentralHome from "./pages/central/CentralHome";
 import Recebimentos from "./pages/central/Recebimentos";
 import Reembolsos from "./pages/central/Reembolsos";
+import ContratosCentral from "./pages/central/ContratosCentral";
 
 const queryClient = new QueryClient();
 
@@ -90,6 +91,7 @@ const App = () => (
                 <Route index element={<CentralHome />} />
                 <Route path="operacional/recebimentos" element={<Recebimentos />} />
                 <Route path="operacional/reembolsos" element={<Reembolsos />} />
+                <Route path="contratos" element={<ContratosCentral />} />
               </Route>
             </Route>
 

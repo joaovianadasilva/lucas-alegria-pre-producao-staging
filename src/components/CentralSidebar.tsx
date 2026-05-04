@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { Wallet, Undo2, BarChart3, ArrowLeft, ShieldCheck } from 'lucide-react';
+import { Wallet, Undo2, BarChart3, ArrowLeft, ShieldCheck, FileText } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -51,6 +51,22 @@ export function CentralSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Dados</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isActive('/central/contratos')}>
+                  <NavLink to="/central/contratos" className={cls}>
+                    <FileText className="h-4 w-4" />
+                    {!collapsed && <span>Contratos</span>}
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

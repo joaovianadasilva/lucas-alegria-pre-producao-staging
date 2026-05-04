@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Wallet, Undo2 } from 'lucide-react';
+import { Wallet, Undo2, FileText } from 'lucide-react';
 
 export default function CentralHome() {
   return (
@@ -23,6 +23,14 @@ export default function CentralHome() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2"><Undo2 className="h-5 w-5" /> Reembolsos</CardTitle>
               <CardDescription>Confirmar reembolsos de contratos elegíveis.</CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
+        <Link to="/central/contratos">
+          <Card className="hover:shadow-md transition">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5" /> Todos os Contratos</CardTitle>
+              <CardDescription>Visão consolidada cross-provedor com filtros e exportação.</CardDescription>
             </CardHeader>
           </Card>
         </Link>
