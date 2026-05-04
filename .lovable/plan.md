@@ -1,52 +1,31 @@
-## Ajustes no relatório Visão Geral de Vendas
+Add two new ranking tables to the **Visão Geral de Vendas** report, positioned between the existing Planos/Adicionais rankings and the "Cancelamentos por motivo" chart.
 
-### 1. Gráfico de Cadastros vs Instalações por dia
-Trocar `LineChart` por `BarChart` vertical agrupado (recharts), em `src/pages/central/RelatorioVisaoGeralVendas.tsx`:
-- Duas barras lado a lado por dia: "Cadastrados" (cor primária) e "Instalados" (verde).
-- `XAxis` com data formatada (`dd/MM`), `YAxis` inteiro, tooltip e legenda mantidos.
-- Mantém comportamento responsivo e altura atual (320px).
+## Backend — `supabase/functions/central-operacional/index.ts`
 
-### 2. Renomear "MRR" → "Valor" + separar Cadastrados vs Instalados
+In the `relatorioVisaoGeralVendas` action:
 
-**Backend (`supabase/functions/central-operacional/index.ts`, action `relatorioVisaoGeralVendas`)**
+1. Include `origem` and `representante_vendas` in the SELECT for both the `cadastrados` and `instalados` queries.
+2. Build two new aggregation maps similar to `planosMap`, grouping by `origem` and `representante_vendas`:
+   - Each entry: `{ chave, cadastrados, instalados }`
+   - Increment `cadastrados` for each contract in the cadastrados set; `instalados` for each in the instalados set.
+   - Treat empty/null as `"Não informado"`.
+   - Sort by `(cadastrados + instalados)` desc. No top-N cap (origens/representantes are usually a small set; if it grows, we can revisit).
+3. Add to response payload:
+   ```ts
+   rankings: {
+     planos: ...,
+     adicionais: ...,
+     origens: [{ chave, cadastrados, instalados }],
+     representantes: [{ chave, cadastrados, instalados }],
+   }
+   ```
 
-Hoje a composição só calcula valores em cima dos instalados. Adicionar também a soma do valor para os cadastrados em cada grupo (com/sem adicionais), ficando:
+## Frontend — `src/pages/central/RelatorioVisaoGeralVendas.tsx`
 
-```ts
-composicao: {
-  semAdicionais: {
-    cadastrados: number,
-    instalados: number,
-    valorPlanoCadastrados: number,   // Σ plano_valor dos cadastrados sem adicionais
-    valorPlanoInstalados: number,    // Σ plano_valor dos instalados sem adicionais
-  },
-  comAdicionais: {
-    cadastrados: number,
-    instalados: number,
-    valorPlanoCadastrados: number,
-    valorAdicionaisCadastrados: number,
-    valorPlanoInstalados: number,
-    valorAdicionaisInstalados: number,
-  }
-}
-```
+1. Extend the `Relatorio` interface `rankings` with `origens` and `representantes` arrays.
+2. Insert a new grid row (just before the "Cancelamentos por motivo" Card) with two cards side-by-side:
+   - **Vendas por origem** — columns: Origem | Cadastrados | Instalados
+   - **Vendas por representante** — columns: Representante | Cadastrados | Instalados
+   - Same Table styling as the existing Planos ranking, with empty-state row when zero.
 
-Cálculo: ao iterar `cadastrados`, somar `plano_valor` no grupo correspondente (com/sem adicionais) e somar `adicional_valor` das linhas de `adicionais_contrato` ligadas a esses contratos. O cálculo dos instalados continua igual, só renomeado.
-
-**Frontend (cards "Sem adicionais" / "Com adicionais")**
-
-Substituir todas as labels "MRR" por "Valor" e exibir as duas vertentes claramente separadas:
-
-- **Sem adicionais**
-  - Cadastrados: `N` — Valor planos: `R$ X`
-  - Instalados: `N` — Valor planos: `R$ X` (destacado)
-
-- **Com adicionais**
-  - Cadastrados: `N` — Valor planos: `R$ X` — Valor adicionais: `R$ Y` — Valor total: `R$ X+Y`
-  - Instalados: `N` — Valor planos: `R$ X` — Valor adicionais: `R$ Y` — Valor total: `R$ X+Y` (destacado)
-
-Layout sugerido em cada card: dois sub-blocos com título ("Cadastrados" / "Instalados"), cada um listando contagem e valores correspondentes, separados por uma linha divisória sutil.
-
-### Arquivos
-- `supabase/functions/central-operacional/index.ts`
-- `src/pages/central/RelatorioVisaoGeralVendas.tsx`
+No DB migration required.

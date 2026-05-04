@@ -209,8 +209,8 @@ serve(async (req) => {
         };
 
         const [cadastrados, instalados, cancelados] = await Promise.all([
-          fetchAll(() => baseFilter(supabase.from('contratos').select('id, provedor_id, created_at, plano_codigo, plano_nome, plano_valor, taxa_instalacao').gte('created_at', inicioISO).lte('created_at', fimISO))),
-          fetchAll(() => baseFilter(supabase.from('contratos').select('id, provedor_id, data_ativacao, plano_codigo, plano_nome, plano_valor').gte('data_ativacao', dataInicio).lte('data_ativacao', dataFim).not('data_ativacao', 'is', null))),
+          fetchAll(() => baseFilter(supabase.from('contratos').select('id, provedor_id, created_at, plano_codigo, plano_nome, plano_valor, taxa_instalacao, origem, representante_vendas').gte('created_at', inicioISO).lte('created_at', fimISO))),
+          fetchAll(() => baseFilter(supabase.from('contratos').select('id, provedor_id, data_ativacao, plano_codigo, plano_nome, plano_valor, origem, representante_vendas').gte('data_ativacao', dataInicio).lte('data_ativacao', dataFim).not('data_ativacao', 'is', null))),
           fetchAll(() => baseFilter(supabase.from('contratos').select('id, provedor_id, data_cancelamento, motivo_cancelamento').gte('data_cancelamento', dataInicio).lte('data_cancelamento', dataFim).not('data_cancelamento', 'is', null))),
         ]);
 
