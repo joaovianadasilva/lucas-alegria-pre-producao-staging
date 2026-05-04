@@ -359,7 +359,7 @@ serve(async (req) => {
 
         let query = supabase
           .from('contratos')
-          .select('id, nome_completo, celular, email, cpf, codigo_contrato, codigo_cliente, created_at', { count: 'exact' })
+          .select('id, nome_completo, celular, email, cpf, codigo_contrato, codigo_cliente, created_at, recebimento_efetivado, reembolso_efetivado, reembolsavel, status_contrato, data_ativacao, data_cancelamento, data_pgto_primeira_mensalidade, data_pgto_segunda_mensalidade, data_pgto_terceira_mensalidade', { count: 'exact' })
           .eq('provedor_id', provedorId)
           .order('created_at', { ascending: false });
 
@@ -388,8 +388,46 @@ serve(async (req) => {
 
         if (error) throw error;
 
+        // Carrega regras operacionais para calcular elegibilidade
+        const { data: regrasRows } = await supabase
+          .from('regras_operacionais_provedor')
+          .select('tipo, regra')
+          .eq('provedor_id', provedorId)
+          .eq('ativo', true);
+        const regraReceb: any = (regrasRows || []).find((r: any) => r.tipo === 'recebimento')?.regra || {};
+        const regraReemb: any = (regrasRows || []).find((r: any) => r.tipo === 'reembolso')?.regra || {};
+
+        const isElegivelReceb = (c: any) => {
+          if (c.recebimento_efetivado === true) return false;
+          const exige = regraReceb.exige_pagamentos ?? 1;
+          const pgtos = [c.data_pgto_primeira_mensalidade, c.data_pgto_segunda_mensalidade, c.data_pgto_terceira_mensalidade].filter(Boolean).length;
+          if (pgtos < exige) return false;
+          if (regraReceb.status_contrato_in && c.status_contrato && !regraReceb.status_contrato_in.includes(c.status_contrato)) return false;
+          if (regraReceb.dias_apos_ativacao && c.data_ativacao) {
+            const diff = (Date.now() - new Date(c.data_ativacao).getTime()) / 86400000;
+            if (diff < regraReceb.dias_apos_ativacao) return false;
+          }
+          return true;
+        };
+        const isElegivelReemb = (c: any) => {
+          if (c.reembolso_efetivado === true) return false;
+          if (c.reembolsavel !== true) return false;
+          if (regraReemb.status_contrato_in && c.status_contrato && !regraReemb.status_contrato_in.includes(c.status_contrato)) return false;
+          if (regraReemb.dias_apos_cancelamento && c.data_cancelamento) {
+            const diff = (Date.now() - new Date(c.data_cancelamento).getTime()) / 86400000;
+            if (diff < regraReemb.dias_apos_cancelamento) return false;
+          }
+          return true;
+        };
+
+        const enriched = (data || []).map((c: any) => ({
+          ...c,
+          elegivel_recebimento: isElegivelReceb(c),
+          elegivel_reembolso: isElegivelReemb(c),
+        }));
+
         return new Response(
-          JSON.stringify({ success: true, contratos: data, total: count }),
+          JSON.stringify({ success: true, contratos: enriched, total: count }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }

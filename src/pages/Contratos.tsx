@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Filter, Edit, ChevronLeft, ChevronRight, FileText, Eye } from 'lucide-react';
 import { ContractDetailsDialog, ContratoCompleto } from '@/components/ContractDetailsDialog';
@@ -22,6 +23,11 @@ interface Contrato {
   codigo_contrato: string | null;
   codigo_cliente: string | null;
   created_at: string;
+  recebimento_efetivado?: boolean;
+  reembolso_efetivado?: boolean;
+  reembolsavel?: boolean;
+  elegivel_recebimento?: boolean;
+  elegivel_reembolso?: boolean;
 }
 
 const ITEMS_PER_PAGE = 20;
@@ -326,6 +332,7 @@ export default function Contratos() {
                       <TableHead>CPF</TableHead>
                       <TableHead>Cód. Contrato</TableHead>
                       <TableHead>Cód. Cliente</TableHead>
+                      <TableHead>Status financeiro</TableHead>
                       <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -341,6 +348,29 @@ export default function Contratos() {
                         <TableCell>{contrato.cpf || '-'}</TableCell>
                         <TableCell>{contrato.codigo_contrato || '-'}</TableCell>
                         <TableCell>{contrato.codigo_cliente || '-'}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {contrato.recebimento_efetivado && (
+                              <Badge variant="outline" className="text-xs">Recebido</Badge>
+                            )}
+                            {contrato.elegivel_recebimento && (
+                              <Badge className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white" title="Elegível para recebimento">
+                                Elegível recebimento
+                              </Badge>
+                            )}
+                            {contrato.reembolso_efetivado && (
+                              <Badge variant="outline" className="text-xs">Reembolsado</Badge>
+                            )}
+                            {contrato.elegivel_reembolso && (
+                              <Badge className="text-xs bg-amber-600 hover:bg-amber-700 text-white" title="Elegível para reembolso">
+                                Elegível reembolso
+                              </Badge>
+                            )}
+                            {!contrato.recebimento_efetivado && !contrato.elegivel_recebimento && !contrato.reembolso_efetivado && !contrato.elegivel_reembolso && (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </div>
+                        </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">
                             <Button

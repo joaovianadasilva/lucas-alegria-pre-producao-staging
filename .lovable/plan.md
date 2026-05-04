@@ -1,21 +1,43 @@
-## Correções no módulo "Todos os Contratos" (Central)
+## Melhorias em Reembolsos/Recebimentos e sinalização em Contratos
 
-### 1. Exportação CSV exporta apenas a página atual
-**Causa:** `exportCSV()` usa `result?.contratos`, que vem paginado (20 por vez) do edge function.
+### A) Páginas Reembolsos e Recebimentos (`OperacionalContratos.tsx`)
 
-**Correção:**
-- Adicionar action `exportContratos` em `supabase/functions/central-operacional/index.ts`, reaproveitando a mesma lógica de filtros do `listContratos`, porém **sem `.range()`** (busca todas as linhas) e selecionando apenas as colunas necessárias para o CSV.
-- Limite defensivo de segurança (ex.: 50.000 linhas) para evitar payloads gigantes; se exceder, retorna erro pedindo refinar filtros.
-- Em `ContratosCentral.tsx`, transformar `exportCSV` em async: invocar `central-operacional` com `action: 'exportContratos'` + filtros atuais, gerar CSV a partir do retorno completo, mostrar toast de progresso/sucesso.
+1. **Filtro de provedor à esquerda**
+   - Reordenar o `CardContent` de filtros: o popover "Provedores" passa a ser o primeiro item (à esquerda), seguido pelo input "Buscar".
 
-### 2. Coluna "Criado" exibe "Invalid Date"
-**Causa:** `created_at` é um timestamp ISO completo (`2026-05-04T22:40:16.000Z`). `formatLocalDate` faz `split('-')` esperando `YYYY-MM-DD`, então o "day" vira `04T22:40:16...` e o `Date` resulta inválido.
+2. **Clicar no contrato exibe detalhes**
+   - Reaproveitar `ContractDetailsDialog` (já usado em `ContratosCentral`).
+   - Estado local: `detailsOpen`, `contractDetails`, `loadingDetails`.
+   - Adicionar botão "Ver" (ícone Eye) na coluna Ações (ao lado de "Confirmar"/data) e tornar a linha clicável (cursor-pointer + onClick) que dispara `openDetails(c.id, c.provedor_id)`.
+   - `openDetails` chama `manage-contracts:getContract` com `provedorId` da própria linha (super_admin já tem acesso cross-provedor via service role).
+   - Após edição, invalidar query `central-contratos`.
 
-**Correção:**
-- Atualizar `src/lib/dateUtils.ts` → `parseLocalDate` para aceitar tanto `YYYY-MM-DD` quanto timestamps ISO completos: detectar `T` e usar somente os 10 primeiros caracteres antes do split (preservando comportamento atual e a regra de timezone-safe).
-- Nenhuma mudança necessária nos pontos de uso; isso conserta a coluna "Criado" e qualquer outro lugar que passe timestamp completo para `formatLocalDate`.
+3. **Exportar CSV (elegíveis e processados)**
+   - Adicionar botão "Exportar CSV" no header da página, ao lado do título; exporta a lista da aba ativa, respeitando filtros aplicados (provedores + busca).
+   - Como `listElegiveis`/`listProcessados` já retornam todas as linhas filtradas (sem paginação no backend), gerar CSV client-side a partir do `contratos` carregado.
+   - Colunas: provedor, codigo_contrato, codigo_cliente, nome_completo, cpf, plano_nome, plano_valor, status_contrato, data_ativacao/data_cancelamento (conforme tipo), e — na aba processados — data_recebimento ou data_reembolso.
+   - Nome do arquivo: `recebimentos_elegiveis_YYYY-MM-DD.csv`, etc.
+
+### B) Página Contratos (`src/pages/Contratos.tsx`) — sinalização de elegibilidade
+
+**Backend (`supabase/functions/manage-contracts/index.ts`, action `listContractsWithFilter`)**
+- Selecionar campos extras: `recebimento_efetivado, reembolso_efetivado, reembolsavel, status_contrato, data_ativacao, data_cancelamento, data_pgto_primeira_mensalidade, data_pgto_segunda_mensalidade, data_pgto_terceira_mensalidade`.
+- Carregar regras ativas do provedor (`regras_operacionais_provedor`, tipos `recebimento` e `reembolso`).
+- Para cada linha calcular dois booleans:
+  - `elegivel_recebimento`: mesma regra do `contratoElegivel('recebimento')` em `central-operacional`.
+  - `elegivel_reembolso`: idem para reembolso.
+- Retornar essas flags junto com cada contrato. Manter contagem `total` válida (a lógica é só um `map` após o `select`).
+
+**Frontend (`Contratos.tsx`)**
+- Estender interface `Contrato` com as duas flags e os novos campos retornados.
+- Adicionar coluna "Status financeiro" exibindo dois `Badge`s pequenos:
+  - "Elegível recebimento" (variant default verde via classe `bg-emerald-600`) quando `elegivel_recebimento`.
+  - "Elegível reembolso" (variant warning amber `bg-amber-600`) quando `elegivel_reembolso`.
+  - "Recebido" / "Reembolsado" (cinza/outline) quando já efetivado.
+  - Nada quando nenhum aplicável.
+- Tooltip simples explicando o motivo (ex.: "Pagamentos ≥ X confirmados").
 
 ### Arquivos afetados
-- `supabase/functions/central-operacional/index.ts` (nova action `exportContratos`)
-- `src/pages/central/ContratosCentral.tsx` (`exportCSV` async chamando a nova action)
-- `src/lib/dateUtils.ts` (`parseLocalDate` aceitando ISO completo)
+- `src/pages/central/OperacionalContratos.tsx` (layout de filtros, clique em linha, export CSV, ContractDetailsDialog)
+- `supabase/functions/manage-contracts/index.ts` (campos extras + flags de elegibilidade no `listContractsWithFilter`)
+- `src/pages/Contratos.tsx` (nova coluna com badges de elegibilidade)

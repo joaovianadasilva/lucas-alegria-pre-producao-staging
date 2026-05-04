@@ -12,7 +12,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
-import { Filter, CheckCircle2 } from 'lucide-react';
+import { Filter, CheckCircle2, Eye, Download } from 'lucide-react';
+import { ContractDetailsDialog, ContratoCompleto } from '@/components/ContractDetailsDialog';
+import { formatLocalDate } from '@/lib/dateUtils';
 
 interface Props {
   tipo: 'recebimento' | 'reembolso';
@@ -36,6 +38,11 @@ export default function OperacionalContratos({ tipo }: Props) {
   const [busca, setBusca] = useState('');
   const [aba, setAba] = useState<'elegiveis' | 'processados'>('elegiveis');
   const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; contrato?: Contrato; data: string }>({ open: false, data: new Date().toISOString().slice(0, 10) });
+
+  // Detalhes
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [contractDetails, setContractDetails] = useState<ContratoCompleto | null>(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
 
   const { data: provedores } = useQuery({
     queryKey: ['central-provedores'],
@@ -87,11 +94,66 @@ export default function OperacionalContratos({ tipo }: Props) {
     setProvedorIds(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]);
   };
 
+  const openDetails = async (c: Contrato) => {
+    setDetailsOpen(true);
+    setLoadingDetails(true);
+    setContractDetails(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('manage-contracts', {
+        body: { action: 'getContract', provedorId: c.provedor_id, contratoId: c.id },
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Erro ao carregar detalhes');
+      setContractDetails(data.contrato);
+    } catch (e: any) {
+      toast.error('Erro: ' + e.message);
+      setDetailsOpen(false);
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
+
+  const handleContractUpdated = () => {
+    qc.invalidateQueries({ queryKey: ['central-contratos'] });
+  };
+
+  const exportCSV = () => {
+    const rows = contratos || [];
+    if (!rows.length) { toast.info('Nada para exportar'); return; }
+    const isProc = aba === 'processados';
+    const dataCol = tipo === 'recebimento' ? 'data_ativacao' : 'data_cancelamento';
+    const procCol = tipo === 'recebimento' ? 'data_recebimento' : 'data_reembolso';
+    const cols = ['provedor', 'codigo_contrato', 'codigo_cliente', 'nome_completo', 'cpf', 'plano_nome', 'plano_valor', 'status_contrato', dataCol];
+    if (isProc) cols.push(procCol);
+    const csv = [cols.join(',')].concat(
+      rows.map(r => cols.map(c => {
+        const v = c === 'provedor' ? (provedorMap.get(r.provedor_id) || '') : ((r as any)[c] ?? '');
+        const s = String(v).replace(/"/g, '""');
+        return /[",\n]/.test(s) ? `"${s}"` : s;
+      }).join(','))
+    ).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const stamp = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `${tipo}s_${aba}_${stamp}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`${rows.length} contrato(s) exportado(s)`);
+  };
+
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-3xl font-bold">{titulo}</h1>
-        <p className="text-muted-foreground">Controle operacional entre provedores.</p>
+      <div className="flex items-end justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">{titulo}</h1>
+          <p className="text-muted-foreground">Controle operacional entre provedores.</p>
+        </div>
+        <Button variant="outline" onClick={exportCSV} disabled={!contratos?.length} className="gap-2">
+          <Download className="h-4 w-4" />
+          Exportar CSV
+        </Button>
       </div>
 
       <Card>
@@ -99,10 +161,6 @@ export default function OperacionalContratos({ tipo }: Props) {
           <CardTitle className="text-base">Filtros</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap items-end gap-3">
-          <div className="flex-1 min-w-[240px]">
-            <Label>Buscar</Label>
-            <Input placeholder="Nome, CPF, código contrato/cliente" value={busca} onChange={e => setBusca(e.target.value)} />
-          </div>
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" className="gap-2">
@@ -124,6 +182,10 @@ export default function OperacionalContratos({ tipo }: Props) {
               </div>
             </PopoverContent>
           </Popover>
+          <div className="flex-1 min-w-[240px]">
+            <Label>Buscar</Label>
+            <Input placeholder="Nome, CPF, código contrato/cliente" value={busca} onChange={e => setBusca(e.target.value)} />
+          </div>
         </CardContent>
       </Card>
 
@@ -155,7 +217,7 @@ export default function OperacionalContratos({ tipo }: Props) {
                   ) : (contratos || []).length === 0 ? (
                     <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Nenhum contrato encontrado.</TableCell></TableRow>
                   ) : (contratos || []).map(c => (
-                    <TableRow key={c.id}>
+                    <TableRow key={c.id} className="cursor-pointer hover:bg-muted/50" onClick={() => openDetails(c)}>
                       <TableCell>{provedorMap.get(c.provedor_id) || '—'}</TableCell>
                       <TableCell className="font-mono text-xs">{c.codigo_contrato || c.id.slice(0, 8)}</TableCell>
                       <TableCell>
@@ -164,19 +226,24 @@ export default function OperacionalContratos({ tipo }: Props) {
                       </TableCell>
                       <TableCell>{c.plano_nome}</TableCell>
                       <TableCell>{fmtBRL(Number(c.plano_valor))}</TableCell>
-                      <TableCell>{(tipo === 'recebimento' ? c.data_ativacao : c.data_cancelamento) || '—'}</TableCell>
+                      <TableCell>{formatLocalDate(tipo === 'recebimento' ? c.data_ativacao : c.data_cancelamento) || '—'}</TableCell>
                       <TableCell><Badge variant="outline">{c.status_contrato || '—'}</Badge></TableCell>
-                      <TableCell className="text-right">
-                        {aba === 'elegiveis' ? (
-                          <Button size="sm" onClick={() => setConfirmDialog({ open: true, contrato: c, data: new Date().toISOString().slice(0, 10) })}>
-                            Confirmar
+                      <TableCell className="text-right" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => openDetails(c)} title="Ver detalhes">
+                            <Eye className="h-4 w-4" />
                           </Button>
-                        ) : (
-                          <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
-                            <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
-                            {(tipo === 'recebimento' ? c.data_recebimento : c.data_reembolso) || ''}
-                          </span>
-                        )}
+                          {aba === 'elegiveis' ? (
+                            <Button size="sm" onClick={() => setConfirmDialog({ open: true, contrato: c, data: new Date().toISOString().slice(0, 10) })}>
+                              Confirmar
+                            </Button>
+                          ) : (
+                            <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                              <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                              {formatLocalDate(tipo === 'recebimento' ? c.data_recebimento : c.data_reembolso) || ''}
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -215,6 +282,14 @@ export default function OperacionalContratos({ tipo }: Props) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ContractDetailsDialog
+        open={detailsOpen}
+        onOpenChange={setDetailsOpen}
+        contract={contractDetails}
+        loading={loadingDetails}
+        onContractUpdated={handleContractUpdated}
+      />
     </div>
   );
 }
