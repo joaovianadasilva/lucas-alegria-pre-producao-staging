@@ -13,7 +13,7 @@ import { Filter, FileBarChart } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatLocalDate, toISODateString } from '@/lib/dateUtils';
 import {
-  ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, Legend, CartesianGrid,
+  ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid,
   BarChart, Bar,
 } from 'recharts';
 
@@ -52,8 +52,8 @@ interface Relatorio {
   kpis: any;
   serieTemporal: { data: string; cadastrados: number; instalados: number }[];
   composicao: {
-    semAdicionais: { cadastrados: number; instalados: number; mrrPlano: number };
-    comAdicionais: { cadastrados: number; instalados: number; mrrPlano: number; mrrAdicionais: number };
+    semAdicionais: { cadastrados: number; instalados: number; valorPlanoCadastrados: number; valorPlanoInstalados: number };
+    comAdicionais: { cadastrados: number; instalados: number; valorPlanoCadastrados: number; valorAdicionaisCadastrados: number; valorPlanoInstalados: number; valorAdicionaisInstalados: number };
   };
   rankings: {
     planos: { codigo: string; nome: string; cadastrados: number; instalados: number }[];
@@ -206,15 +206,15 @@ export default function RelatorioVisaoGeralVendas() {
                 <div className="h-full flex items-center justify-center text-muted-foreground">Sem dados no período.</div>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={relatorio.serieTemporal}>
+                  <BarChart data={relatorio.serieTemporal} barGap={4}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="data" tickFormatter={d => formatLocalDate(d, { day: '2-digit', month: '2-digit' })} />
                     <YAxis allowDecimals={false} />
                     <Tooltip labelFormatter={d => formatLocalDate(String(d))} />
                     <Legend />
-                    <Line type="monotone" dataKey="cadastrados" name="Cadastrados" stroke="hsl(var(--primary))" strokeWidth={2} />
-                    <Line type="monotone" dataKey="instalados" name="Instalados" stroke="hsl(142 71% 45%)" strokeWidth={2} />
-                  </LineChart>
+                    <Bar dataKey="cadastrados" name="Cadastrados" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="instalados" name="Instalados" fill="hsl(142 71% 45%)" radius={[4, 4, 0, 0]} />
+                  </BarChart>
                 </ResponsiveContainer>
               )}
             </CardContent>
@@ -224,20 +224,36 @@ export default function RelatorioVisaoGeralVendas() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card>
               <CardHeader><CardTitle className="text-base">Sem adicionais</CardTitle></CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <Row label="Cadastrados" value={comp!.semAdicionais.cadastrados} />
-                <Row label="Instalados" value={comp!.semAdicionais.instalados} />
-                <Row label="MRR (plano)" value={fmtBRL(comp!.semAdicionais.mrrPlano)} highlight />
+              <CardContent className="space-y-4 text-sm">
+                <div className="space-y-1">
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground">Cadastrados</div>
+                  <Row label="Quantidade" value={comp!.semAdicionais.cadastrados} />
+                  <Row label="Valor planos" value={fmtBRL(comp!.semAdicionais.valorPlanoCadastrados)} highlight />
+                </div>
+                <div className="space-y-1 border-t pt-3">
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground">Instalados</div>
+                  <Row label="Quantidade" value={comp!.semAdicionais.instalados} />
+                  <Row label="Valor planos" value={fmtBRL(comp!.semAdicionais.valorPlanoInstalados)} highlight />
+                </div>
               </CardContent>
             </Card>
             <Card>
               <CardHeader><CardTitle className="text-base">Com adicionais</CardTitle></CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <Row label="Cadastrados" value={comp!.comAdicionais.cadastrados} />
-                <Row label="Instalados" value={comp!.comAdicionais.instalados} />
-                <Row label="MRR plano" value={fmtBRL(comp!.comAdicionais.mrrPlano)} />
-                <Row label="MRR adicionais" value={fmtBRL(comp!.comAdicionais.mrrAdicionais)} />
-                <Row label="MRR total" value={fmtBRL(comp!.comAdicionais.mrrPlano + comp!.comAdicionais.mrrAdicionais)} highlight />
+              <CardContent className="space-y-4 text-sm">
+                <div className="space-y-1">
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground">Cadastrados</div>
+                  <Row label="Quantidade" value={comp!.comAdicionais.cadastrados} />
+                  <Row label="Valor planos" value={fmtBRL(comp!.comAdicionais.valorPlanoCadastrados)} />
+                  <Row label="Valor adicionais" value={fmtBRL(comp!.comAdicionais.valorAdicionaisCadastrados)} />
+                  <Row label="Valor total" value={fmtBRL(comp!.comAdicionais.valorPlanoCadastrados + comp!.comAdicionais.valorAdicionaisCadastrados)} highlight />
+                </div>
+                <div className="space-y-1 border-t pt-3">
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground">Instalados</div>
+                  <Row label="Quantidade" value={comp!.comAdicionais.instalados} />
+                  <Row label="Valor planos" value={fmtBRL(comp!.comAdicionais.valorPlanoInstalados)} />
+                  <Row label="Valor adicionais" value={fmtBRL(comp!.comAdicionais.valorAdicionaisInstalados)} />
+                  <Row label="Valor total" value={fmtBRL(comp!.comAdicionais.valorPlanoInstalados + comp!.comAdicionais.valorAdicionaisInstalados)} highlight />
+                </div>
               </CardContent>
             </Card>
           </div>
