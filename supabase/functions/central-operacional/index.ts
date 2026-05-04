@@ -271,24 +271,32 @@ serve(async (req) => {
         }
         const cadIds = new Set(cadastrados.map(c => c.id));
 
-        let semAdic = { cadastrados: 0, instalados: 0, mrrPlano: 0 };
-        let comAdic = { cadastrados: 0, instalados: 0, mrrPlano: 0, mrrAdicionais: 0 };
+        let semAdic = { cadastrados: 0, instalados: 0, valorPlanoCadastrados: 0, valorPlanoInstalados: 0 };
+        let comAdic = { cadastrados: 0, instalados: 0, valorPlanoCadastrados: 0, valorAdicionaisCadastrados: 0, valorPlanoInstalados: 0, valorAdicionaisInstalados: 0 };
 
         for (const c of cadastrados) {
-          const tem = (adicPorContrato.get(c.id) || []).length > 0;
-          if (tem) comAdic.cadastrados++;
-          else semAdic.cadastrados++;
+          const adic = adicPorContrato.get(c.id) || [];
+          const valor = Number(c.plano_valor || 0);
+          const somaAdic = adic.reduce((s, a) => s + Number(a.adicional_valor || 0), 0);
+          if (adic.length > 0) {
+            comAdic.cadastrados++;
+            comAdic.valorPlanoCadastrados += valor;
+            comAdic.valorAdicionaisCadastrados += somaAdic;
+          } else {
+            semAdic.cadastrados++;
+            semAdic.valorPlanoCadastrados += valor;
+          }
         }
         for (const c of instalados) {
           const adic = adicPorContrato.get(c.id) || [];
           const valor = Number(c.plano_valor || 0);
           if (adic.length > 0) {
             comAdic.instalados++;
-            comAdic.mrrPlano += valor;
-            comAdic.mrrAdicionais += adic.reduce((s, a) => s + Number(a.adicional_valor || 0), 0);
+            comAdic.valorPlanoInstalados += valor;
+            comAdic.valorAdicionaisInstalados += adic.reduce((s, a) => s + Number(a.adicional_valor || 0), 0);
           } else {
             semAdic.instalados++;
-            semAdic.mrrPlano += valor;
+            semAdic.valorPlanoInstalados += valor;
           }
         }
 
