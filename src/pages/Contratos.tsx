@@ -332,6 +332,7 @@ export default function Contratos() {
                       <TableHead>CPF</TableHead>
                       <TableHead>Cód. Contrato</TableHead>
                       <TableHead>Cód. Cliente</TableHead>
+                      <TableHead>Status financeiro</TableHead>
                       <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -347,6 +348,29 @@ export default function Contratos() {
                         <TableCell>{contrato.cpf || '-'}</TableCell>
                         <TableCell>{contrato.codigo_contrato || '-'}</TableCell>
                         <TableCell>{contrato.codigo_cliente || '-'}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {contrato.recebimento_efetivado && (
+                              <Badge variant="outline" className="text-xs">Recebido</Badge>
+                            )}
+                            {contrato.elegivel_recebimento && (
+                              <Badge className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white" title="Elegível para recebimento">
+                                Elegível recebimento
+                              </Badge>
+                            )}
+                            {contrato.reembolso_efetivado && (
+                              <Badge variant="outline" className="text-xs">Reembolsado</Badge>
+                            )}
+                            {contrato.elegivel_reembolso && (
+                              <Badge className="text-xs bg-amber-600 hover:bg-amber-700 text-white" title="Elegível para reembolso">
+                                Elegível reembolso
+                              </Badge>
+                            )}
+                            {!contrato.recebimento_efetivado && !contrato.elegivel_recebimento && !contrato.reembolso_efetivado && !contrato.elegivel_reembolso && (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </div>
+                        </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">
                             <Button
