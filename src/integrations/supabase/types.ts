@@ -1006,41 +1006,21 @@ export type Database = {
       }
       messages: {
         Row: {
-          contact_id: number | null
-          content: string
-          created_at: string | null
           id: number
-          role: string
-          step_at: string | null
-          tools_used: Json | null
+          message: Json
+          session_id: string
         }
         Insert: {
-          contact_id?: number | null
-          content: string
-          created_at?: string | null
           id?: number
-          role: string
-          step_at?: string | null
-          tools_used?: Json | null
+          message: Json
+          session_id: string
         }
         Update: {
-          contact_id?: number | null
-          content?: string
-          created_at?: string | null
           id?: number
-          role?: string
-          step_at?: string | null
-          tools_used?: Json | null
+          message?: Json
+          session_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "messages_contact_id_fkey"
-            columns: ["contact_id"]
-            isOneToOne: false
-            referencedRelation: "contacts"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -1217,6 +1197,72 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      yara_cep_sem_viabilidade: {
+        Row: {
+          cep: string | null
+          created_at: string
+          id: number
+          lead_nome: string | null
+          lead_phone: string | null
+          obs: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          cep?: string | null
+          created_at?: string
+          id?: number
+          lead_nome?: string | null
+          lead_phone?: string | null
+          obs?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          cep?: string | null
+          created_at?: string
+          id?: number
+          lead_nome?: string | null
+          lead_phone?: string | null
+          obs?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      yara_ceps_cobertura: {
+        Row: {
+          area: string | null
+          cep: string | null
+          cidade: string | null
+          created_at: string
+          id: number
+          logradouro: string | null
+          obs: string | null
+          updated_at: string | null
+          viabilidade: string | null
+        }
+        Insert: {
+          area?: string | null
+          cep?: string | null
+          cidade?: string | null
+          created_at?: string
+          id?: number
+          logradouro?: string | null
+          obs?: string | null
+          updated_at?: string | null
+          viabilidade?: string | null
+        }
+        Update: {
+          area?: string | null
+          cep?: string | null
+          cidade?: string | null
+          created_at?: string
+          id?: number
+          logradouro?: string | null
+          obs?: string | null
+          updated_at?: string | null
+          viabilidade?: string | null
+        }
+        Relationships: []
       }
     }
     Views: {
