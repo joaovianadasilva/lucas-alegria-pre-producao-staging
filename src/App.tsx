@@ -21,6 +21,10 @@ import Contratos from "./pages/Contratos";
 import SelecionarProvedor from "./pages/SelecionarProvedor";
 import GerenciarProvedores from "./pages/GerenciarProvedores";
 import NotFound from "./pages/NotFound";
+import { CentralLayout } from "./components/CentralLayout";
+import CentralHome from "./pages/central/CentralHome";
+import Recebimentos from "./pages/central/Recebimentos";
+import Reembolsos from "./pages/central/Reembolsos";
 
 const queryClient = new QueryClient();
 
@@ -80,6 +84,15 @@ const App = () => (
               </Route>
             </Route>
             
+            {/* Central de Controle - apenas super_admin, sem provedor ativo */}
+            <Route element={<ProtectedRoute requiredRole="super_admin" requireProvedor={false} />}>
+              <Route path="/central" element={<CentralLayout />}>
+                <Route index element={<CentralHome />} />
+                <Route path="operacional/recebimentos" element={<Recebimentos />} />
+                <Route path="operacional/reembolsos" element={<Reembolsos />} />
+              </Route>
+            </Route>
+
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -13,6 +13,7 @@ import {
   Building2,
   ClipboardList,
   UserCheck,
+  ShieldCheck,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -155,6 +156,14 @@ export function AppSidebar() {
                     <NavLink to="/gerenciar-provedores" className={getNavClass}>
                       <Building2 className="h-4 w-4" />
                       {!collapsed && <span>Gerenciar Provedores</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <NavLink to="/central" className={getNavClass}>
+                      <ShieldCheck className="h-4 w-4" />
+                      {!collapsed && <span>Central de Controle</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
