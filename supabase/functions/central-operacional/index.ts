@@ -183,6 +183,7 @@ serve(async (req) => {
         }
         return json({ success: true, contratos: data || [], total: count || 0 });
       }
+      default:
         return json({ error: 'Ação desconhecida' }, 400);
     }
   } catch (e: any) {
