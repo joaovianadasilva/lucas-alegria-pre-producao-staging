@@ -1,42 +1,21 @@
-## Módulo "Todos os Contratos" na Central
+## Correções no módulo "Todos os Contratos" (Central)
 
-Nova área `/central/contratos` (super_admin) com filtro base por **provedor** e visão consolidada cross-provedor.
+### 1. Exportação CSV exporta apenas a página atual
+**Causa:** `exportCSV()` usa `result?.contratos`, que vem paginado (20 por vez) do edge function.
 
-### Backend — `supabase/functions/central-operacional/index.ts`
+**Correção:**
+- Adicionar action `exportContratos` em `supabase/functions/central-operacional/index.ts`, reaproveitando a mesma lógica de filtros do `listContratos`, porém **sem `.range()`** (busca todas as linhas) e selecionando apenas as colunas necessárias para o CSV.
+- Limite defensivo de segurança (ex.: 50.000 linhas) para evitar payloads gigantes; se exceder, retorna erro pedindo refinar filtros.
+- Em `ContratosCentral.tsx`, transformar `exportCSV` em async: invocar `central-operacional` com `action: 'exportContratos'` + filtros atuais, gerar CSV a partir do retorno completo, mostrar toast de progresso/sucesso.
 
-Adicionar action **`listContratos`** com paginação server-side:
+### 2. Coluna "Criado" exibe "Invalid Date"
+**Causa:** `created_at` é um timestamp ISO completo (`2026-05-04T22:40:16.000Z`). `formatLocalDate` faz `split('-')` esperando `YYYY-MM-DD`, então o "day" vira `04T22:40:16...` e o `Date` resulta inválido.
 
-Parâmetros: `provedorIds?`, `status?`, `statusContrato?`, `tipoVenda?`, `dataInicio?`, `dataFim?`, `busca?`, `page` (default 1), `pageSize` (default 20).
-
-Implementação:
-- Query `from('contratos').select('*', { count: 'exact' })`
-- Aplica filtros: `.in('provedor_id', ...)`, `.eq(...)` para status/status_contrato/tipo_venda, range em `created_at`
-- Busca: `.or('nome_completo.ilike.%s%,cpf.ilike.%s%,codigo_contrato.ilike.%s%,codigo_cliente.ilike.%s%,email.ilike.%s%,celular.ilike.%s%')`
-- `.order('created_at', { ascending: false }).range(from, to)`
-- Retorna `{ contratos, total }`
-- Auth: super_admin (já validado no início da função)
-
-### Frontend — nova página `src/pages/central/ContratosCentral.tsx`
-
-- Filtros (com botão "Aplicar Filtros" — sem auto-apply, conforme padrão do projeto):
-  - **Provedores** — multi-select (popover com checkboxes), reutilizando a UX já usada em Recebimentos/Reembolsos.
-  - Status, Status contrato, Tipo de venda — selects
-  - Data início / Data fim (created_at)
-  - Busca livre (nome, CPF, código contrato/cliente, e-mail, celular)
-- Tabela paginada (20 por página): Provedor · Contrato · Cliente (nome + CPF/celular) · Plano · Valor · Status · Status contrato · Criado · Ativação · Ações
-- Botão **Exportar CSV** dos resultados filtrados (lado direito do título)
-- Ação por linha: **Ver detalhes** → reaproveita `ContractDetailsDialog` chamando `manage-contracts:getContract` com `provedorId` da linha (super_admin tem acesso via RLS).
-- Datas via `formatLocalDate` (timezone safety).
-
-### Roteamento e navegação
-
-- `src/App.tsx`: adicionar `<Route path="contratos" element={<ContratosCentral />} />` dentro do bloco `/central` já protegido por `super_admin`.
-- `src/components/CentralSidebar.tsx`: novo grupo **"Dados"** com item "Contratos" (ícone `FileText`) → `/central/contratos`.
-- `src/pages/central/CentralHome.tsx`: adicionar card "Todos os Contratos".
+**Correção:**
+- Atualizar `src/lib/dateUtils.ts` → `parseLocalDate` para aceitar tanto `YYYY-MM-DD` quanto timestamps ISO completos: detectar `T` e usar somente os 10 primeiros caracteres antes do split (preservando comportamento atual e a regra de timezone-safe).
+- Nenhuma mudança necessária nos pontos de uso; isso conserta a coluna "Criado" e qualquer outro lugar que passe timestamp completo para `formatLocalDate`.
 
 ### Arquivos afetados
-- `supabase/functions/central-operacional/index.ts` — nova action `listContratos`
-- `src/pages/central/ContratosCentral.tsx` — novo
-- `src/pages/central/CentralHome.tsx` — card adicional
-- `src/components/CentralSidebar.tsx` — item de menu
-- `src/App.tsx` — rota
+- `supabase/functions/central-operacional/index.ts` (nova action `exportContratos`)
+- `src/pages/central/ContratosCentral.tsx` (`exportCSV` async chamando a nova action)
+- `src/lib/dateUtils.ts` (`parseLocalDate` aceitando ISO completo)
