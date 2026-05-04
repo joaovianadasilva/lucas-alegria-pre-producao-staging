@@ -312,6 +312,60 @@ export default function RelatorioVisaoGeralVendas() {
             </Card>
           </div>
 
+          {/* Linha 4b - Origem e Representante */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader><CardTitle className="text-base">Vendas por origem</CardTitle></CardHeader>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Origem</TableHead>
+                      <TableHead className="text-right">Cadastrados</TableHead>
+                      <TableHead className="text-right">Instalados</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {relatorio.rankings.origens.length === 0 ? (
+                      <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground py-6">—</TableCell></TableRow>
+                    ) : relatorio.rankings.origens.map(o => (
+                      <TableRow key={o.chave}>
+                        <TableCell className="font-medium">{o.chave}</TableCell>
+                        <TableCell className="text-right">{o.cadastrados}</TableCell>
+                        <TableCell className="text-right">{o.instalados}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader><CardTitle className="text-base">Vendas por representante</CardTitle></CardHeader>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Representante</TableHead>
+                      <TableHead className="text-right">Cadastrados</TableHead>
+                      <TableHead className="text-right">Instalados</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {relatorio.rankings.representantes.length === 0 ? (
+                      <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground py-6">—</TableCell></TableRow>
+                    ) : relatorio.rankings.representantes.map(r => (
+                      <TableRow key={r.chave}>
+                        <TableCell className="font-medium">{r.chave}</TableCell>
+                        <TableCell className="text-right">{r.cadastrados}</TableCell>
+                        <TableCell className="text-right">{r.instalados}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </div>
+
           {/* Linha 5 - Cancelamentos por motivo */}
           <Card>
             <CardHeader><CardTitle className="text-base">Cancelamentos por motivo</CardTitle></CardHeader>
