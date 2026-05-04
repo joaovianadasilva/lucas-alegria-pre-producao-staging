@@ -1,43 +1,70 @@
-## Melhorias em Reembolsos/Recebimentos e sinalização em Contratos
+## Relatório: Visão Geral de Vendas
 
-### A) Páginas Reembolsos e Recebimentos (`OperacionalContratos.tsx`)
+Nova página em `/central/relatorios/visao-geral-vendas`, acessível somente a `super_admin`, com filtros multi-provedor e período.
 
-1. **Filtro de provedor à esquerda**
-   - Reordenar o `CardContent` de filtros: o popover "Provedores" passa a ser o primeiro item (à esquerda), seguido pelo input "Buscar".
+### Filtros (topo da página)
+- **Provedores**: popover multi-select (padrão: todos ativos). Mesmo componente já usado em Recebimentos/Reembolsos.
+- **Período**: presets `Hoje`, `7 dias`, `Mês atual` (padrão), `Mês anterior`, `Ano`, `Customizado` (date range).
+- Botão **"Aplicar filtros"** explícito (padrão do projeto).
 
-2. **Clicar no contrato exibe detalhes**
-   - Reaproveitar `ContractDetailsDialog` (já usado em `ContratosCentral`).
-   - Estado local: `detailsOpen`, `contractDetails`, `loadingDetails`.
-   - Adicionar botão "Ver" (ícone Eye) na coluna Ações (ao lado de "Confirmar"/data) e tornar a linha clicável (cursor-pointer + onClick) que dispara `openDetails(c.id, c.provedor_id)`.
-   - `openDetails` chama `manage-contracts:getContract` com `provedorId` da própria linha (super_admin já tem acesso cross-provedor via service role).
-   - Após edição, invalidar query `central-contratos`.
+### Métricas (independentes pela data do evento)
+- **Cadastrados**: `created_at` no período.
+- **Instalados**: `data_ativacao` no período (não nulo).
+- **Cancelados**: `data_cancelamento` no período (não nulo).
+- Um contrato pode contar em mais de uma métrica se múltiplos eventos caírem no intervalo.
 
-3. **Exportar CSV (elegíveis e processados)**
-   - Adicionar botão "Exportar CSV" no header da página, ao lado do título; exporta a lista da aba ativa, respeitando filtros aplicados (provedores + busca).
-   - Como `listElegiveis`/`listProcessados` já retornam todas as linhas filtradas (sem paginação no backend), gerar CSV client-side a partir do `contratos` carregado.
-   - Colunas: provedor, codigo_contrato, codigo_cliente, nome_completo, cpf, plano_nome, plano_valor, status_contrato, data_ativacao/data_cancelamento (conforme tipo), e — na aba processados — data_recebimento ou data_reembolso.
-   - Nome do arquivo: `recebimentos_elegiveis_YYYY-MM-DD.csv`, etc.
+### Layout
 
-### B) Página Contratos (`src/pages/Contratos.tsx`) — sinalização de elegibilidade
+**Linha 1 — KPIs (3 cards)**
+- Card "Contratos Cadastrados": total + média/dia + média/semana no período.
+- Card "Contratos Instalados": idem.
+- Card "Contratos Cancelados": idem.
+- Médias = total ÷ nº de dias (ou semanas) do período selecionado.
 
-**Backend (`supabase/functions/manage-contracts/index.ts`, action `listContractsWithFilter`)**
-- Selecionar campos extras: `recebimento_efetivado, reembolso_efetivado, reembolsavel, status_contrato, data_ativacao, data_cancelamento, data_pgto_primeira_mensalidade, data_pgto_segunda_mensalidade, data_pgto_terceira_mensalidade`.
-- Carregar regras ativas do provedor (`regras_operacionais_provedor`, tipos `recebimento` e `reembolso`).
-- Para cada linha calcular dois booleans:
-  - `elegivel_recebimento`: mesma regra do `contratoElegivel('recebimento')` em `central-operacional`.
-  - `elegivel_reembolso`: idem para reembolso.
-- Retornar essas flags junto com cada contrato. Manter contagem `total` válida (a lógica é só um `map` após o `select`).
+**Linha 2 — Gráfico temporal**
+- Linha/Área dual (recharts): séries `Cadastrados` (created_at) e `Instalados` (data_ativacao) por dia.
+- Se período > 90 dias, agrupa por semana automaticamente.
 
-**Frontend (`Contratos.tsx`)**
-- Estender interface `Contrato` com as duas flags e os novos campos retornados.
-- Adicionar coluna "Status financeiro" exibindo dois `Badge`s pequenos:
-  - "Elegível recebimento" (variant default verde via classe `bg-emerald-600`) quando `elegivel_recebimento`.
-  - "Elegível reembolso" (variant warning amber `bg-amber-600`) quando `elegivel_reembolso`.
-  - "Recebido" / "Reembolsado" (cinza/outline) quando já efetivado.
-  - Nada quando nenhum aplicável.
-- Tooltip simples explicando o motivo (ex.: "Pagamentos ≥ X confirmados").
+**Linha 3 — Receita por composição (2 cards lado a lado)**
+- **Sem adicionais**: contratos instalados no período cuja `adicionais_contrato` está vazia. Mostra: nº cadastrados (do mesmo grupo, por created_at), nº instalados, **MRR** (Σ `plano_valor`).
+- **Com adicionais**: contratos instalados no período com pelo menos uma linha em `adicionais_contrato`. Mostra: nº cadastrados, nº instalados, **MRR plano** (Σ `plano_valor`), **MRR adicionais** (Σ `adicional_valor`), **MRR total**.
 
-### Arquivos afetados
-- `src/pages/central/OperacionalContratos.tsx` (layout de filtros, clique em linha, export CSV, ContractDetailsDialog)
-- `supabase/functions/manage-contracts/index.ts` (campos extras + flags de elegibilidade no `listContractsWithFilter`)
-- `src/pages/Contratos.tsx` (nova coluna com badges de elegibilidade)
+**Linha 4 — Rankings (2 cards)**
+- **Planos mais cadastrados / mais instalados**: tabela top 10 por `plano_codigo` + `plano_nome`, com colunas `Cadastrados` e `Instalados`.
+- **Adicionais mais cadastrados**: top 10 por `adicional_codigo` + `adicional_nome`, contagem de ocorrências em `adicionais_contrato` cujo contrato foi cadastrado no período.
+
+**Linha 5 — Cancelamentos por motivo**
+- Gráfico de barras horizontais com `motivo_cancelamento` (agrupado, vazio = "Não informado") para contratos cancelados no período.
+
+### Backend
+
+Estender a edge function `central-operacional` com nova action `relatorioVisaoGeralVendas` (mantém o gating super_admin já existente). Params: `provedorIds[]`, `dataInicio`, `dataFim`.
+
+Carrega 4 datasets em paralelo (filtrando por `provedor_id` se fornecido):
+1. `contratos` com `created_at` no período → cadastrados, ranking de planos cadastrados.
+2. `contratos` com `data_ativacao` no período → instalados, ranking instalados, separação com/sem adicionais, MRR.
+3. `contratos` com `data_cancelamento` no período → cancelados, agregação por `motivo_cancelamento`.
+4. `adicionais_contrato` JOIN `contratos` (via `contrato_id`) onde contrato cadastrado no período → ranking adicionais e flag "tem adicionais" para os instalados.
+
+Retorna JSON pronto para a UI:
+```ts
+{
+  kpis: { cadastrados, instalados, cancelados, mediaDia, mediaSemana, ... },
+  serieTemporal: [{ data, cadastrados, instalados }],
+  composicao: { semAdicionais: {...}, comAdicionais: {...} },
+  rankings: { planosCadastrados: [...], planosInstalados: [...], adicionais: [...] },
+  cancelamentosPorMotivo: [{ motivo, total }]
+}
+```
+
+### Frontend
+- Nova página `src/pages/central/RelatorioVisaoGeralVendas.tsx`.
+- Reaproveita `MultiProvedorPicker` (extrair se ainda inline em Recebimentos/Reembolsos) e `DateRangePicker` (verificar se existe; senão criar simples com `Calendar` + dois popovers).
+- Usa `recharts` (já no projeto via `chart.tsx`).
+- Adiciona item no `CentralSidebar.tsx` na seção **Relatórios** (substituindo o "Em breve" placeholder): `Visão Geral de Vendas`.
+- Rota em `src/App.tsx`.
+
+### Notas
+- Datas usam `formatLocalDate` (regra do projeto) para evitar UTC shift.
+- Para períodos grandes a edge function pagina internamente (loop em `range()` de 1000 em 1000) para evitar o limite default do Supabase.
+- Sem export CSV nesta primeira versão (pode ser adicionado depois se desejado).
