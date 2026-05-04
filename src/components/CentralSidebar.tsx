@@ -56,6 +56,22 @@ export function CentralSidebar() {
         </SidebarGroup>
 
         <SidebarGroup>
+          <SidebarGroupLabel>Dados</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isActive('/central/contratos')}>
+                  <NavLink to="/central/contratos" className={cls}>
+                    <FileText className="h-4 w-4" />
+                    {!collapsed && <span>Contratos</span>}
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
           <SidebarGroupLabel>Relatórios</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
