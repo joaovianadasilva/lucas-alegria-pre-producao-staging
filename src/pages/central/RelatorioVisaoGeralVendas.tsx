@@ -58,6 +58,8 @@ interface Relatorio {
   rankings: {
     planos: { codigo: string; nome: string; cadastrados: number; instalados: number }[];
     adicionais: { codigo: string; nome: string; total: number }[];
+    origens: { chave: string; cadastrados: number; instalados: number }[];
+    representantes: { chave: string; cadastrados: number; instalados: number }[];
   };
   cancelamentosPorMotivo: { motivo: string; total: number }[];
 }
