@@ -158,6 +158,31 @@ serve(async (req) => {
         if (error) throw error;
         return json({ success: true, contratos: data || [], total: count || 0 });
       }
+      case 'exportContratos': {
+        const {
+          provedorIds, status, statusContrato, tipoVenda,
+          dataInicio, dataFim, busca,
+        } = params;
+        const MAX = 50000;
+        let q = supabase.from('contratos').select('*', { count: 'exact' });
+        if (provedorIds && provedorIds.length > 0) q = q.in('provedor_id', provedorIds);
+        if (status) q = q.eq('status', status);
+        if (statusContrato) q = q.eq('status_contrato', statusContrato);
+        if (tipoVenda) q = q.eq('tipo_venda', tipoVenda);
+        if (dataInicio) q = q.gte('created_at', dataInicio);
+        if (dataFim) q = q.lte('created_at', dataFim + 'T23:59:59');
+        if (busca) {
+          const s = `%${busca}%`;
+          q = q.or(`nome_completo.ilike.${s},cpf.ilike.${s},codigo_contrato.ilike.${s},codigo_cliente.ilike.${s},email.ilike.${s},celular.ilike.${s}`);
+        }
+        q = q.order('created_at', { ascending: false }).range(0, MAX - 1);
+        const { data, error, count } = await q;
+        if (error) throw error;
+        if ((count || 0) > MAX) {
+          return json({ error: `Exportação excede ${MAX} linhas (${count}). Refine os filtros.` }, 400);
+        }
+        return json({ success: true, contratos: data || [], total: count || 0 });
+      }
       default:
         return json({ error: 'Ação desconhecida' }, 400);
     }

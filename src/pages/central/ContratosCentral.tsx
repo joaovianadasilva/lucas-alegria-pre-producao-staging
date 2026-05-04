@@ -113,22 +113,36 @@ export default function ContratosCentral() {
     }
   };
 
-  const exportCSV = () => {
-    const rows = result?.contratos || [];
-    if (!rows.length) { toast.info('Nada para exportar'); return; }
-    const cols = ['provedor', 'codigo_contrato', 'codigo_cliente', 'nome_completo', 'cpf', 'celular', 'email', 'plano_nome', 'plano_valor', 'valor_total', 'status', 'status_contrato', 'tipo_venda', 'created_at', 'data_ativacao', 'data_cancelamento'];
-    const csv = [cols.join(',')].concat(
-      rows.map(r => cols.map(c => {
-        const v = c === 'provedor' ? (provedorMap.get(r.provedor_id) || '') : ((r as any)[c] ?? '');
-        const s = String(v).replace(/"/g, '""');
-        return /[",\n]/.test(s) ? `"${s}"` : s;
-      }).join(','))
-    ).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = `contratos_${new Date().toISOString().slice(0,10)}.csv`;
-    a.click(); URL.revokeObjectURL(url);
+  const exportCSV = async () => {
+    if (!filters) { toast.info('Aplique os filtros primeiro'); return; }
+    const tId = toast.loading('Gerando exportação...');
+    try {
+      const { data, error } = await supabase.functions.invoke('central-operacional', {
+        body: { action: 'exportContratos', ...filters },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      const rows: ContratoRow[] = data?.contratos || [];
+      if (!rows.length) { toast.dismiss(tId); toast.info('Nada para exportar'); return; }
+      const cols = ['provedor', 'codigo_contrato', 'codigo_cliente', 'nome_completo', 'cpf', 'celular', 'email', 'plano_nome', 'plano_valor', 'valor_total', 'status', 'status_contrato', 'tipo_venda', 'created_at', 'data_ativacao', 'data_cancelamento'];
+      const csv = [cols.join(',')].concat(
+        rows.map(r => cols.map(c => {
+          const v = c === 'provedor' ? (provedorMap.get(r.provedor_id) || '') : ((r as any)[c] ?? '');
+          const s = String(v).replace(/"/g, '""');
+          return /[",\n]/.test(s) ? `"${s}"` : s;
+        }).join(','))
+      ).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `contratos_${new Date().toISOString().slice(0,10)}.csv`;
+      a.click(); URL.revokeObjectURL(url);
+      toast.dismiss(tId);
+      toast.success(`${rows.length} contrato(s) exportado(s)`);
+    } catch (e: any) {
+      toast.dismiss(tId);
+      toast.error('Erro ao exportar: ' + e.message);
+    }
   };
 
   const total = result?.total || 0;

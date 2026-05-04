@@ -9,7 +9,9 @@
  * @returns Date object no timezone local
  */
 export const parseLocalDate = (isoDateString: string): Date => {
-  const [year, month, day] = isoDateString.split('-').map(Number);
+  // Aceita 'YYYY-MM-DD' ou timestamp ISO completo ('YYYY-MM-DDTHH:mm:ss...')
+  const datePart = isoDateString.includes('T') ? isoDateString.slice(0, 10) : isoDateString.slice(0, 10);
+  const [year, month, day] = datePart.split('-').map(Number);
   return new Date(year, month - 1, day); // month is 0-indexed in JavaScript
 };
 
