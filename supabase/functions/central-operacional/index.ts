@@ -475,6 +475,23 @@ serve(async (req) => {
         }
         const cancelReprogTempo = Array.from(crMap.values()).sort((a, b) => a.data.localeCompare(b.data));
 
+        // ===== Registrados por dia (created_at) =====
+        const registradosAgendamentos = await fetchAll(() => applyFilters(
+          supabase.from('agendamentos')
+            .select('id, provedor_id, created_at, status, confirmacao, tipo, origem, rede, representante_vendas, tecnico_responsavel_id, data_agendamento')
+            .gte('created_at', dataInicio + 'T00:00:00')
+            .lte('created_at', dataFim + 'T23:59:59')
+        ));
+        const regMap = new Map<string, number>();
+        for (const a of registradosAgendamentos) {
+          const d = (a.created_at || '').slice(0, 10);
+          if (!d) continue;
+          regMap.set(d, (regMap.get(d) || 0) + 1);
+        }
+        const registradosPorDia = Array.from(regMap.entries())
+          .map(([data, total]) => ({ data, total }))
+          .sort((a, b) => a.data.localeCompare(b.data));
+
         // ===== Ocupação por slot =====
         const slotMap = new Map<number, number>();
         for (const a of agendamentos) slotMap.set(a.slot_numero, (slotMap.get(a.slot_numero) || 0) + 1);
@@ -575,6 +592,7 @@ serve(async (req) => {
           agingPendencias,
           leadTime,
           pendentesPorTecnico,
+          registradosPorDia,
         });
       }
       default:
