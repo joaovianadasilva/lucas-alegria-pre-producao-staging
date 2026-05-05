@@ -27,6 +27,7 @@ import Recebimentos from "./pages/central/Recebimentos";
 import Reembolsos from "./pages/central/Reembolsos";
 import ContratosCentral from "./pages/central/ContratosCentral";
 import RelatorioVisaoGeralVendas from "./pages/central/RelatorioVisaoGeralVendas";
+import RelatorioVisaoGeralAgendamentos from "./pages/central/RelatorioVisaoGeralAgendamentos";
 
 const queryClient = new QueryClient();
 
@@ -94,6 +95,7 @@ const App = () => (
                 <Route path="operacional/reembolsos" element={<Reembolsos />} />
                 <Route path="contratos" element={<ContratosCentral />} />
                 <Route path="relatorios/visao-geral-vendas" element={<RelatorioVisaoGeralVendas />} />
+                <Route path="relatorios/visao-geral-agendamentos" element={<RelatorioVisaoGeralAgendamentos />} />
               </Route>
             </Route>
 

@@ -363,6 +363,220 @@ serve(async (req) => {
           cancelamentosPorMotivo,
         });
       }
+      case 'relatorioVisaoGeralAgendamentos': {
+        const {
+          provedorIds, dataInicio, dataFim,
+          status: fStatus, confirmacao: fConf, tecnicoIds, tipos: fTipos,
+          origens: fOrigens, redes: fRedes, representantes: fReps,
+        } = params as {
+          provedorIds?: string[]; dataInicio: string; dataFim: string;
+          status?: string[]; confirmacao?: string[]; tecnicoIds?: string[]; tipos?: string[];
+          origens?: string[]; redes?: string[]; representantes?: string[];
+        };
+        if (!dataInicio || !dataFim) return json({ error: 'dataInicio e dataFim obrigatórios' }, 400);
+
+        const fetchAll = async (build: () => any) => {
+          const out: any[] = [];
+          const page = 1000;
+          for (let from = 0; ; from += page) {
+            const { data, error } = await build().range(from, from + page - 1);
+            if (error) throw error;
+            out.push(...(data || []));
+            if (!data || data.length < page) break;
+          }
+          return out;
+        };
+
+        const applyFilters = (q: any) => {
+          if (provedorIds?.length) q = q.in('provedor_id', provedorIds);
+          if (fStatus?.length) q = q.in('status', fStatus);
+          if (fConf?.length) q = q.in('confirmacao', fConf);
+          if (fTipos?.length) q = q.in('tipo', fTipos);
+          if (tecnicoIds?.length) {
+            // Suportar valor "__none__" para "Sem técnico"
+            const hasNone = tecnicoIds.includes('__none__');
+            const ids = tecnicoIds.filter(t => t !== '__none__');
+            if (hasNone && ids.length === 0) q = q.is('tecnico_responsavel_id', null);
+            else if (!hasNone) q = q.in('tecnico_responsavel_id', ids);
+            // se ambos: não restringir por técnico (cobre tudo)
+          }
+          if (fOrigens?.length) q = q.in('origem', fOrigens);
+          if (fRedes?.length) q = q.in('rede', fRedes);
+          if (fReps?.length) q = q.in('representante_vendas', fReps);
+          return q;
+        };
+
+        const agendamentos = await fetchAll(() => applyFilters(
+          supabase.from('agendamentos')
+            .select('id, provedor_id, data_agendamento, slot_numero, status, confirmacao, tipo, origem, rede, representante_vendas, tecnico_responsavel_id, created_at')
+            .gte('data_agendamento', dataInicio)
+            .lte('data_agendamento', dataFim)
+        ));
+
+        // Reagendamentos no período (para gráfico de cancelamentos & reprogramações ao longo do tempo)
+        let reagFilter = supabase.from('historico_reagendamentos')
+          .select('id, provedor_id, agendamento_id, data_nova, created_at')
+          .gte('data_nova', dataInicio)
+          .lte('data_nova', dataFim);
+        if (provedorIds?.length) reagFilter = reagFilter.in('provedor_id', provedorIds);
+        const reagendamentos = await fetchAll(() => reagFilter);
+
+        // Lookup nomes de técnicos
+        const tecIds = Array.from(new Set(agendamentos.map(a => a.tecnico_responsavel_id).filter(Boolean)));
+        const profMap = new Map<string, string>();
+        if (tecIds.length > 0) {
+          const { data: profs } = await supabase.from('profiles').select('id, nome, sobrenome').in('id', tecIds);
+          (profs || []).forEach(p => profMap.set(p.id, `${p.nome || ''} ${p.sobrenome || ''}`.trim() || 'Sem nome'));
+        }
+        const tecNome = (id: string | null) => id ? (profMap.get(id) || 'Desconhecido') : 'Sem técnico';
+
+        const today = new Date().toISOString().slice(0, 10);
+        const in7 = (() => { const d = new Date(); d.setDate(d.getDate() + 7); return d.toISOString().slice(0, 10); })();
+
+        // ===== KPIs =====
+        const isReprog = new Set(reagendamentos.map(r => r.agendamento_id));
+        const kpis = {
+          hoje: agendamentos.filter(a => a.data_agendamento === today).length,
+          proximos7Dias: agendamentos.filter(a => a.data_agendamento >= today && a.data_agendamento <= in7).length,
+          pendentes: agendamentos.filter(a => a.status === 'pendente').length,
+          confirmados: agendamentos.filter(a => a.confirmacao === 'confirmado').length,
+          concluidos: agendamentos.filter(a => a.status === 'concluido').length,
+          cancelados: agendamentos.filter(a => a.status === 'cancelado').length,
+          reprogramados: isReprog.size,
+          semTecnico: agendamentos.filter(a => !a.tecnico_responsavel_id).length,
+        };
+
+        // ===== Série temporal (volume por dia) =====
+        const serieMap = new Map<string, any>();
+        const ensureS = (d: string) => {
+          if (!serieMap.has(d)) serieMap.set(d, { data: d, total: 0, pendentes: 0, confirmados: 0, concluidos: 0, cancelados: 0 });
+          return serieMap.get(d);
+        };
+        for (const a of agendamentos) {
+          const row = ensureS(a.data_agendamento);
+          row.total++;
+          if (a.status === 'pendente') row.pendentes++;
+          if (a.confirmacao === 'confirmado') row.confirmados++;
+          if (a.status === 'concluido') row.concluidos++;
+          if (a.status === 'cancelado') row.cancelados++;
+        }
+        const serieTemporal = Array.from(serieMap.values()).sort((a, b) => a.data.localeCompare(b.data));
+
+        // Cancelamentos & reprogramações ao longo do tempo
+        const crMap = new Map<string, { data: string; cancelados: number; reprogramados: number }>();
+        const ensureCR = (d: string) => {
+          if (!crMap.has(d)) crMap.set(d, { data: d, cancelados: 0, reprogramados: 0 });
+          return crMap.get(d)!;
+        };
+        for (const a of agendamentos) if (a.status === 'cancelado') ensureCR(a.data_agendamento).cancelados++;
+        for (const r of reagendamentos) {
+          const d = (r.created_at || r.data_nova || '').slice(0, 10);
+          if (d) ensureCR(d).reprogramados++;
+        }
+        const cancelReprogTempo = Array.from(crMap.values()).sort((a, b) => a.data.localeCompare(b.data));
+
+        // ===== Ocupação por slot =====
+        const slotMap = new Map<number, number>();
+        for (const a of agendamentos) slotMap.set(a.slot_numero, (slotMap.get(a.slot_numero) || 0) + 1);
+        const ocupacaoPorSlot = Array.from(slotMap.entries())
+          .map(([slot, total]) => ({ slot, total }))
+          .sort((a, b) => a.slot - b.slot);
+
+        // ===== Por técnico =====
+        const tecMap = new Map<string, { tecnico: string; total: number; pendentes: number; concluidos: number }>();
+        const ensureT = (n: string) => {
+          if (!tecMap.has(n)) tecMap.set(n, { tecnico: n, total: 0, pendentes: 0, concluidos: 0 });
+          return tecMap.get(n)!;
+        };
+        for (const a of agendamentos) {
+          const t = ensureT(tecNome(a.tecnico_responsavel_id));
+          t.total++;
+          if (a.status === 'pendente') t.pendentes++;
+          if (a.status === 'concluido') t.concluidos++;
+        }
+        const porTecnico = Array.from(tecMap.values()).sort((a, b) => b.total - a.total);
+
+        // ===== Distribuições =====
+        const tally1 = (field: string) => {
+          const m = new Map<string, number>();
+          for (const a of agendamentos) {
+            const k = ((a as any)[field] || '').toString().trim() || 'Não informado';
+            m.set(k, (m.get(k) || 0) + 1);
+          }
+          return Array.from(m.entries()).map(([chave, total]) => ({ chave, total })).sort((a, b) => b.total - a.total);
+        };
+        const distribuicaoStatus = tally1('status').map(x => ({ status: x.chave, total: x.total }));
+        const distribuicaoConfirmacao = tally1('confirmacao').map(x => ({ confirmacao: x.chave, total: x.total }));
+        const porOrigem = tally1('origem');
+        const porRepresentante = tally1('representante_vendas');
+        const porRede = tally1('rede');
+
+        // ===== Pendências =====
+        const pendentes = agendamentos.filter(a => a.status === 'pendente');
+        const todayDate = new Date(today + 'T00:00:00');
+        const bucketAging = (dias: number) => {
+          if (dias <= 1) return '0-1d';
+          if (dias <= 3) return '2-3d';
+          if (dias <= 7) return '4-7d';
+          if (dias <= 14) return '8-14d';
+          return '15+d';
+        };
+        const agingMap = new Map<string, number>();
+        for (const a of pendentes) {
+          const d = new Date(a.data_agendamento + 'T00:00:00');
+          const diff = Math.max(0, Math.floor((todayDate.getTime() - d.getTime()) / 86400000));
+          // Apenas pendências vencidas/dia
+          const f = bucketAging(diff);
+          agingMap.set(f, (agingMap.get(f) || 0) + 1);
+        }
+        const ordemAging = ['0-1d', '2-3d', '4-7d', '8-14d', '15+d'];
+        const agingPendencias = ordemAging.map(faixa => ({ faixa, total: agingMap.get(faixa) || 0 }));
+
+        const bucketLead = (dias: number) => {
+          if (dias <= 0) return 'mesmo dia';
+          if (dias <= 3) return '1-3d';
+          if (dias <= 7) return '4-7d';
+          if (dias <= 14) return '8-14d';
+          return '15+d';
+        };
+        const leadMap = new Map<string, number>();
+        for (const a of agendamentos) {
+          if (!a.created_at) continue;
+          const c = new Date(a.created_at);
+          const d = new Date(a.data_agendamento + 'T00:00:00');
+          const diff = Math.max(0, Math.floor((d.getTime() - c.getTime()) / 86400000));
+          const f = bucketLead(diff);
+          leadMap.set(f, (leadMap.get(f) || 0) + 1);
+        }
+        const ordemLead = ['mesmo dia', '1-3d', '4-7d', '8-14d', '15+d'];
+        const leadTime = ordemLead.map(faixa => ({ faixa, total: leadMap.get(faixa) || 0 }));
+
+        const pendTecMap = new Map<string, number>();
+        for (const a of pendentes) {
+          const n = tecNome(a.tecnico_responsavel_id);
+          pendTecMap.set(n, (pendTecMap.get(n) || 0) + 1);
+        }
+        const pendentesPorTecnico = Array.from(pendTecMap.entries())
+          .map(([tecnico, total]) => ({ tecnico, total }))
+          .sort((a, b) => b.total - a.total);
+
+        return json({
+          success: true,
+          kpis,
+          serieTemporal,
+          ocupacaoPorSlot,
+          porTecnico,
+          distribuicaoStatus,
+          distribuicaoConfirmacao,
+          cancelReprogTempo,
+          porOrigem,
+          porRepresentante,
+          porRede,
+          agingPendencias,
+          leadTime,
+          pendentesPorTecnico,
+        });
+      }
       default:
         return json({ error: 'Ação desconhecida' }, 400);
     }
