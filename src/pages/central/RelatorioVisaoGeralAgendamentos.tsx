@@ -64,6 +64,7 @@ interface Relatorio {
   agingPendencias: { faixa: string; total: number }[];
   leadTime: { faixa: string; total: number }[];
   pendentesPorTecnico: { tecnico: string; total: number }[];
+  registradosPorDia: { data: string; total: number }[];
 }
 
 const STATUS_OPTS = ['pendente', 'confirmado', 'concluido', 'cancelado', 'reagendado'];
