@@ -458,10 +458,26 @@ function Kpi({ titulo, valor, accent, info }: { titulo: string; valor: number; a
   );
 }
 
-function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
+function ChartCard({ title, info, children }: { title: string; info?: string; children: React.ReactNode }) {
   return (
     <Card>
-      <CardHeader><CardTitle className="text-base">{title}</CardTitle></CardHeader>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center justify-between gap-2">
+          <span>{title}</span>
+          {info && (
+            <TooltipProvider delayDuration={150}>
+              <UITooltip>
+                <TooltipTrigger asChild>
+                  <button type="button" className="text-muted-foreground hover:text-foreground transition-colors" aria-label={`Sobre ${title}`}>
+                    <Info className="h-3.5 w-3.5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs text-xs">{info}</TooltipContent>
+              </UITooltip>
+            </TooltipProvider>
+          )}
+        </CardTitle>
+      </CardHeader>
       <CardContent style={{ height: 280 }}>{children}</CardContent>
     </Card>
   );
