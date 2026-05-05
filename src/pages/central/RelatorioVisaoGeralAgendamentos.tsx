@@ -8,7 +8,8 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Filter, CalendarRange } from 'lucide-react';
+import { Filter, CalendarRange, Info } from 'lucide-react';
+import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { formatLocalDate, toISODateString } from '@/lib/dateUtils';
 import {
@@ -281,14 +282,14 @@ export default function RelatorioVisaoGeralAgendamentos() {
         <>
           {/* Linha 1 - KPIs */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Kpi titulo="Hoje" valor={k!.hoje} accent="text-blue-600" />
-            <Kpi titulo="Próximos 7 dias" valor={k!.proximos7Dias} accent="text-indigo-600" />
-            <Kpi titulo="Pendentes" valor={k!.pendentes} accent="text-amber-600" />
-            <Kpi titulo="Confirmados" valor={k!.confirmados} accent="text-emerald-600" />
-            <Kpi titulo="Concluídos" valor={k!.concluidos} accent="text-green-700" />
-            <Kpi titulo="Cancelados" valor={k!.cancelados} accent="text-red-600" />
-            <Kpi titulo="Reprogramados" valor={k!.reprogramados} accent="text-orange-600" />
-            <Kpi titulo="Sem técnico" valor={k!.semTecnico} accent="text-slate-600" />
+            <Kpi titulo="Hoje" valor={k!.hoje} accent="text-blue-600" info="Total de agendamentos cuja data agendada é hoje, dentro dos filtros aplicados." />
+            <Kpi titulo="Próximos 7 dias" valor={k!.proximos7Dias} accent="text-indigo-600" info="Agendamentos com data entre hoje e os próximos 7 dias (independente do período filtrado)." />
+            <Kpi titulo="Pendentes" valor={k!.pendentes} accent="text-amber-600" info="Agendamentos com status 'pendente' no período filtrado — ainda não concluídos nem cancelados." />
+            <Kpi titulo="Confirmados" valor={k!.confirmados} accent="text-emerald-600" info="Agendamentos cuja confirmação com o cliente está marcada como 'confirmado' no período." />
+            <Kpi titulo="Concluídos" valor={k!.concluidos} accent="text-green-700" info="Agendamentos com status 'concluido' (instalação/serviço realizado) no período." />
+            <Kpi titulo="Cancelados" valor={k!.cancelados} accent="text-red-600" info="Agendamentos com status 'cancelado' no período filtrado." />
+            <Kpi titulo="Reprogramados" valor={k!.reprogramados} accent="text-orange-600" info="Quantidade de agendamentos distintos que tiveram pelo menos uma reprogramação registrada no período." />
+            <Kpi titulo="Sem técnico" valor={k!.semTecnico} accent="text-slate-600" info="Agendamentos no período que ainda não possuem técnico responsável atribuído." />
           </div>
 
           {/* Linha 2 - Carga operacional */}
@@ -432,11 +433,25 @@ export default function RelatorioVisaoGeralAgendamentos() {
   );
 }
 
-function Kpi({ titulo, valor, accent }: { titulo: string; valor: number; accent?: string }) {
+function Kpi({ titulo, valor, accent, info }: { titulo: string; valor: number; accent?: string; info?: string }) {
   return (
     <Card>
       <CardContent className="p-4">
-        <div className="text-xs uppercase tracking-wide text-muted-foreground">{titulo}</div>
+        <div className="flex items-center justify-between gap-2">
+          <div className="text-xs uppercase tracking-wide text-muted-foreground">{titulo}</div>
+          {info && (
+            <TooltipProvider delayDuration={150}>
+              <UITooltip>
+                <TooltipTrigger asChild>
+                  <button type="button" className="text-muted-foreground hover:text-foreground transition-colors" aria-label={`Sobre ${titulo}`}>
+                    <Info className="h-3.5 w-3.5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs text-xs">{info}</TooltipContent>
+              </UITooltip>
+            </TooltipProvider>
+          )}
+        </div>
         <div className={`text-3xl font-bold mt-1 ${accent || ''}`}>{(valor || 0).toLocaleString('pt-BR')}</div>
       </CardContent>
     </Card>
