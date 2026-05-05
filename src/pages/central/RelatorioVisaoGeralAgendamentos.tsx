@@ -294,7 +294,7 @@ export default function RelatorioVisaoGeralAgendamentos() {
 
           {/* Linha 2 - Carga operacional */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <ChartCard title="Volume por dia">
+            <ChartCard title="Volume por dia" info="Quantidade total de agendamentos por data agendada, dentro do período e filtros aplicados.">
               {relatorio.serieTemporal.length === 0 ? <Empty/> : (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={relatorio.serieTemporal}>
@@ -307,7 +307,7 @@ export default function RelatorioVisaoGeralAgendamentos() {
                 </ResponsiveContainer>
               )}
             </ChartCard>
-            <ChartCard title="Ocupação por slot">
+            <ChartCard title="Ocupação por slot" info="Quantos agendamentos foram alocados em cada número de vaga (slot) no período. Ajuda a identificar horários mais carregados.">
               {relatorio.ocupacaoPorSlot.length === 0 ? <Empty/> : (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={relatorio.ocupacaoPorSlot}>
@@ -320,7 +320,7 @@ export default function RelatorioVisaoGeralAgendamentos() {
                 </ResponsiveContainer>
               )}
             </ChartCard>
-            <ChartCard title="Agendamentos por técnico">
+            <ChartCard title="Agendamentos por técnico" info="Distribuição de agendamentos atribuídos a cada técnico no período, separando os pendentes dos concluídos. 'Sem técnico' agrupa os agendamentos sem responsável.">
               {relatorio.porTecnico.length === 0 ? <Empty/> : (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={relatorio.porTecnico} layout="vertical" margin={{ left: 80 }}>
@@ -339,7 +339,7 @@ export default function RelatorioVisaoGeralAgendamentos() {
 
           {/* Linha 3 - Saúde da agenda */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <ChartCard title="Distribuição por status">
+            <ChartCard title="Distribuição por status" info="Total de agendamentos agrupados pelo status (pendente, confirmado, concluído, cancelado, reagendado).">
               {relatorio.distribuicaoStatus.length === 0 ? <Empty/> : (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={relatorio.distribuicaoStatus}>
@@ -352,7 +352,7 @@ export default function RelatorioVisaoGeralAgendamentos() {
                 </ResponsiveContainer>
               )}
             </ChartCard>
-            <ChartCard title="Distribuição por confirmação">
+            <ChartCard title="Distribuição por confirmação" info="Total de agendamentos agrupados pelo estado de confirmação com o cliente (pré-agendado, confirmado, não confirmado).">
               {relatorio.distribuicaoConfirmacao.length === 0 ? <Empty/> : (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={relatorio.distribuicaoConfirmacao}>
@@ -365,7 +365,7 @@ export default function RelatorioVisaoGeralAgendamentos() {
                 </ResponsiveContainer>
               )}
             </ChartCard>
-            <ChartCard title="Cancelamentos e reprogramações ao longo do tempo">
+            <ChartCard title="Cancelamentos e reprogramações ao longo do tempo" info="Série diária de cancelamentos (pela data agendada) e reprogramações (pela data em que foram registradas) no período.">
               {relatorio.cancelReprogTempo.length === 0 ? <Empty/> : (
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={relatorio.cancelReprogTempo}>
@@ -384,20 +384,20 @@ export default function RelatorioVisaoGeralAgendamentos() {
 
           {/* Linha 4 - Origem e qualidade */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <ChartCard title="Agendamentos por origem">
+            <ChartCard title="Agendamentos por origem" info="Quantidade de agendamentos por canal de origem (ex.: site, indicação, parceiro). Valores em branco aparecem como 'Não informado'.">
               <BarHorizontal data={relatorio.porOrigem} color={COLORS[0]} />
             </ChartCard>
-            <ChartCard title="Agendamentos por representante">
+            <ChartCard title="Agendamentos por representante" info="Quantidade de agendamentos atribuídos a cada representante de vendas no período.">
               <BarHorizontal data={relatorio.porRepresentante} color={COLORS[1]} />
             </ChartCard>
-            <ChartCard title="Agendamentos por rede">
+            <ChartCard title="Agendamentos por rede" info="Quantidade de agendamentos por zona/lado da rede (mapeado a partir do campo 'rede' do agendamento).">
               <BarHorizontal data={relatorio.porRede} color={COLORS[4]} />
             </ChartCard>
           </div>
 
           {/* Linha 5 - Pendências */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <ChartCard title="Aging de pendências">
+            <ChartCard title="Aging de pendências" info="Distribuição dos agendamentos pendentes pelo tempo (em dias) desde a data agendada até hoje. Quanto mais à direita, mais antiga é a pendência.">
               {relatorio.agingPendencias.every(a => a.total === 0) ? <Empty/> : (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={relatorio.agingPendencias}>
