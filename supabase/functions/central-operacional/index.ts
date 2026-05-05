@@ -592,6 +592,7 @@ serve(async (req) => {
           agingPendencias,
           leadTime,
           pendentesPorTecnico,
+          registradosPorDia,
         });
       }
       default:
