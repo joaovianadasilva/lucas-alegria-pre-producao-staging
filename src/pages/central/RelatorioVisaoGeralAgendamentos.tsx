@@ -410,7 +410,7 @@ export default function RelatorioVisaoGeralAgendamentos() {
                 </ResponsiveContainer>
               )}
             </ChartCard>
-            <ChartCard title="Tempo entre criação e data agendada">
+            <ChartCard title="Tempo entre criação e data agendada" info="Distribuição do lead time: quantos dias se passam entre a criação do agendamento e a data marcada. Indica antecedência típica.">
               {relatorio.leadTime.every(a => a.total === 0) ? <Empty/> : (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={relatorio.leadTime}>
@@ -423,7 +423,7 @@ export default function RelatorioVisaoGeralAgendamentos() {
                 </ResponsiveContainer>
               )}
             </ChartCard>
-            <ChartCard title="Pendentes por técnico (inclui sem técnico)">
+            <ChartCard title="Pendentes por técnico (inclui sem técnico)" info="Quantidade de agendamentos pendentes por técnico responsável. 'Sem técnico' agrupa pendências ainda não atribuídas.">
               <BarHorizontal data={relatorio.pendentesPorTecnico.map(p => ({ chave: p.tecnico, total: p.total }))} color={COLORS[3]} />
             </ChartCard>
           </div>
