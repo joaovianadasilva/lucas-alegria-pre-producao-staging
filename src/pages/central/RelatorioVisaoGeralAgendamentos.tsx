@@ -293,6 +293,21 @@ export default function RelatorioVisaoGeralAgendamentos() {
             <Kpi titulo="Sem técnico" valor={k!.semTecnico} accent="text-slate-600" info="Agendamentos no período que ainda não possuem técnico responsável atribuído." />
           </div>
 
+          {/* Registrados por dia (created_at) */}
+          <ChartCard title="Agendamentos registrados por dia" info="Quantidade de agendamentos criados (data de cadastro / created_at) em cada dia do período filtrado.">
+            {(!relatorio.registradosPorDia || relatorio.registradosPorDia.length === 0) ? <Empty/> : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={relatorio.registradosPorDia}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="data" tickFormatter={d => formatLocalDate(d, { day: '2-digit', month: '2-digit' })} />
+                  <YAxis allowDecimals={false} />
+                  <Tooltip labelFormatter={d => formatLocalDate(String(d))} />
+                  <Bar dataKey="total" name="Registrados" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </ChartCard>
+
           {/* Linha 2 - Carga operacional */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <ChartCard title="Volume por dia" info="Quantidade total de agendamentos por data agendada, dentro do período e filtros aplicados.">
