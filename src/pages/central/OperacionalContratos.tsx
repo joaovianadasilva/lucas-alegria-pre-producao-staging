@@ -186,62 +186,75 @@ export default function OperacionalContratos({ tipo }: Props) {
         <CardHeader>
           <CardTitle className="text-base">Filtros</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-wrap items-end gap-3">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="gap-2">
-                <Filter className="h-4 w-4" />
-                Provedores {provedorIds.length > 0 && <Badge variant="secondary">{provedorIds.length}</Badge>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-72">
-              <div className="space-y-2 max-h-72 overflow-auto">
-                {(provedores || []).map(p => (
-                  <label key={p.id} className="flex items-center gap-2 cursor-pointer text-sm">
-                    <Checkbox checked={provedorIds.includes(p.id)} onCheckedChange={() => toggleProv(p.id)} />
-                    {p.nome}
-                  </label>
-                ))}
-                {provedorIds.length > 0 && (
-                  <Button variant="ghost" size="sm" onClick={() => setProvedorIds([])}>Limpar</Button>
-                )}
-              </div>
-            </PopoverContent>
-          </Popover>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="gap-2">
-                <CalendarIcon className="h-4 w-4" />
-                Filtros de data {activeDateFilterCount > 0 && <Badge variant="secondary">{activeDateFilterCount}</Badge>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[420px]" align="start">
-              <div className="space-y-3 max-h-[420px] overflow-auto pr-1">
-                {DATE_FILTER_FIELDS.map(({ key, label }) => {
-                  const r = dateRanges[key as string] || {};
-                  return (
-                    <div key={key as string} className="space-y-1">
-                      <Label className="text-xs">{label}</Label>
-                      <div className="flex items-center gap-2">
-                        <Input type="date" value={r.from || ''} onChange={e => setRange(key as string, 'from', e.target.value)} className="h-8" />
-                        <span className="text-xs text-muted-foreground">até</span>
-                        <Input type="date" value={r.to || ''} onChange={e => setRange(key as string, 'to', e.target.value)} className="h-8" />
-                      </div>
-                    </div>
-                  );
-                })}
-                {activeDateFilterCount > 0 && (
-                  <Button variant="ghost" size="sm" onClick={() => setDateRanges({})}>Limpar filtros de data</Button>
-                )}
-              </div>
-            </PopoverContent>
-          </Popover>
-          <div className="flex-1 min-w-[240px]">
-            <Label>Buscar</Label>
-            <Input placeholder="Nome, CPF, código contrato/cliente" value={busca} onChange={e => setBusca(e.target.value)} />
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap items-end gap-3">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <Filter className="h-4 w-4" />
+                  Provedores {provedorIds.length > 0 && <Badge variant="secondary">{provedorIds.length}</Badge>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-72">
+                <div className="space-y-2 max-h-72 overflow-auto">
+                  {(provedores || []).map(p => (
+                    <label key={p.id} className="flex items-center gap-2 cursor-pointer text-sm">
+                      <Checkbox checked={provedorIds.includes(p.id)} onCheckedChange={() => toggleProv(p.id)} />
+                      {p.nome}
+                    </label>
+                  ))}
+                  {provedorIds.length > 0 && (
+                    <Button variant="ghost" size="sm" onClick={() => setProvedorIds([])}>Limpar</Button>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
+            <div className="flex-1 min-w-[240px]">
+              <Label>Buscar</Label>
+              <Input placeholder="Nome, CPF, código contrato/cliente" value={busca} onChange={e => setBusca(e.target.value)} />
+            </div>
+          </div>
+
+          <div>
+            <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Filtros de data
+            </div>
+            <DateConditionBuilder
+              value={conditions}
+              onChange={setConditions}
+              fields={DATE_FILTER_FIELDS as any}
+            />
           </div>
         </CardContent>
       </Card>
+
+      {activeConditions.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs text-muted-foreground">Filtros ativos:</span>
+          {activeConditions.map((c, i) => (
+            <div key={c.id} className="flex items-center gap-1">
+              {i > 0 && (
+                <span className={`text-[10px] font-bold uppercase ${c.connector === 'AND' ? 'text-primary' : 'text-amber-600 dark:text-amber-400'}`}>
+                  {c.connector === 'AND' ? 'E' : 'OU'}
+                </span>
+              )}
+              <Badge variant="secondary" className="gap-1.5 pr-1">
+                {summarizeCondition(c, DATE_FILTER_FIELDS as any)}
+                <button
+                  type="button"
+                  onClick={() => setConditions(prev => prev.filter(x => x.id !== c.id))}
+                  className="rounded-sm p-0.5 hover:bg-background/60"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            </div>
+          ))}
+          <Button variant="ghost" size="sm" className="h-6 text-xs text-muted-foreground" onClick={() => setConditions([])}>
+            Limpar
+          </Button>
+        </div>
+      )}
 
       <Tabs value={aba} onValueChange={v => setAba(v as any)}>
         <TabsList>
