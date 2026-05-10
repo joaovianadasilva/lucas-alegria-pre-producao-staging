@@ -431,6 +431,36 @@ export default function OperacionalContratos({ tipo }: Props) {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={bulkDialog.open} onOpenChange={(o) => setBulkDialog(s => ({ ...s, open: o }))}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar {tipo === 'recebimento' ? 'recebimentos' : 'reembolsos'} em massa</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="rounded-md bg-muted/50 p-3 text-sm">
+              <div><span className="font-medium">{selectedContratos.length}</span> contrato(s) · Total: <span className="font-medium">{fmtBRL(selectedTotal)}</span></div>
+              <div className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                {selectedContratos.slice(0, 3).map(c => c.nome_completo).join(', ')}
+                {selectedContratos.length > 3 && ` e mais ${selectedContratos.length - 3}`}
+              </div>
+            </div>
+            <div>
+              <Label>{dataDial}</Label>
+              <Input type="date" value={bulkDialog.data} onChange={e => setBulkDialog(s => ({ ...s, data: e.target.value }))} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkDialog(s => ({ ...s, open: false }))}>Cancelar</Button>
+            <Button
+              disabled={confirmarLote.isPending || selectedContratos.length === 0}
+              onClick={() => confirmarLote.mutate({ contratoIds: selectedContratos.map(c => c.id), data: bulkDialog.data })}
+            >
+              {confirmarLote.isPending ? 'Confirmando...' : `Confirmar ${selectedContratos.length} contrato(s)`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <ContractDetailsDialog
         open={detailsOpen}
         onOpenChange={setDetailsOpen}
