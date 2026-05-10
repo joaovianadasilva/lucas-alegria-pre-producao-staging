@@ -290,9 +290,6 @@ export function ContractDetailsDialog({
                       <p className="text-sm bg-muted/30 rounded-md p-2">{contract.motivo_cancelamento}</p>
                     </div>
                   )}
-                  <InfoRow label="Pgto. 1ª mensalidade" value={formatDate(contract.data_pgto_primeira_mensalidade ?? null)} />
-                  <InfoRow label="Pgto. 2ª mensalidade" value={formatDate(contract.data_pgto_segunda_mensalidade ?? null)} />
-                  <InfoRow label="Pgto. 3ª mensalidade" value={formatDate(contract.data_pgto_terceira_mensalidade ?? null)} />
                   <InfoRow
                     label="Recebimento"
                     value={
