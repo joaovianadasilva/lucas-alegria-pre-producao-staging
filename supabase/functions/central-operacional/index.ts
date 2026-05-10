@@ -250,6 +250,60 @@ serve(async (req) => {
         if (error) throw error;
         return json({ success: true, provedores: data });
       }
+      case 'listarRegras': {
+        let q = supabase.from('regras_operacionais_provedor')
+          .select('id, nome, tipo, provedor_id, provedor_ids, aplica_todos, ativo, regra, prioridade, created_at, updated_at')
+          .order('tipo').order('prioridade', { ascending: false }).order('nome');
+        if (params.tipo) q = q.eq('tipo', params.tipo);
+        const { data, error } = await q;
+        if (error) throw error;
+        return json({ success: true, regras: data || [] });
+      }
+      case 'criarRegra': {
+        const { nome, tipo, provedor_ids = [], aplica_todos = false, regra, ativo = true, prioridade = 0 } = params;
+        if (!nome || !tipo || !regra) return json({ error: 'nome, tipo e regra são obrigatórios' }, 400);
+        if (tipo !== 'recebimento' && tipo !== 'reembolso') return json({ error: 'tipo inválido' }, 400);
+        if (!aplica_todos && (!Array.isArray(provedor_ids) || provedor_ids.length === 0)) {
+          return json({ error: 'Selecione ao menos um provedor ou marque "aplica a todos"' }, 400);
+        }
+        const { data, error } = await supabase.from('regras_operacionais_provedor').insert({
+          nome, tipo, provedor_ids, aplica_todos, regra, ativo, prioridade,
+          provedor_id: null,
+        }).select().single();
+        if (error) throw error;
+        return json({ success: true, regra: data });
+      }
+      case 'atualizarRegra': {
+        const { id, ...updates } = params;
+        if (!id) return json({ error: 'id obrigatório' }, 400);
+        const allowed = ['nome', 'tipo', 'provedor_ids', 'aplica_todos', 'regra', 'ativo', 'prioridade'];
+        const upd: any = {};
+        for (const k of allowed) if (k in updates) upd[k] = updates[k];
+        if (upd.tipo && upd.tipo !== 'recebimento' && upd.tipo !== 'reembolso') return json({ error: 'tipo inválido' }, 400);
+        const { data, error } = await supabase.from('regras_operacionais_provedor').update(upd).eq('id', id).select().single();
+        if (error) throw error;
+        return json({ success: true, regra: data });
+      }
+      case 'excluirRegra': {
+        if (!params.id) return json({ error: 'id obrigatório' }, 400);
+        const { error } = await supabase.from('regras_operacionais_provedor').delete().eq('id', params.id);
+        if (error) throw error;
+        return json({ success: true });
+      }
+      case 'testarRegra': {
+        const { regra, contratoId, codigoContrato } = params;
+        if (!regra) return json({ error: 'regra obrigatória' }, 400);
+        let q = supabase.from('contratos').select('*');
+        if (contratoId) q = q.eq('id', contratoId);
+        else if (codigoContrato) q = q.eq('codigo_contrato', codigoContrato);
+        else return json({ error: 'Informe contratoId ou codigoContrato' }, 400);
+        const { data: contrato, error } = await q.maybeSingle();
+        if (error) throw error;
+        if (!contrato) return json({ error: 'Contrato não encontrado' }, 404);
+        const tree = adaptRegraLegacy(regra, 'recebimento') as Node;
+        const { result, trace } = evalNodeTrace(contrato, tree);
+        return json({ success: true, resultado: result, trace, contrato: { id: contrato.id, codigo_contrato: contrato.codigo_contrato, nome_completo: contrato.nome_completo, status_contrato: contrato.status_contrato, data_ativacao: contrato.data_ativacao, data_cancelamento: contrato.data_cancelamento, motivo_cancelamento: contrato.motivo_cancelamento } });
+      }
       case 'listContratos': {
         const {
           provedorIds, status, statusContrato, tipoVenda,
