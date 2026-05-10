@@ -1090,28 +1090,40 @@ export type Database = {
       }
       regras_operacionais_provedor: {
         Row: {
+          aplica_todos: boolean
           ativo: boolean
           created_at: string
           id: string
-          provedor_id: string
+          nome: string
+          prioridade: number
+          provedor_id: string | null
+          provedor_ids: string[]
           regra: Json
           tipo: string
           updated_at: string
         }
         Insert: {
+          aplica_todos?: boolean
           ativo?: boolean
           created_at?: string
           id?: string
-          provedor_id: string
+          nome?: string
+          prioridade?: number
+          provedor_id?: string | null
+          provedor_ids?: string[]
           regra?: Json
           tipo: string
           updated_at?: string
         }
         Update: {
+          aplica_todos?: boolean
           ativo?: boolean
           created_at?: string
           id?: string
-          provedor_id?: string
+          nome?: string
+          prioridade?: number
+          provedor_id?: string | null
+          provedor_ids?: string[]
           regra?: Json
           tipo?: string
           updated_at?: string

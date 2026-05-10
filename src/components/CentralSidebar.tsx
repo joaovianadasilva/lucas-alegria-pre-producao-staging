@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { Wallet, Undo2, BarChart3, ArrowLeft, ShieldCheck, FileText, FileBarChart } from 'lucide-react';
+import { Wallet, Undo2, BarChart3, ArrowLeft, ShieldCheck, FileText, FileBarChart, Settings2 } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -88,6 +88,22 @@ export function CentralSidebar() {
                   <NavLink to="/central/relatorios/visao-geral-agendamentos" className={cls}>
                     <FileBarChart className="h-4 w-4" />
                     {!collapsed && <span>Visão Geral de Agendamentos</span>}
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Configurações</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isActive('/central/regras')}>
+                  <NavLink to="/central/regras" className={cls}>
+                    <Settings2 className="h-4 w-4" />
+                    {!collapsed && <span>Regras Operacionais</span>}
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
