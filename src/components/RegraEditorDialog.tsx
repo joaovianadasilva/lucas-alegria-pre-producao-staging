@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -71,22 +71,21 @@ export default function RegraEditorDialog({ open, onOpenChange, tipo, initial, p
       setProvedorIds(initial.provedor_ids || (initial.provedor_id ? [initial.provedor_id] : []));
       setTree(migrate(initial.regra, tipo));
     } else {
-      setNome(''); setAtivo(true); setAplicaTodos(false); setProvedorIds([]); setTree(emptyTree());
+      setNome(''); setAtivo(true); setAplicaTodos(false); setProvedorIds([]);
+      setTree({ op: 'AND', children: [{ field: 'status_contrato', operator: 'eq', value: '' }] });
     }
     setTestInput(''); setTestResult(null);
   }, [open, initial, tipo]);
 
   const updateNode = (path: number[], updater: (n: Node) => Node) => {
-    const clone = JSON.parse(JSON.stringify(tree)) as Group;
-    let parent: any = { children: [clone] };
-    let idx = 0;
-    const fullPath = [0, ...path];
-    for (let i = 0; i < fullPath.length - 1; i++) {
-      parent = parent.children[fullPath[i]];
-      idx = fullPath[i + 1];
-    }
-    parent.children[idx] = updater(parent.children[idx]);
-    setTree(clone);
+    const recur = (node: Node, depth: number): Node => {
+      if (depth === path.length) return updater(node);
+      if (!isGroup(node)) return node;
+      const idx = path[depth];
+      const newChildren = node.children.map((c, i) => i === idx ? recur(c, depth + 1) : c);
+      return { ...node, children: newChildren };
+    };
+    setTree(recur(tree, 0) as Group);
   };
 
   const addCondition = (path: number[]) => {
@@ -160,6 +159,7 @@ export default function RegraEditorDialog({ open, onOpenChange, tipo, initial, p
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{initial ? 'Editar regra' : 'Nova regra'} — {tipo === 'recebimento' ? 'Recebimento' : 'Reembolso'}</DialogTitle>
+          <DialogDescription>Combine condições com E/OU. A regra é satisfeita quando a expressão for verdadeira para o contrato.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
