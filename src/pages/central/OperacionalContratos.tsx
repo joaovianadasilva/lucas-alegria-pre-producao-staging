@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
-import { Filter, CheckCircle2, Eye, Download } from 'lucide-react';
+import { Filter, CheckCircle2, Eye, Download, Calendar as CalendarIcon } from 'lucide-react';
 import { ContractDetailsDialog, ContratoCompleto } from '@/components/ContractDetailsDialog';
 import { formatLocalDate } from '@/lib/dateUtils';
 
@@ -24,11 +24,25 @@ interface Provedor { id: string; nome: string }
 interface Contrato {
   id: string; provedor_id: string; codigo_contrato?: string; codigo_cliente?: string;
   nome_completo: string; cpf?: string; plano_nome: string; plano_valor: number;
+  created_at?: string;
   data_ativacao?: string; data_cancelamento?: string; status_contrato?: string;
   data_pgto_primeira_mensalidade?: string; data_pgto_segunda_mensalidade?: string; data_pgto_terceira_mensalidade?: string;
   data_recebimento?: string; data_reembolso?: string;
   reembolsavel?: boolean;
 }
+
+const DATE_FILTER_FIELDS: { key: keyof Contrato; label: string }[] = [
+  { key: 'created_at', label: 'Data de criação' },
+  { key: 'data_ativacao', label: 'Data de ativação' },
+  { key: 'data_cancelamento', label: 'Data de cancelamento' },
+  { key: 'data_recebimento', label: 'Data de recebimento' },
+  { key: 'data_reembolso', label: 'Data de reembolso' },
+  { key: 'data_pgto_primeira_mensalidade', label: 'Pgto. 1ª mensalidade' },
+  { key: 'data_pgto_segunda_mensalidade', label: 'Pgto. 2ª mensalidade' },
+  { key: 'data_pgto_terceira_mensalidade', label: 'Pgto. 3ª mensalidade' },
+];
+
+type DateRanges = Record<string, { from?: string; to?: string }>;
 
 const fmtBRL = (n: number) => n?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -37,6 +51,7 @@ export default function OperacionalContratos({ tipo }: Props) {
   const [provedorIds, setProvedorIds] = useState<string[]>([]);
   const [busca, setBusca] = useState('');
   const [aba, setAba] = useState<'elegiveis' | 'processados'>('elegiveis');
+  const [dateRanges, setDateRanges] = useState<DateRanges>({});
   const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; contrato?: Contrato; data: string }>({ open: false, data: new Date().toISOString().slice(0, 10) });
 
   // Detalhes
@@ -70,6 +85,32 @@ export default function OperacionalContratos({ tipo }: Props) {
       return data.contratos as Contrato[];
     },
   });
+
+  const activeDateFilterCount = useMemo(
+    () => Object.values(dateRanges).filter(r => r?.from || r?.to).length,
+    [dateRanges]
+  );
+
+  const filteredContratos = useMemo(() => {
+    const list = contratos || [];
+    if (activeDateFilterCount === 0) return list;
+    return list.filter(c => {
+      for (const { key } of DATE_FILTER_FIELDS) {
+        const r = dateRanges[key as string];
+        if (!r || (!r.from && !r.to)) continue;
+        const v = (c as any)[key];
+        if (!v) return false;
+        const d = String(v).slice(0, 10);
+        if (r.from && d < r.from) return false;
+        if (r.to && d > r.to) return false;
+      }
+      return true;
+    });
+  }, [contratos, dateRanges, activeDateFilterCount]);
+
+  const setRange = (key: string, side: 'from' | 'to', value: string) => {
+    setDateRanges(prev => ({ ...prev, [key]: { ...prev[key], [side]: value || undefined } }));
+  };
 
   const confirmar = useMutation({
     mutationFn: async ({ contratoId, data }: { contratoId: string; data: string }) => {
@@ -118,7 +159,7 @@ export default function OperacionalContratos({ tipo }: Props) {
   };
 
   const exportCSV = () => {
-    const rows = contratos || [];
+    const rows = filteredContratos || [];
     if (!rows.length) { toast.info('Nada para exportar'); return; }
     const isProc = aba === 'processados';
     const dataCol = tipo === 'recebimento' ? 'data_ativacao' : 'data_cancelamento';
@@ -150,7 +191,7 @@ export default function OperacionalContratos({ tipo }: Props) {
           <h1 className="text-3xl font-bold">{titulo}</h1>
           <p className="text-muted-foreground">Controle operacional entre provedores.</p>
         </div>
-        <Button variant="outline" onClick={exportCSV} disabled={!contratos?.length} className="gap-2">
+        <Button variant="outline" onClick={exportCSV} disabled={!filteredContratos?.length} className="gap-2">
           <Download className="h-4 w-4" />
           Exportar CSV
         </Button>
@@ -178,6 +219,34 @@ export default function OperacionalContratos({ tipo }: Props) {
                 ))}
                 {provedorIds.length > 0 && (
                   <Button variant="ghost" size="sm" onClick={() => setProvedorIds([])}>Limpar</Button>
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <CalendarIcon className="h-4 w-4" />
+                Filtros de data {activeDateFilterCount > 0 && <Badge variant="secondary">{activeDateFilterCount}</Badge>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[420px]" align="start">
+              <div className="space-y-3 max-h-[420px] overflow-auto pr-1">
+                {DATE_FILTER_FIELDS.map(({ key, label }) => {
+                  const r = dateRanges[key as string] || {};
+                  return (
+                    <div key={key as string} className="space-y-1">
+                      <Label className="text-xs">{label}</Label>
+                      <div className="flex items-center gap-2">
+                        <Input type="date" value={r.from || ''} onChange={e => setRange(key as string, 'from', e.target.value)} className="h-8" />
+                        <span className="text-xs text-muted-foreground">até</span>
+                        <Input type="date" value={r.to || ''} onChange={e => setRange(key as string, 'to', e.target.value)} className="h-8" />
+                      </div>
+                    </div>
+                  );
+                })}
+                {activeDateFilterCount > 0 && (
+                  <Button variant="ghost" size="sm" onClick={() => setDateRanges({})}>Limpar filtros de data</Button>
                 )}
               </div>
             </PopoverContent>
@@ -214,9 +283,9 @@ export default function OperacionalContratos({ tipo }: Props) {
                 <TableBody>
                   {isLoading ? (
                     <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
-                  ) : (contratos || []).length === 0 ? (
+                  ) : (filteredContratos || []).length === 0 ? (
                     <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Nenhum contrato encontrado.</TableCell></TableRow>
-                  ) : (contratos || []).map(c => (
+                  ) : (filteredContratos || []).map(c => (
                     <TableRow key={c.id} className="cursor-pointer hover:bg-muted/50" onClick={() => openDetails(c)}>
                       <TableCell>{provedorMap.get(c.provedor_id) || '—'}</TableCell>
                       <TableCell className="font-mono text-xs">{c.codigo_contrato || c.id.slice(0, 8)}</TableCell>

@@ -1,25 +1,33 @@
-# Adicionar `created_at` e `updated_at` ao builder de regras
+## Objetivo
 
-## Mudanças
+Adicionar filtros por intervalo de datas (de/até) nas páginas de **Recebimentos** e **Reembolsos** (que compartilham o componente `OperacionalContratos.tsx`).
 
-### 1. `src/lib/regras/fields.ts`
-Adicionar dois campos na seção "Datas":
+> Observação: hoje não existe uma página chamada "Cancelamentos" — os contratos cancelados aparecem na página de **Reembolsos** (já que o reembolso depende do cancelamento). O filtro será aplicado nessa página. Se preferir uma página dedicada de Cancelamentos, é só avisar.
 
-```ts
-{ key: 'created_at', label: 'Data de criação do contrato', type: 'date', isDate: true },
-{ key: 'updated_at', label: 'Última atualização do contrato', type: 'date', isDate: true },
-```
+## O que será adicionado
 
-Eles automaticamente aparecem:
-- no select de campos do `ConditionRow`
-- na lista de campos de data disponíveis para `lte_date_offset`/`gte_date_offset` (via `ALL_FIELDS_INCLUDING_TODAY.filter(f => f.isDate)`)
+No card "Filtros", incluir uma seção de filtros de data com **de/até** para os seguintes campos do contrato:
 
-### 2. `supabase/functions/central-operacional/index.ts`
-No avaliador, garantir que `created_at`/`updated_at` (que vêm como timestamps ISO completos) sejam tratados como datas. O parser de datas já existente precisa aceitar tanto `YYYY-MM-DD` quanto `YYYY-MM-DDTHH:mm:ss...` — verificar e ajustar a função de leitura de campo de data se necessário (truncar para os 10 primeiros caracteres antes de comparar).
+- Data de criação (`created_at`)
+- Data de ativação (`data_ativacao`)
+- Data de cancelamento (`data_cancelamento`)
+- Data de recebimento (`data_recebimento`)
+- Data de reembolso (`data_reembolso`)
+- Data pgto. 1ª/2ª/3ª mensalidade (`data_pgto_primeira/segunda/terceira_mensalidade`)
 
-Sem alterações de banco. Sem alterações de UI além das acima.
+UI: um Popover "Filtros de data" que abre um painel com cada campo + dois inputs `type="date"` (de/até) + botão "Limpar". Um badge mostra quantos filtros de data estão ativos.
 
-## Validação
-- Abrir editor de regra → campo "Data de criação do contrato" disponível.
-- Operador "em ou antes de (campo + offset)" lista `created_at`/`updated_at` como referência.
-- Testar regra com contrato real retorna resultado correto (sem erro de parsing de data).
+## Comportamento
+
+- Filtragem **client-side** sobre a lista já retornada (o edge function `central-operacional` já devolve `select('*')`, todos os campos de data estão disponíveis).
+- Cada intervalo é independente; vazio = sem restrição naquele lado.
+- Contratos sem valor no campo são excluídos quando há qualquer filtro ativo nesse campo.
+- Filtros aplicam-se nas duas abas (Elegíveis e Já recebidos/reembolsados).
+- Exportar CSV respeita os filtros (já usa o array `contratos` filtrado).
+
+## Arquivos afetados
+
+- `src/pages/central/OperacionalContratos.tsx` — adicionar estado dos filtros, UI do popover, e `useMemo` que filtra `contratos` antes de renderizar/exportar.
+- Adicionar `created_at` ao tipo `Contrato`.
+
+Sem alterações no backend nem no banco.
