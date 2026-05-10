@@ -86,6 +86,32 @@ export default function OperacionalContratos({ tipo }: Props) {
     },
   });
 
+  const activeDateFilterCount = useMemo(
+    () => Object.values(dateRanges).filter(r => r?.from || r?.to).length,
+    [dateRanges]
+  );
+
+  const filteredContratos = useMemo(() => {
+    const list = contratos || [];
+    if (activeDateFilterCount === 0) return list;
+    return list.filter(c => {
+      for (const { key } of DATE_FILTER_FIELDS) {
+        const r = dateRanges[key as string];
+        if (!r || (!r.from && !r.to)) continue;
+        const v = (c as any)[key];
+        if (!v) return false;
+        const d = String(v).slice(0, 10);
+        if (r.from && d < r.from) return false;
+        if (r.to && d > r.to) return false;
+      }
+      return true;
+    });
+  }, [contratos, dateRanges, activeDateFilterCount]);
+
+  const setRange = (key: string, side: 'from' | 'to', value: string) => {
+    setDateRanges(prev => ({ ...prev, [key]: { ...prev[key], [side]: value || undefined } }));
+  };
+
   const confirmar = useMutation({
     mutationFn: async ({ contratoId, data }: { contratoId: string; data: string }) => {
       const action = tipo === 'recebimento' ? 'confirmarRecebimento' : 'confirmarReembolso';
