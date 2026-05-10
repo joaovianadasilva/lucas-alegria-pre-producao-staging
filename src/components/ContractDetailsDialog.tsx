@@ -284,12 +284,7 @@ export function ContractDetailsDialog({
                   />
                   <InfoRow label="Data de Ativação" value={formatDate(contract.data_ativacao ?? null)} />
                   <InfoRow label="Data de Cancelamento" value={formatDate(contract.data_cancelamento ?? null)} />
-                  {contract.motivo_cancelamento && (
-                    <div className="pt-2">
-                      <p className="text-sm text-muted-foreground mb-1">Motivo do Cancelamento:</p>
-                      <p className="text-sm bg-muted/30 rounded-md p-2">{contract.motivo_cancelamento}</p>
-                    </div>
-                  )}
+                  <InfoRow label="Motivo do Cancelamento" value={contract.motivo_cancelamento || '-'} />
                   <InfoRow
                     label="Recebimento"
                     value={
