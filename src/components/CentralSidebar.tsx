@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { Wallet, Undo2, BarChart3, ArrowLeft, ShieldCheck, FileText, FileBarChart } from 'lucide-react';
+import { Wallet, Undo2, BarChart3, ArrowLeft, ShieldCheck, FileText, FileBarChart, Settings2 } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
