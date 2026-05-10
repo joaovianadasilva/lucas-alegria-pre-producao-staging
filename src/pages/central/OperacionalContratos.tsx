@@ -310,12 +310,36 @@ export default function OperacionalContratos({ tipo }: Props) {
           <TabsTrigger value="processados">Já {tipo === 'recebimento' ? 'recebidos' : 'reembolsados'}</TabsTrigger>
         </TabsList>
 
-        <TabsContent value={aba}>
+        <TabsContent value={aba} className="space-y-3">
+          {aba === 'elegiveis' && selectedIds.size > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-primary/5 px-4 py-2.5">
+              <div className="text-sm">
+                <span className="font-medium">{selectedIds.size}</span> contrato(s) selecionado(s)
+                <span className="text-muted-foreground"> · Total: </span>
+                <span className="font-medium">{fmtBRL(selectedTotal)}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())}>Limpar seleção</Button>
+                <Button size="sm" onClick={() => setBulkDialog({ open: true, data: new Date().toISOString().slice(0, 10) })}>
+                  Confirmar em massa
+                </Button>
+              </div>
+            </div>
+          )}
           <Card>
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
                   <TableRow>
+                    {aba === 'elegiveis' && (
+                      <TableHead className="w-10">
+                        <Checkbox
+                          checked={allVisibleSelected ? true : (someVisibleSelected ? 'indeterminate' : false)}
+                          onCheckedChange={toggleAllVisible}
+                          aria-label="Selecionar todos"
+                        />
+                      </TableHead>
+                    )}
                     <TableHead>Provedor</TableHead>
                     <TableHead>Contrato</TableHead>
                     <TableHead>Cliente</TableHead>
@@ -328,11 +352,20 @@ export default function OperacionalContratos({ tipo }: Props) {
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
-                    <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={aba === 'elegiveis' ? 9 : 8} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
                   ) : (filteredContratos || []).length === 0 ? (
-                    <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Nenhum contrato encontrado.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={aba === 'elegiveis' ? 9 : 8} className="text-center py-8 text-muted-foreground">Nenhum contrato encontrado.</TableCell></TableRow>
                   ) : (filteredContratos || []).map(c => (
                     <TableRow key={c.id} className="cursor-pointer hover:bg-muted/50" onClick={() => openDetails(c)}>
+                      {aba === 'elegiveis' && (
+                        <TableCell onClick={e => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selectedIds.has(c.id)}
+                            onCheckedChange={() => toggleOne(c.id)}
+                            aria-label="Selecionar contrato"
+                          />
+                        </TableCell>
+                      )}
                       <TableCell>{provedorMap.get(c.provedor_id) || '—'}</TableCell>
                       <TableCell className="font-mono text-xs">{c.codigo_contrato || c.id.slice(0, 8)}</TableCell>
                       <TableCell>
