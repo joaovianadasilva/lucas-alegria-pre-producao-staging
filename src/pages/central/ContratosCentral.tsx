@@ -11,9 +11,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ContractDetailsDialog, ContratoCompleto } from '@/components/ContractDetailsDialog';
-import { Filter, ChevronLeft, ChevronRight, Eye, Download, FileText } from 'lucide-react';
+import { Filter, ChevronLeft, ChevronRight, Eye, Download, FileText, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatLocalDate } from '@/lib/dateUtils';
+import { DateConditionBuilder } from '@/components/filters/DateConditionBuilder';
+import { Condition, isConditionComplete, summarizeCondition } from '@/components/filters/dateConditionUtils';
+
+const DATE_FILTER_FIELDS = [
+  { key: 'created_at', label: 'Data de criação' },
+  { key: 'data_ativacao', label: 'Data de ativação' },
+  { key: 'data_cancelamento', label: 'Data de cancelamento' },
+  { key: 'data_recebimento', label: 'Data de recebimento' },
+  { key: 'data_reembolso', label: 'Data de reembolso' },
+  { key: 'data_pgto_primeira_mensalidade', label: 'Pgto. 1ª mensalidade' },
+  { key: 'data_pgto_segunda_mensalidade', label: 'Pgto. 2ª mensalidade' },
+  { key: 'data_pgto_terceira_mensalidade', label: 'Pgto. 3ª mensalidade' },
+];
 
 interface Provedor { id: string; nome: string }
 interface ContratoRow {
