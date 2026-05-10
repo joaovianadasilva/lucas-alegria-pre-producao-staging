@@ -179,13 +179,12 @@ serve(async (req) => {
     const { action, ...params } = await req.json();
     console.log('central-operacional action:', action, params);
 
-    // Carrega regras ativas e indexa por provedor+tipo
+    // Carrega todas as regras ativas
     const { data: regrasRows } = await supabase
       .from('regras_operacionais_provedor')
-      .select('provedor_id, tipo, regra')
+      .select('id, nome, tipo, provedor_id, provedor_ids, aplica_todos, ativo, regra, prioridade')
       .eq('ativo', true);
-    const regrasMap = new Map<string, Regra>();
-    for (const r of regrasRows || []) regrasMap.set(`${r.provedor_id}:${r.tipo}`, r.regra as Regra);
+    const regrasAtivas = (regrasRows || []) as RegraRow[];
 
     const buildContractsQuery = (provedorIds?: string[]) => {
       let q = supabase.from('contratos').select('*');
@@ -210,7 +209,7 @@ serve(async (req) => {
         if (tipo !== 'recebimento' && tipo !== 'reembolso') return json({ error: 'tipo inválido' }, 400);
         const { data, error } = await buildContractsQuery(params.provedorIds);
         if (error) throw error;
-        const rows = (data || []).filter(c => contratoElegivel(c, tipo, regrasMap.get(`${c.provedor_id}:${tipo}`) || null));
+        const rows = (data || []).filter(c => contratoElegivel(c, tipo, regrasAtivas));
         return json({ success: true, contratos: filterByBusca(rows, params.busca) });
       }
       case 'listProcessados': {
