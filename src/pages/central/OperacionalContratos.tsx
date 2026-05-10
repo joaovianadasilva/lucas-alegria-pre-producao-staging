@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -53,6 +53,8 @@ export default function OperacionalContratos({ tipo }: Props) {
   const [aba, setAba] = useState<'elegiveis' | 'processados'>('elegiveis');
   const [conditions, setConditions] = useState<Condition[]>([]);
   const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; contrato?: Contrato; data: string }>({ open: false, data: new Date().toISOString().slice(0, 10) });
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDialog, setBulkDialog] = useState<{ open: boolean; data: string }>({ open: false, data: new Date().toISOString().slice(0, 10) });
 
   // Detalhes
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -111,6 +113,52 @@ export default function OperacionalContratos({ tipo }: Props) {
     },
     onError: (e: any) => toast.error('Erro: ' + e.message),
   });
+
+  const confirmarLote = useMutation({
+    mutationFn: async ({ contratoIds, data }: { contratoIds: string[]; data: string }) => {
+      const { data: resp, error } = await supabase.functions.invoke('central-operacional', {
+        body: { action: 'confirmarLote', tipo, contratoIds, data },
+      });
+      if (error) throw error;
+      if (resp?.error) throw new Error(resp.error);
+      return resp;
+    },
+    onSuccess: (resp: any) => {
+      toast.success(`${resp?.count ?? 0} contrato(s) confirmado(s)!`);
+      qc.invalidateQueries({ queryKey: ['central-contratos'] });
+      setSelectedIds(new Set());
+      setBulkDialog({ open: false, data: new Date().toISOString().slice(0, 10) });
+    },
+    onError: (e: any) => toast.error('Erro: ' + e.message),
+  });
+
+  // Limpa seleção ao mudar contexto
+  useEffect(() => { setSelectedIds(new Set()); }, [aba, provedorIds, busca, conditions, tipo]);
+
+  const visibleIds = useMemo(() => (filteredContratos || []).map(c => c.id), [filteredContratos]);
+  const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selectedIds.has(id));
+  const someVisibleSelected = visibleIds.some(id => selectedIds.has(id));
+  const selectedContratos = useMemo(
+    () => (filteredContratos || []).filter(c => selectedIds.has(c.id)),
+    [filteredContratos, selectedIds]
+  );
+  const selectedTotal = selectedContratos.reduce((sum, c) => sum + Number(c.plano_valor || 0), 0);
+
+  const toggleAllVisible = () => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (allVisibleSelected) visibleIds.forEach(id => next.delete(id));
+      else visibleIds.forEach(id => next.add(id));
+      return next;
+    });
+  };
+  const toggleOne = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
 
   const titulo = tipo === 'recebimento' ? 'Recebimentos' : 'Reembolsos';
   const dataLabelCol = tipo === 'recebimento' ? 'Data ativação' : 'Data cancelamento';
@@ -262,12 +310,36 @@ export default function OperacionalContratos({ tipo }: Props) {
           <TabsTrigger value="processados">Já {tipo === 'recebimento' ? 'recebidos' : 'reembolsados'}</TabsTrigger>
         </TabsList>
 
-        <TabsContent value={aba}>
+        <TabsContent value={aba} className="space-y-3">
+          {aba === 'elegiveis' && selectedIds.size > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-primary/5 px-4 py-2.5">
+              <div className="text-sm">
+                <span className="font-medium">{selectedIds.size}</span> contrato(s) selecionado(s)
+                <span className="text-muted-foreground"> · Total: </span>
+                <span className="font-medium">{fmtBRL(selectedTotal)}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())}>Limpar seleção</Button>
+                <Button size="sm" onClick={() => setBulkDialog({ open: true, data: new Date().toISOString().slice(0, 10) })}>
+                  Confirmar em massa
+                </Button>
+              </div>
+            </div>
+          )}
           <Card>
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
                   <TableRow>
+                    {aba === 'elegiveis' && (
+                      <TableHead className="w-10">
+                        <Checkbox
+                          checked={allVisibleSelected ? true : (someVisibleSelected ? 'indeterminate' : false)}
+                          onCheckedChange={toggleAllVisible}
+                          aria-label="Selecionar todos"
+                        />
+                      </TableHead>
+                    )}
                     <TableHead>Provedor</TableHead>
                     <TableHead>Contrato</TableHead>
                     <TableHead>Cliente</TableHead>
@@ -280,11 +352,20 @@ export default function OperacionalContratos({ tipo }: Props) {
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
-                    <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={aba === 'elegiveis' ? 9 : 8} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
                   ) : (filteredContratos || []).length === 0 ? (
-                    <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Nenhum contrato encontrado.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={aba === 'elegiveis' ? 9 : 8} className="text-center py-8 text-muted-foreground">Nenhum contrato encontrado.</TableCell></TableRow>
                   ) : (filteredContratos || []).map(c => (
                     <TableRow key={c.id} className="cursor-pointer hover:bg-muted/50" onClick={() => openDetails(c)}>
+                      {aba === 'elegiveis' && (
+                        <TableCell onClick={e => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selectedIds.has(c.id)}
+                            onCheckedChange={() => toggleOne(c.id)}
+                            aria-label="Selecionar contrato"
+                          />
+                        </TableCell>
+                      )}
                       <TableCell>{provedorMap.get(c.provedor_id) || '—'}</TableCell>
                       <TableCell className="font-mono text-xs">{c.codigo_contrato || c.id.slice(0, 8)}</TableCell>
                       <TableCell>
@@ -345,6 +426,36 @@ export default function OperacionalContratos({ tipo }: Props) {
               onClick={() => confirmDialog.contrato && confirmar.mutate({ contratoId: confirmDialog.contrato.id, data: confirmDialog.data })}
             >
               Confirmar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={bulkDialog.open} onOpenChange={(o) => setBulkDialog(s => ({ ...s, open: o }))}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar {tipo === 'recebimento' ? 'recebimentos' : 'reembolsos'} em massa</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="rounded-md bg-muted/50 p-3 text-sm">
+              <div><span className="font-medium">{selectedContratos.length}</span> contrato(s) · Total: <span className="font-medium">{fmtBRL(selectedTotal)}</span></div>
+              <div className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                {selectedContratos.slice(0, 3).map(c => c.nome_completo).join(', ')}
+                {selectedContratos.length > 3 && ` e mais ${selectedContratos.length - 3}`}
+              </div>
+            </div>
+            <div>
+              <Label>{dataDial}</Label>
+              <Input type="date" value={bulkDialog.data} onChange={e => setBulkDialog(s => ({ ...s, data: e.target.value }))} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkDialog(s => ({ ...s, open: false }))}>Cancelar</Button>
+            <Button
+              disabled={confirmarLote.isPending || selectedContratos.length === 0}
+              onClick={() => confirmarLote.mutate({ contratoIds: selectedContratos.map(c => c.id), data: bulkDialog.data })}
+            >
+              {confirmarLote.isPending ? 'Confirmando...' : `Confirmar ${selectedContratos.length} contrato(s)`}
             </Button>
           </DialogFooter>
         </DialogContent>

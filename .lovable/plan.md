@@ -1,88 +1,54 @@
-## Objetivo
+## Seleção em massa para confirmar recebimentos/reembolsos
 
-Reformular o filtro de datas em **Recebimentos** e **Reembolsos** para um query builder visual no estilo "campo + condição + valor", combinável com **E/OU**, com presets rápidos e UX moderna.
+Adicionar a capacidade de selecionar múltiplos contratos na aba **Elegíveis** (de Recebimentos e Reembolsos) e confirmá-los em massa com uma data única.
 
-## UX proposta
+### UX
 
-Substituir o popover "Filtros de data" por um **construtor de condições** dentro do card "Filtros":
+1. **Coluna de seleção** na tabela:
+   - Checkbox no `TableHead` para selecionar/desmarcar todos os contratos visíveis (após filtros).
+   - Checkbox em cada linha (clique não propaga para abrir detalhes).
+   - Estado indeterminado quando há seleção parcial.
+   - Aparece somente na aba **Elegíveis** (não faz sentido em "Já recebidos/reembolsados").
 
-```text
-[ Data de criação ▾ ]  [ está entre ▾ ]  [ 01/05/2026 → 10/05/2026 ]  [ Hoje | 7d | 30d | Mês ]  [ x ]
-   E   ─────────────────────────────────────────────────────────────────────────────────────────────
-[ Data de ativação ▾ ] [ é maior que ▾ ] [ 01/04/2026 ]                                            [ x ]
-   OU  ─────────────────────────────────────────────────────────────────────────────────────────────
-[ Data de cancelamento ▾ ] [ está vazio ▾ ]                                                        [ x ]
+2. **Barra de ações em massa** acima da tabela (visível apenas com seleção > 0):
+   - Texto: `N contrato(s) selecionado(s)` + soma do valor (`fmtBRL`).
+   - Botão `Confirmar em massa` (abre dialog).
+   - Botão `Limpar seleção`.
 
-[ + Adicionar condição ]   [ Limpar tudo ]
-```
+3. **Dialog "Confirmar em massa"**:
+   - Mostra resumo: `N contratos · Total: R$ X`.
+   - Lista compacta dos primeiros nomes (ex.: "Fulano, Beltrano e mais N").
+   - Campo `Data do recebimento/reembolso` (input date, default hoje).
+   - Botões `Cancelar` / `Confirmar N contratos`.
+   - Durante envio: botão em loading; ao fim, toast com sucessos/erros e fecha o dialog.
 
-### Componentes de cada linha
+4. **Limpeza automática** da seleção:
+   - Ao trocar de aba, mudar provedores, busca, condições de data, ou após confirmar.
 
-1. **Campo** (Select com ícone de calendário): created_at, data_ativacao, data_cancelamento, data_recebimento, data_reembolso, data_pgto_1ª/2ª/3ª mensalidade.
-2. **Condição** (Select):
-   - está entre
-   - é igual a
-   - é maior que (depois de)
-   - é menor que (antes de)
-   - está preenchido
-   - está vazio
-3. **Valor**: muda conforme a condição
-   - "está entre" → range picker visual (Calendar `mode="range"` em Popover) com chips de preset ao lado: **Hoje**, **Ontem**, **Últimos 7d**, **Últimos 30d**, **Últimos 90d**, **Este mês**, **Mês passado**.
-   - "é igual / maior / menor" → date picker único (Calendar `mode="single"`).
-   - "preenchido / vazio" → sem campo de valor.
-4. **Conector** entre linhas: chip clicável que alterna entre **E** / **OU** (padrão E).
-5. **Remover linha** (ícone X).
+### Backend
 
-### Estado vazio
-
-Quando não há condições, o card mostra um CTA discreto: `+ Adicionar filtro de data` com ícone de calendário e dica "Combine condições com E/OU".
-
-### Resumo ativo
-
-Acima da tabela, exibir uma linha de chips resumindo as condições ativas (ex: "Criação entre 01/05–10/05  E  Ativação > 01/04"), com X individual em cada chip — espelha o estado do builder e permite remoção rápida sem reabrir o painel.
-
-### Comportamento de avaliação
-
-- Avaliação client-side sobre `contratos`. Cada condição gera um predicado; combinam-se com **E**/**OU** seguindo a ordem do builder, com **E** tendo precedência maior que **OU** (agrupamento padrão de SQL). Sem parênteses na v1 — se ficar limitado, evoluímos depois.
-- Datas comparadas usando os primeiros 10 chars (`YYYY-MM-DD`) para evitar problemas de timezone (consistente com `formatLocalDate`).
-- Filtros aplicam-se nas duas abas e o **Exportar CSV** respeita o resultado filtrado.
-
-## Detalhes técnicos
-
-### Novos arquivos
-
-- `src/components/filters/DateConditionBuilder.tsx` — componente reutilizável que recebe `value: Condition[]` e `onChange`. Encapsula linhas, conectores E/OU, presets e popovers.
-- `src/components/filters/dateConditionUtils.ts` — tipos (`Condition`, `Operator`, `Connector`), função `evaluateConditions(row, conditions, fields)` e helpers de preset (`getPresetRange('last7d')` etc.).
-
-### Tipos
+Nova ação `confirmarLote` em `supabase/functions/central-operacional/index.ts`:
 
 ```ts
-type Operator = 'between' | 'eq' | 'gt' | 'lt' | 'is_set' | 'is_empty';
-type Connector = 'AND' | 'OR';
-interface Condition {
-  id: string;
-  field: string;          // 'created_at' | 'data_ativacao' | ...
-  operator: Operator;
-  from?: string;          // YYYY-MM-DD
-  to?: string;            // YYYY-MM-DD (apenas para 'between')
-  value?: string;         // YYYY-MM-DD (para eq/gt/lt)
-  connector: Connector;   // como liga com a condição anterior; ignorado na primeira
-}
+// params: { tipo: 'recebimento' | 'reembolso', contratoIds: string[], data: string (YYYY-MM-DD) }
 ```
 
-### Componentes shadcn usados
+- Valida `tipo` e `contratoIds` (array não vazio, máx 500).
+- Faz `select('id, provedor_id, nome_completo')` filtrando `.in('id', contratoIds)`.
+- Faz `update` em massa: `.update(updates).in('id', contratoIds)` com os mesmos campos do fluxo atual (`recebimento_efetivado`/`data_recebimento` ou `reembolso_efetivado`/`data_reembolso`).
+- Insere uma linha em `historico_contratos` por contrato (mesmo formato da ação singular), em uma única chamada `.insert([...])`.
+- Resposta: `{ success: true, count: N }`. Em erro parcial, retorna `{ success: false, error }`.
 
-- `Calendar` (mode `range` e `single`) dentro de `Popover` para os pickers visuais — com `className="p-3 pointer-events-auto"`.
-- `Select` para campo e operador.
-- `Badge` clicável para conector E/OU e para os chips de presets/resumo.
-- `Button` ghost com ícone `Plus` para adicionar condição.
+Sem mudança de schema — todos os campos já existem em `contratos`.
 
 ### Arquivos modificados
 
-- `src/pages/central/OperacionalContratos.tsx`:
-  - Substituir o popover atual de "Filtros de data" pelo `<DateConditionBuilder>` no card Filtros.
-  - Trocar o estado `dateRanges` por `conditions: Condition[]`.
-  - Trocar a lógica do `useMemo filteredContratos` para usar `evaluateConditions`.
-  - Adicionar a barra de chips de resumo acima da tabela.
+- `src/pages/central/OperacionalContratos.tsx`
+  - Novo state `selectedIds: Set<string>`.
+  - Coluna checkbox + barra de ações em massa + dialog de bulk.
+  - `useEffect` para limpar seleção quando filtros/aba mudam.
+  - Mutation `confirmarLote` chamando a nova action.
+- `supabase/functions/central-operacional/index.ts`
+  - Novo `case 'confirmarLote'` reaproveitando lógica do singular.
 
-Sem alterações de backend nem de banco.
+Sem migrations.
