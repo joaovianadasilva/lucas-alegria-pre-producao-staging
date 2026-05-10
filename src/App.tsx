@@ -97,6 +97,7 @@ const App = () => (
                 <Route path="contratos" element={<ContratosCentral />} />
                 <Route path="relatorios/visao-geral-vendas" element={<RelatorioVisaoGeralVendas />} />
                 <Route path="relatorios/visao-geral-agendamentos" element={<RelatorioVisaoGeralAgendamentos />} />
+                <Route path="regras" element={<RegrasOperacionais />} />
               </Route>
             </Route>
 
