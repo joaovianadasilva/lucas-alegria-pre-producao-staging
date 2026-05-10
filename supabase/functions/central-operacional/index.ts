@@ -12,6 +12,66 @@ const json = (body: unknown, status = 200) =>
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 
+// ===== Filtro de condições de data (espelha DateConditionBuilder do frontend) =====
+const ALLOWED_DATE_FIELDS = new Set([
+  'created_at', 'updated_at',
+  'data_ativacao', 'data_cancelamento',
+  'data_recebimento', 'data_reembolso',
+  'data_pgto_primeira_mensalidade', 'data_pgto_segunda_mensalidade', 'data_pgto_terceira_mensalidade',
+  'data_nascimento',
+]);
+const TS_FIELDS = new Set(['created_at', 'updated_at']);
+function isValidISODate(s: any): boolean {
+  return typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
+}
+function condToFilter(c: any): string | null {
+  if (!c || !ALLOWED_DATE_FIELDS.has(c.field)) return null;
+  const f = c.field;
+  const isTs = TS_FIELDS.has(f);
+  const dayStart = (d: string) => isTs ? `${d}T00:00:00` : d;
+  const dayEnd = (d: string) => isTs ? `${d}T23:59:59.999` : d;
+  switch (c.operator) {
+    case 'is_set': return `${f}.not.is.null`;
+    case 'is_empty': return `${f}.is.null`;
+    case 'eq': {
+      if (!isValidISODate(c.value)) return null;
+      if (isTs) return `and(${f}.gte.${dayStart(c.value)},${f}.lte.${dayEnd(c.value)})`;
+      return `${f}.eq.${c.value}`;
+    }
+    case 'gt': {
+      if (!isValidISODate(c.value)) return null;
+      return `${f}.gt.${dayEnd(c.value)}`;
+    }
+    case 'lt': {
+      if (!isValidISODate(c.value)) return null;
+      return `${f}.lt.${dayStart(c.value)}`;
+    }
+    case 'between': {
+      const parts: string[] = [];
+      if (isValidISODate(c.from)) parts.push(`${f}.gte.${dayStart(c.from)}`);
+      if (isValidISODate(c.to)) parts.push(`${f}.lte.${dayEnd(c.to)}`);
+      if (parts.length === 0) return null;
+      return parts.length === 1 ? parts[0] : `and(${parts.join(',')})`;
+    }
+    default: return null;
+  }
+}
+function buildDateConditionsFilter(conditions: any[]): string | null {
+  const active = (conditions || []).filter((c: any) => c && condToFilter(c) !== null);
+  if (active.length === 0) return null;
+  const groups: any[][] = [[]];
+  active.forEach((c: any, i: number) => {
+    if (i === 0 || c.connector === 'AND') groups[groups.length - 1].push(c);
+    else groups.push([c]);
+  });
+  const groupStrs = groups
+    .map(g => g.map(condToFilter).filter(Boolean) as string[])
+    .filter(g => g.length > 0)
+    .map(g => g.length === 1 ? g[0] : `and(${g.join(',')})`);
+  if (groupStrs.length === 0) return null;
+  return groupStrs.join(',');
+}
+
 // ===== Avaliador de regras (árvore AND/OR + condições) =====
 type Node = GroupNode | CondNode;
 interface GroupNode { op: 'AND' | 'OR'; children: Node[]; }
@@ -377,15 +437,21 @@ serve(async (req) => {
       case 'listContratos': {
         const {
           provedorIds, status, statusContrato, tipoVenda,
-          dataInicio, dataFim, busca, page = 1, pageSize = 20,
+          dataInicio, dataFim, dateConditions, busca, page = 1, pageSize = 20,
         } = params;
         let q = supabase.from('contratos').select('*', { count: 'exact' });
         if (provedorIds && provedorIds.length > 0) q = q.in('provedor_id', provedorIds);
         if (status) q = q.eq('status', status);
         if (statusContrato) q = q.eq('status_contrato', statusContrato);
         if (tipoVenda) q = q.eq('tipo_venda', tipoVenda);
-        if (dataInicio) q = q.gte('created_at', dataInicio);
-        if (dataFim) q = q.lte('created_at', dataFim + 'T23:59:59');
+        // Compat: dataInicio/dataFim antigos => filtra por created_at
+        if (!Array.isArray(dateConditions) || dateConditions.length === 0) {
+          if (dataInicio) q = q.gte('created_at', dataInicio);
+          if (dataFim) q = q.lte('created_at', dataFim + 'T23:59:59');
+        } else {
+          const orFilter = buildDateConditionsFilter(dateConditions);
+          if (orFilter) q = q.or(orFilter);
+        }
         if (busca) {
           const s = `%${busca}%`;
           q = q.or(`nome_completo.ilike.${s},cpf.ilike.${s},codigo_contrato.ilike.${s},codigo_cliente.ilike.${s},email.ilike.${s},celular.ilike.${s}`);
@@ -400,7 +466,7 @@ serve(async (req) => {
       case 'exportContratos': {
         const {
           provedorIds, status, statusContrato, tipoVenda,
-          dataInicio, dataFim, busca,
+          dataInicio, dataFim, dateConditions, busca,
         } = params;
         const MAX = 50000;
         let q = supabase.from('contratos').select('*', { count: 'exact' });
@@ -408,8 +474,13 @@ serve(async (req) => {
         if (status) q = q.eq('status', status);
         if (statusContrato) q = q.eq('status_contrato', statusContrato);
         if (tipoVenda) q = q.eq('tipo_venda', tipoVenda);
-        if (dataInicio) q = q.gte('created_at', dataInicio);
-        if (dataFim) q = q.lte('created_at', dataFim + 'T23:59:59');
+        if (!Array.isArray(dateConditions) || dateConditions.length === 0) {
+          if (dataInicio) q = q.gte('created_at', dataInicio);
+          if (dataFim) q = q.lte('created_at', dataFim + 'T23:59:59');
+        } else {
+          const orFilter = buildDateConditionsFilter(dateConditions);
+          if (orFilter) q = q.or(orFilter);
+        }
         if (busca) {
           const s = `%${busca}%`;
           q = q.or(`nome_completo.ilike.${s},cpf.ilike.${s},codigo_contrato.ilike.${s},codigo_cliente.ilike.${s},email.ilike.${s},celular.ilike.${s}`);

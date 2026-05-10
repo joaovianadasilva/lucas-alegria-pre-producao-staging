@@ -11,9 +11,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ContractDetailsDialog, ContratoCompleto } from '@/components/ContractDetailsDialog';
-import { Filter, ChevronLeft, ChevronRight, Eye, Download, FileText } from 'lucide-react';
+import { Filter, ChevronLeft, ChevronRight, Eye, Download, FileText, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatLocalDate } from '@/lib/dateUtils';
+import { DateConditionBuilder } from '@/components/filters/DateConditionBuilder';
+import { Condition, isConditionComplete, summarizeCondition } from '@/components/filters/dateConditionUtils';
+
+const DATE_FILTER_FIELDS = [
+  { key: 'created_at', label: 'Data de criação' },
+  { key: 'data_ativacao', label: 'Data de ativação' },
+  { key: 'data_cancelamento', label: 'Data de cancelamento' },
+  { key: 'data_recebimento', label: 'Data de recebimento' },
+  { key: 'data_reembolso', label: 'Data de reembolso' },
+  { key: 'data_pgto_primeira_mensalidade', label: 'Pgto. 1ª mensalidade' },
+  { key: 'data_pgto_segunda_mensalidade', label: 'Pgto. 2ª mensalidade' },
+  { key: 'data_pgto_terceira_mensalidade', label: 'Pgto. 3ª mensalidade' },
+];
 
 interface Provedor { id: string; nome: string }
 interface ContratoRow {
@@ -36,8 +49,7 @@ export default function ContratosCentral() {
   const [pStatusContrato, setPStatusContrato] = useState('todos');
   const [pTipoVenda, setPTipoVenda] = useState('todos');
   const [pBusca, setPBusca] = useState('');
-  const [pDataInicio, setPDataInicio] = useState('');
-  const [pDataFim, setPDataFim] = useState('');
+  const [pConditions, setPConditions] = useState<Condition[]>([]);
 
   const [filters, setFilters] = useState<any>(null);
   const [page, setPage] = useState(1);
@@ -72,6 +84,11 @@ export default function ContratosCentral() {
     enabled: !!filters,
   });
 
+  const activeConditions = useMemo(
+    () => pConditions.filter(isConditionComplete),
+    [pConditions]
+  );
+
   const apply = () => {
     setFilters({
       provedorIds: pProvedores.length ? pProvedores : undefined,
@@ -79,15 +96,14 @@ export default function ContratosCentral() {
       statusContrato: pStatusContrato !== 'todos' ? pStatusContrato : undefined,
       tipoVenda: pTipoVenda !== 'todos' ? pTipoVenda : undefined,
       busca: pBusca || undefined,
-      dataInicio: pDataInicio || undefined,
-      dataFim: pDataFim || undefined,
+      dateConditions: activeConditions.length ? activeConditions : undefined,
     });
     setPage(1);
   };
 
   const clear = () => {
     setPProvedores([]); setPStatus('todos'); setPStatusContrato('todos');
-    setPTipoVenda('todos'); setPBusca(''); setPDataInicio(''); setPDataFim('');
+    setPTipoVenda('todos'); setPBusca(''); setPConditions([]);
     setFilters(null); setPage(1);
   };
 
@@ -230,19 +246,50 @@ export default function ContratosCentral() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1.5">
-              <Label>Data início</Label>
-              <Input type="date" value={pDataInicio} onChange={e => setPDataInicio(e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Data fim</Label>
-              <Input type="date" value={pDataFim} onChange={e => setPDataFim(e.target.value)} />
-            </div>
-            <div className="space-y-1.5 md:col-span-2">
+            <div className="space-y-1.5 md:col-span-2 lg:col-span-2">
               <Label>Buscar</Label>
               <Input placeholder="Nome, CPF, código, e-mail, celular" value={pBusca} onChange={e => setPBusca(e.target.value)} />
             </div>
           </div>
+
+          <div>
+            <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Filtros de data
+            </div>
+            <DateConditionBuilder
+              value={pConditions}
+              onChange={setPConditions}
+              fields={DATE_FILTER_FIELDS as any}
+            />
+          </div>
+
+          {activeConditions.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs text-muted-foreground">Filtros ativos:</span>
+              {activeConditions.map((c, i) => (
+                <div key={c.id} className="flex items-center gap-1">
+                  {i > 0 && (
+                    <span className={`text-[10px] font-bold uppercase ${c.connector === 'AND' ? 'text-primary' : 'text-amber-600 dark:text-amber-400'}`}>
+                      {c.connector === 'AND' ? 'E' : 'OU'}
+                    </span>
+                  )}
+                  <Badge variant="secondary" className="gap-1.5 pr-1">
+                    {summarizeCondition(c, DATE_FILTER_FIELDS as any)}
+                    <button
+                      type="button"
+                      onClick={() => setPConditions(prev => prev.filter(x => x.id !== c.id))}
+                      className="rounded-sm p-0.5 hover:bg-background/60"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                </div>
+              ))}
+              <Button variant="ghost" size="sm" className="h-6 text-xs text-muted-foreground" onClick={() => setPConditions([])}>
+                Limpar datas
+              </Button>
+            </div>
+          )}
           <div className="flex gap-2">
             <Button onClick={apply}><Filter className="mr-2 h-4 w-4" /> Aplicar Filtros</Button>
             <Button variant="outline" onClick={clear}>Limpar</Button>
