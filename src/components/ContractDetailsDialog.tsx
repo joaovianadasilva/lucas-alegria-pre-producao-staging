@@ -113,6 +113,46 @@ export function ContractDetailsDialog({
   onContractUpdated 
 }: ContractDetailsDialogProps) {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editStatusOp, setEditStatusOp] = useState(false);
+  const [savingStatusOp, setSavingStatusOp] = useState(false);
+  const [recebFlag, setRecebFlag] = useState(false);
+  const [recebData, setRecebData] = useState('');
+  const [reembFlag, setReembFlag] = useState(false);
+  const [reembData, setReembData] = useState('');
+
+  useEffect(() => {
+    if (!contract) return;
+    setRecebFlag(!!contract.recebimento_efetivado);
+    setRecebData(contract.data_recebimento ? String(contract.data_recebimento).slice(0, 10) : '');
+    setReembFlag(!!contract.reembolso_efetivado);
+    setReembData(contract.data_reembolso ? String(contract.data_reembolso).slice(0, 10) : '');
+  }, [contract, editStatusOp]);
+
+  const salvarStatusOp = async () => {
+    if (!contract) return;
+    setSavingStatusOp(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('central-operacional', {
+        body: {
+          action: 'atualizarStatusOperacional',
+          contratoId: contract.id,
+          recebimento_efetivado: recebFlag,
+          data_recebimento: recebFlag ? (recebData || null) : null,
+          reembolso_efetivado: reembFlag,
+          data_reembolso: reembFlag ? (reembData || null) : null,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success('Status operacional atualizado');
+      setEditStatusOp(false);
+      onContractUpdated?.();
+    } catch (e: any) {
+      toast.error('Erro: ' + e.message);
+    } finally {
+      setSavingStatusOp(false);
+    }
+  };
 
   if (loading) {
     return (
