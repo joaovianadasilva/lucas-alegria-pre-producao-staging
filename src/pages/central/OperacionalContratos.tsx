@@ -44,8 +44,6 @@ const DATE_FILTER_FIELDS: { key: keyof Contrato; label: string }[] = [
   { key: 'data_pgto_terceira_mensalidade', label: 'Pgto. 3ª mensalidade' },
 ];
 
-type DateRanges = Record<string, { from?: string; to?: string }>;
-
 const fmtBRL = (n: number) => n?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 export default function OperacionalContratos({ tipo }: Props) {
@@ -53,7 +51,7 @@ export default function OperacionalContratos({ tipo }: Props) {
   const [provedorIds, setProvedorIds] = useState<string[]>([]);
   const [busca, setBusca] = useState('');
   const [aba, setAba] = useState<'elegiveis' | 'processados'>('elegiveis');
-  const [dateRanges, setDateRanges] = useState<DateRanges>({});
+  const [conditions, setConditions] = useState<Condition[]>([]);
   const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; contrato?: Contrato; data: string }>({ open: false, data: new Date().toISOString().slice(0, 10) });
 
   // Detalhes
