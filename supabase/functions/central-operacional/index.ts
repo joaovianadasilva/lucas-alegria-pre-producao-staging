@@ -12,6 +12,66 @@ const json = (body: unknown, status = 200) =>
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 
+// ===== Filtro de condições de data (espelha DateConditionBuilder do frontend) =====
+const ALLOWED_DATE_FIELDS = new Set([
+  'created_at', 'updated_at',
+  'data_ativacao', 'data_cancelamento',
+  'data_recebimento', 'data_reembolso',
+  'data_pgto_primeira_mensalidade', 'data_pgto_segunda_mensalidade', 'data_pgto_terceira_mensalidade',
+  'data_nascimento',
+]);
+const TS_FIELDS = new Set(['created_at', 'updated_at']);
+function isValidISODate(s: any): boolean {
+  return typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
+}
+function condToFilter(c: any): string | null {
+  if (!c || !ALLOWED_DATE_FIELDS.has(c.field)) return null;
+  const f = c.field;
+  const isTs = TS_FIELDS.has(f);
+  const dayStart = (d: string) => isTs ? `${d}T00:00:00` : d;
+  const dayEnd = (d: string) => isTs ? `${d}T23:59:59.999` : d;
+  switch (c.operator) {
+    case 'is_set': return `${f}.not.is.null`;
+    case 'is_empty': return `${f}.is.null`;
+    case 'eq': {
+      if (!isValidISODate(c.value)) return null;
+      if (isTs) return `and(${f}.gte.${dayStart(c.value)},${f}.lte.${dayEnd(c.value)})`;
+      return `${f}.eq.${c.value}`;
+    }
+    case 'gt': {
+      if (!isValidISODate(c.value)) return null;
+      return `${f}.gt.${dayEnd(c.value)}`;
+    }
+    case 'lt': {
+      if (!isValidISODate(c.value)) return null;
+      return `${f}.lt.${dayStart(c.value)}`;
+    }
+    case 'between': {
+      const parts: string[] = [];
+      if (isValidISODate(c.from)) parts.push(`${f}.gte.${dayStart(c.from)}`);
+      if (isValidISODate(c.to)) parts.push(`${f}.lte.${dayEnd(c.to)}`);
+      if (parts.length === 0) return null;
+      return parts.length === 1 ? parts[0] : `and(${parts.join(',')})`;
+    }
+    default: return null;
+  }
+}
+function buildDateConditionsFilter(conditions: any[]): string | null {
+  const active = (conditions || []).filter((c: any) => c && condToFilter(c) !== null);
+  if (active.length === 0) return null;
+  const groups: any[][] = [[]];
+  active.forEach((c: any, i: number) => {
+    if (i === 0 || c.connector === 'AND') groups[groups.length - 1].push(c);
+    else groups.push([c]);
+  });
+  const groupStrs = groups
+    .map(g => g.map(condToFilter).filter(Boolean) as string[])
+    .filter(g => g.length > 0)
+    .map(g => g.length === 1 ? g[0] : `and(${g.join(',')})`);
+  if (groupStrs.length === 0) return null;
+  return groupStrs.join(',');
+}
+
 // ===== Avaliador de regras (árvore AND/OR + condições) =====
 type Node = GroupNode | CondNode;
 interface GroupNode { op: 'AND' | 'OR'; children: Node[]; }
