@@ -59,6 +59,17 @@ export interface ContratoCompleto {
   codigo_cliente: string | null;
   observacao: string | null;
   created_at: string;
+  data_ativacao?: string | null;
+  data_cancelamento?: string | null;
+  motivo_cancelamento?: string | null;
+  data_recebimento?: string | null;
+  data_reembolso?: string | null;
+  data_pgto_primeira_mensalidade?: string | null;
+  data_pgto_segunda_mensalidade?: string | null;
+  data_pgto_terceira_mensalidade?: string | null;
+  recebimento_efetivado?: boolean | null;
+  reembolso_efetivado?: boolean | null;
+  reembolsavel?: boolean | null;
   adicionais_contrato: Adicional[];
 }
 
