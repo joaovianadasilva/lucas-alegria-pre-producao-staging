@@ -274,17 +274,6 @@ export function ContractDetailsDialog({
 
               <Separator />
 
-              {/* Seção 4: Outras Informações */}
-              <section>
-                <h3 className="font-semibold text-lg mb-3">Outras Informações</h3>
-                <div className="space-y-1">
-                  <InfoRow label="Origem da Venda" value={contract.origem} />
-                  <InfoRow label="Representante de Vendas" value={contract.representante_vendas} />
-                  <InfoRow label="Tipo de Venda" value={contract.tipo_venda} />
-                  <InfoRow label="Código do Contrato" value={contract.codigo_contrato} />
-                  <InfoRow label="Código do Cliente" value={contract.codigo_cliente} />
-              <Separator />
-
               {/* Status Operacional */}
               <section>
                 <h3 className="font-semibold text-lg mb-3">Status Operacional</h3>
