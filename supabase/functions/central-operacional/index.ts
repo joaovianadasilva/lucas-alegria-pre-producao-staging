@@ -245,6 +245,34 @@ serve(async (req) => {
         });
         return json({ success: true });
       }
+      case 'confirmarLote': {
+        const { tipo, contratoIds, data: dataAcao } = params;
+        if (tipo !== 'recebimento' && tipo !== 'reembolso') return json({ error: 'tipo inválido' }, 400);
+        if (!Array.isArray(contratoIds) || contratoIds.length === 0) return json({ error: 'contratoIds obrigatório' }, 400);
+        if (contratoIds.length > 500) return json({ error: 'Máximo 500 contratos por lote' }, 400);
+        const isReceb = tipo === 'recebimento';
+        const dataFinal = dataAcao || new Date().toISOString().slice(0, 10);
+        const updates = isReceb
+          ? { recebimento_efetivado: true, data_recebimento: dataFinal }
+          : { reembolso_efetivado: true, data_reembolso: dataFinal };
+        const { data: contratosLote, error: cErr } = await supabase
+          .from('contratos').select('id, provedor_id, nome_completo').in('id', contratoIds);
+        if (cErr) throw cErr;
+        const { error: updErr } = await supabase.from('contratos').update(updates).in('id', contratoIds);
+        if (updErr) throw updErr;
+        const historicoRows = (contratosLote || []).map((c: any) => ({
+          contrato_id: c.id,
+          provedor_id: c.provedor_id,
+          entidade_nome: c.nome_completo,
+          usuario_id: user.id,
+          tipo_acao: isReceb ? 'recebimento_confirmado' : 'reembolso_confirmado',
+          campo_alterado: isReceb ? 'recebimento_efetivado' : 'reembolso_efetivado',
+          valor_anterior: 'false',
+          valor_novo: 'true',
+        }));
+        if (historicoRows.length) await supabase.from('historico_contratos').insert(historicoRows);
+        return json({ success: true, count: contratosLote?.length || 0 });
+      }
       case 'listProvedores': {
         const { data, error } = await supabase.from('provedores').select('id, nome').eq('ativo', true).order('nome');
         if (error) throw error;
