@@ -24,11 +24,25 @@ interface Provedor { id: string; nome: string }
 interface Contrato {
   id: string; provedor_id: string; codigo_contrato?: string; codigo_cliente?: string;
   nome_completo: string; cpf?: string; plano_nome: string; plano_valor: number;
+  created_at?: string;
   data_ativacao?: string; data_cancelamento?: string; status_contrato?: string;
   data_pgto_primeira_mensalidade?: string; data_pgto_segunda_mensalidade?: string; data_pgto_terceira_mensalidade?: string;
   data_recebimento?: string; data_reembolso?: string;
   reembolsavel?: boolean;
 }
+
+const DATE_FILTER_FIELDS: { key: keyof Contrato; label: string }[] = [
+  { key: 'created_at', label: 'Data de criação' },
+  { key: 'data_ativacao', label: 'Data de ativação' },
+  { key: 'data_cancelamento', label: 'Data de cancelamento' },
+  { key: 'data_recebimento', label: 'Data de recebimento' },
+  { key: 'data_reembolso', label: 'Data de reembolso' },
+  { key: 'data_pgto_primeira_mensalidade', label: 'Pgto. 1ª mensalidade' },
+  { key: 'data_pgto_segunda_mensalidade', label: 'Pgto. 2ª mensalidade' },
+  { key: 'data_pgto_terceira_mensalidade', label: 'Pgto. 3ª mensalidade' },
+];
+
+type DateRanges = Record<string, { from?: string; to?: string }>;
 
 const fmtBRL = (n: number) => n?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
