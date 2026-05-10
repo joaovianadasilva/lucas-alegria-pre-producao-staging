@@ -191,7 +191,7 @@ export default function OperacionalContratos({ tipo }: Props) {
           <h1 className="text-3xl font-bold">{titulo}</h1>
           <p className="text-muted-foreground">Controle operacional entre provedores.</p>
         </div>
-        <Button variant="outline" onClick={exportCSV} disabled={!contratos?.length} className="gap-2">
+        <Button variant="outline" onClick={exportCSV} disabled={!filteredContratos?.length} className="gap-2">
           <Download className="h-4 w-4" />
           Exportar CSV
         </Button>
