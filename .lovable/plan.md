@@ -1,72 +1,111 @@
-## Visão Geral dos Agendamentos — novo relatório
+## Mecanismo de regras configuráveis (recebimento / reembolso)
 
-Criar uma nova tela de relatório seguindo o mesmo padrão visual e arquitetura do **Visão Geral de Vendas** (filtros + edge function + cards/charts com Recharts).
+Substituir o atual formato fixo do JSON `regra` por um **builder de condições aninhadas (AND/OR)**, com **múltiplas regras por tipo+provedor** (OR entre regras), e regras que podem ser aplicadas a uma **lista de provedores alvo**. UI de gestão na Central de Controle (super_admin).
 
-### 1. Navegação
-- `src/components/CentralSidebar.tsx`: adicionar item **"Visão Geral de Agendamentos"** em **Relatórios**, rota `/central/relatorios/visao-geral-agendamentos`.
-- `src/App.tsx`: registrar a rota apontando para a nova página.
+### 1. Banco — `regras_operacionais_provedor`
 
-### 2. Backend — `supabase/functions/central-operacional/index.ts`
-Adicionar action `relatorioVisaoGeralAgendamentos`.
+Manter a tabela, mas relaxar e ampliar:
 
-**Input:** `provedorIds[]`, `dataInicio`, `dataFim`, e filtros opcionais `status[]`, `confirmacao[]`, `tecnicoIds[]`, `tipos[]`, `origens[]`, `redes[]`, `representantes[]`.
+- Tornar `provedor_id` **nullable** (regra global = `null` aplicada via `provedor_ids`).
+- Adicionar `provedor_ids uuid[] NOT NULL DEFAULT '{}'` — lista de provedores alvo. `'{}' + aplica_todos=true` = todos.
+- Adicionar `aplica_todos boolean NOT NULL DEFAULT false`.
+- Adicionar `nome text NOT NULL` (descrição amigável p/ UI).
+- Adicionar `prioridade int DEFAULT 0` (ordenação).
+- Manter `tipo` (`'recebimento' | 'reembolso'`), `ativo`, `regra jsonb`.
+- Index: `(tipo, ativo)`, GIN em `provedor_ids`.
 
-**Query base:** `agendamentos` filtrado por `provedor_id IN (...)` e `data_agendamento BETWEEN ini AND fim`, mais filtros opcionais. Para "Reprogramados" e "Tempo até a data agendada" também consultar `historico_reagendamentos` e `agendamentos.created_at`.
+**Formato do `regra` (JSONB) — árvore de condições:**
 
-**Resposta:**
-```ts
+```json
 {
-  kpis: {
-    hoje, proximos7Dias, pendentes, confirmados, concluidos,
-    cancelados, reprogramados, semTecnico
-  },
-  serieTemporal: [{ data, total, pendentes, confirmados, concluidos, cancelados }],
-  ocupacaoPorSlot: [{ slot: 1..N, total }],
-  porTecnico: [{ tecnico, total, pendentes, concluidos }], // "Sem técnico" como bucket
-  distribuicaoStatus: [{ status, total }],
-  distribuicaoConfirmacao: [{ confirmacao, total }],
-  cancelReprogTempo: [{ data, cancelados, reprogramados }],
-  porOrigem: [{ chave, total }],
-  porRepresentante: [{ chave, total }],
-  porRede: [{ chave, total }],
-  agingPendencias: [{ faixa: '0-1d'|'2-3d'|'4-7d'|'8-14d'|'15+d', total }],
-  leadTime: [{ faixa: 'mesmo dia'|'1-3d'|'4-7d'|'8-14d'|'15+d', total }],
-  pendentesPorTecnico: [{ tecnico, total }] // inclui "Sem técnico"
+  "op": "AND",
+  "children": [
+    { "field": "status_contrato", "operator": "eq", "value": "cancelado" },
+    {
+      "op": "OR",
+      "children": [
+        { "field": "motivo_cancelamento", "operator": "in", "value": ["6","12"] }
+      ]
+    },
+    {
+      "field": "data_cancelamento",
+      "operator": "lte_date_offset",
+      "ref": "data_ativacao",
+      "offset": { "months": 2 }
+    }
+  ]
 }
 ```
-Nomes de técnicos virão de `profiles` (lookup por `tecnico_responsavel_id`).
 
-### 3. Frontend — `src/pages/central/RelatorioVisaoGeralAgendamentos.tsx`
-Estrutura de filtros (header sticky no mesmo padrão, com botão "Aplicar Filtros"):
-- Provedor (multiselect — herdado do padrão)
-- Período (presets: hoje, 7d, mês atual, mês anterior, ano, custom)
-- Status, Confirmação, Tipo, Origem, Rede, Representante (multiselects populados a partir de catálogos / valores distintos)
-- Técnico (multiselect a partir de `profiles` com role `tecnico` do provedor)
+Tipos de nó:
+- **Grupo**: `{ op: 'AND'|'OR', children: Node[] }`
+- **Condição simples**: `{ field, operator, value }`
+- **Condição comparando campos/datas**: `{ field, operator, ref, offset? }`
 
-**Layout:**
+Operadores suportados (v1):
+- Genéricos: `eq`, `neq`, `in`, `not_in`, `is_null`, `is_not_null`, `is_true`, `is_false`
+- Numéricos: `gt`, `gte`, `lt`, `lte`
+- Datas: `gt`, `gte`, `lt`, `lte` (vs valor literal `YYYY-MM-DD` ou `today`), `between`, e `lte_date_offset`/`gte_date_offset` (vs outro campo + offset em `days`/`months`)
+- Texto: `contains`, `starts_with`
 
-```text
-Linha 1 — Visão geral (8 cards KPI)
-[Hoje] [Próx. 7d] [Pendentes] [Confirmados] [Concluídos] [Cancelados] [Reprogramados] [Sem técnico]
+Campos disponíveis (v1) — derivados de `contratos`:
+`status_contrato, status, tipo_cliente, plano_codigo, plano_valor, dia_vencimento, taxa_instalacao, valor_total, reembolsavel, motivo_cancelamento, data_ativacao, data_cancelamento, data_pgto_primeira_mensalidade, data_pgto_segunda_mensalidade, data_pgto_terceira_mensalidade, qtd_pagamentos_efetuados (computado), origem, representante_vendas, codigo_cliente, codigo_contrato`.
 
-Linha 2 — Carga operacional
-[Volume por dia (BarChart)] [Ocupação por slot (BarChart)] [Por técnico (BarChart horizontal)]
+RLS: continua "only functions can modify"; SELECT só super_admin (já não há leitura por admins comuns hoje).
 
-Linha 3 — Saúde da agenda
-[Status (Pie/Bar)] [Confirmação (Pie/Bar)] [Cancel. & reprog. ao longo do tempo (LineChart)]
+### 2. Backend — `supabase/functions/central-operacional`
 
-Linha 4 — Origem e qualidade
-[Origem (Bar)] [Representante (Bar)] [Rede (Bar)]
+- Substituir a função `contratoElegivel` por um **avaliador genérico** `evaluateNode(node, contrato)` que percorre a árvore.
+- Para cada contrato + tipo: pegar todas as regras `ativo=true` do tipo cuja `aplica_todos=true` OU `provedor_id = c.provedor_id` OU `c.provedor_id = ANY(provedor_ids)`. Contrato é elegível se **qualquer regra** avalia para `true` (OR entre regras). Mantém os pre-checks fixos: `recebimento_efetivado=false` para recebimento e `reembolso_efetivado=false` para reembolso.
+- Novas actions (apenas super_admin, igual o resto do arquivo):
+  - `listarRegras({ tipo? })`
+  - `criarRegra({ nome, tipo, provedor_ids, aplica_todos, regra, ativo, prioridade })`
+  - `atualizarRegra({ id, ... })`
+  - `excluirRegra({ id })` (soft via `ativo=false` ou hard delete)
+  - `testarRegra({ regra, contratoId })` → retorna `{ resultado, trace }` para depuração.
+- Validar a árvore (schema Zod) antes de salvar.
 
-Linha 5 — Pendências
-[Aging pendências (Bar)] [Lead time criação→agendamento (Bar)] [Pendentes por técnico (Bar, inclui Sem técnico)]
-```
+### 3. Frontend — Central de Controle
 
-Reaproveitar utilitários (`fmtNum`, `getPresetRange`, `formatLocalDate`) e padrão de Popover de multiselect já usado em `RelatorioVisaoGeralVendas.tsx`.
+**Sidebar (`CentralSidebar.tsx`)**: novo grupo "Configurações" → item **"Regras Operacionais"** → rota `/central/regras`.
 
-### Observações técnicas
-- Toda agregação no edge function (evita 1000-row limit e mantém lógica server-side).
-- Buscar `profiles` (id→nome) uma vez para resolver técnicos.
-- Tratar `null/empty` como "Não informado" nas dimensões origem/representante/rede.
-- Filtros opcionais: quando array vazio, não aplicar restrição.
-- Sem migração de banco.
+**Nova página `src/pages/central/RegrasOperacionais.tsx`**:
+- Tabs: `Recebimento` | `Reembolso`.
+- Lista de regras (nome, escopo — "Todos provedores" ou chips de provedores, status ativo, ações editar/duplicar/excluir).
+- Botão "Nova regra" → abre modal `RegraEditorDialog`.
+
+**`src/components/RegraEditorDialog.tsx`** (componente novo, reutilizável):
+- Campos topo: `nome`, `tipo` (read-only no contexto), `ativo`, `aplica_todos` + multiselect de provedores quando `aplica_todos=false`.
+- **Builder visual recursivo** (`ConditionGroup` + `ConditionRow`):
+  - Cabeçalho do grupo com toggle AND/OR.
+  - Botões "+ Condição", "+ Grupo", "Remover".
+  - `ConditionRow`: select de campo → select de operador (filtrado pelo tipo do campo) → input de valor (texto/número/select para campos enumerados como `status_contrato`, `tipo_cliente`, `motivo_cancelamento`; date picker para datas; multi-select para `in/not_in`; "outro campo + offset" para `*_date_offset`).
+  - Catálogo de campos centralizado em `src/lib/regras/fields.ts` com `{ key, label, type, options? }`; operadores em `src/lib/regras/operators.ts`.
+- **Painel "Testar regra"**: input de `código_contrato` ou `id` → chama `testarRegra` → mostra `true/false` + trace por nó (✓/✗) para diagnóstico.
+
+### 4. Compatibilidade / migração de dados
+
+- Hoje o JSON `regra` usa o formato antigo (`exige_pagamentos`, `dias_apos_ativacao` etc.). Manter um **adapter** no edge function: se a regra não tiver `op`/`children`, traduz on-the-fly para a árvore equivalente (sem migração destrutiva). Usuário pode reeditar pela nova UI quando quiser.
+
+### Detalhes técnicos
+
+- Cálculo de offsets de data feito no servidor com `Date` UTC + ajuste; nunca confiar em fuso do navegador (consistente com `formatLocalDate`).
+- `qtd_pagamentos_efetuados` é computado a partir das três colunas `data_pgto_*_mensalidade`.
+- Zod schema da árvore previne payloads inválidos; `testarRegra` é seguro (read-only).
+- Sem mudanças em telas existentes de Recebimentos/Reembolsos — elas continuam consumindo `listElegiveis` e passam a refletir as novas regras automaticamente.
+- Logs de auditoria em `historico_contratos` permanecem inalterados.
+
+### Exemplos cobrindo os casos da W2A
+
+1. *"Plano com data_ativacao é elegível para recebimento"*:
+   ```json
+   { "op":"AND", "children":[{"field":"data_ativacao","operator":"is_not_null"}] }
+   ```
+2. *"Cancelado em até 2 meses após ativação com motivo 6 ou 12 → elegível para reembolso"*:
+   ```json
+   { "op":"AND", "children":[
+     { "field":"status_contrato","operator":"eq","value":"cancelado" },
+     { "field":"motivo_cancelamento","operator":"in","value":["6","12"] },
+     { "field":"data_cancelamento","operator":"lte_date_offset","ref":"data_ativacao","offset":{"months":2} }
+   ]}
+   ```
