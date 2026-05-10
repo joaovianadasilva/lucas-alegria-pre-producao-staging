@@ -159,6 +159,7 @@ export default function RegraEditorDialog({ open, onOpenChange, tipo, initial, p
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{initial ? 'Editar regra' : 'Nova regra'} — {tipo === 'recebimento' ? 'Recebimento' : 'Reembolso'}</DialogTitle>
+          <DialogDescription>Combine condições com E/OU. A regra é satisfeita quando a expressão for verdadeira para o contrato.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
