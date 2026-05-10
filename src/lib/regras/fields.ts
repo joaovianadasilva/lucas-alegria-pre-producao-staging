@@ -58,6 +58,8 @@ export const FIELDS: FieldDef[] = [
   { key: 'data_pgto_terceira_mensalidade', label: 'Pgto 3ª mensalidade', type: 'date', isDate: true },
   { key: 'data_recebimento', label: 'Data do recebimento', type: 'date', isDate: true },
   { key: 'data_reembolso', label: 'Data do reembolso', type: 'date', isDate: true },
+  { key: 'created_at', label: 'Data de criação do contrato', type: 'date', isDate: true },
+  { key: 'updated_at', label: 'Última atualização do contrato', type: 'date', isDate: true },
   // Computado
   { key: 'qtd_pagamentos_efetuados', label: 'Qtd. mensalidades pagas (computado)', type: 'number' },
   // Cancelamento
