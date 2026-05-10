@@ -51,6 +51,7 @@ export default function OperacionalContratos({ tipo }: Props) {
   const [provedorIds, setProvedorIds] = useState<string[]>([]);
   const [busca, setBusca] = useState('');
   const [aba, setAba] = useState<'elegiveis' | 'processados'>('elegiveis');
+  const [dateRanges, setDateRanges] = useState<DateRanges>({});
   const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; contrato?: Contrato; data: string }>({ open: false, data: new Date().toISOString().slice(0, 10) });
 
   // Detalhes
