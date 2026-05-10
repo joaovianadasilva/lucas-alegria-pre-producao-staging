@@ -223,6 +223,34 @@ export default function OperacionalContratos({ tipo }: Props) {
               </div>
             </PopoverContent>
           </Popover>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <CalendarIcon className="h-4 w-4" />
+                Filtros de data {activeDateFilterCount > 0 && <Badge variant="secondary">{activeDateFilterCount}</Badge>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[420px]" align="start">
+              <div className="space-y-3 max-h-[420px] overflow-auto pr-1">
+                {DATE_FILTER_FIELDS.map(({ key, label }) => {
+                  const r = dateRanges[key as string] || {};
+                  return (
+                    <div key={key as string} className="space-y-1">
+                      <Label className="text-xs">{label}</Label>
+                      <div className="flex items-center gap-2">
+                        <Input type="date" value={r.from || ''} onChange={e => setRange(key as string, 'from', e.target.value)} className="h-8" />
+                        <span className="text-xs text-muted-foreground">até</span>
+                        <Input type="date" value={r.to || ''} onChange={e => setRange(key as string, 'to', e.target.value)} className="h-8" />
+                      </div>
+                    </div>
+                  );
+                })}
+                {activeDateFilterCount > 0 && (
+                  <Button variant="ghost" size="sm" onClick={() => setDateRanges({})}>Limpar filtros de data</Button>
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
           <div className="flex-1 min-w-[240px]">
             <Label>Buscar</Label>
             <Input placeholder="Nome, CPF, código contrato/cliente" value={busca} onChange={e => setBusca(e.target.value)} />
