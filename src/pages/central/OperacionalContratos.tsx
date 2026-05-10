@@ -114,6 +114,52 @@ export default function OperacionalContratos({ tipo }: Props) {
     onError: (e: any) => toast.error('Erro: ' + e.message),
   });
 
+  const confirmarLote = useMutation({
+    mutationFn: async ({ contratoIds, data }: { contratoIds: string[]; data: string }) => {
+      const { data: resp, error } = await supabase.functions.invoke('central-operacional', {
+        body: { action: 'confirmarLote', tipo, contratoIds, data },
+      });
+      if (error) throw error;
+      if (resp?.error) throw new Error(resp.error);
+      return resp;
+    },
+    onSuccess: (resp: any) => {
+      toast.success(`${resp?.count ?? 0} contrato(s) confirmado(s)!`);
+      qc.invalidateQueries({ queryKey: ['central-contratos'] });
+      setSelectedIds(new Set());
+      setBulkDialog({ open: false, data: new Date().toISOString().slice(0, 10) });
+    },
+    onError: (e: any) => toast.error('Erro: ' + e.message),
+  });
+
+  // Limpa seleção ao mudar contexto
+  useEffect(() => { setSelectedIds(new Set()); }, [aba, provedorIds, busca, conditions, tipo]);
+
+  const visibleIds = useMemo(() => (filteredContratos || []).map(c => c.id), [filteredContratos]);
+  const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selectedIds.has(id));
+  const someVisibleSelected = visibleIds.some(id => selectedIds.has(id));
+  const selectedContratos = useMemo(
+    () => (filteredContratos || []).filter(c => selectedIds.has(c.id)),
+    [filteredContratos, selectedIds]
+  );
+  const selectedTotal = selectedContratos.reduce((sum, c) => sum + Number(c.plano_valor || 0), 0);
+
+  const toggleAllVisible = () => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (allVisibleSelected) visibleIds.forEach(id => next.delete(id));
+      else visibleIds.forEach(id => next.add(id));
+      return next;
+    });
+  };
+  const toggleOne = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
   const titulo = tipo === 'recebimento' ? 'Recebimentos' : 'Reembolsos';
   const dataLabelCol = tipo === 'recebimento' ? 'Data ativação' : 'Data cancelamento';
   const dataDial = tipo === 'recebimento' ? 'Data do recebimento' : 'Data do reembolso';
