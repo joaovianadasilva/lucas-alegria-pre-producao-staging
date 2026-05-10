@@ -12,37 +12,152 @@ const json = (body: unknown, status = 200) =>
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 
-interface Regra {
-  exige_pagamentos?: number; // qtde mínima de mensalidades pagas
-  dias_apos_ativacao?: number;
-  dias_apos_cancelamento?: number;
-  status_contrato_in?: string[];
+// ===== Avaliador de regras (árvore AND/OR + condições) =====
+type Node = GroupNode | CondNode;
+interface GroupNode { op: 'AND' | 'OR'; children: Node[]; }
+interface CondNode {
+  field: string;
+  operator: string;
+  value?: any;
+  ref?: string;
+  offset?: { days?: number; months?: number };
 }
 
-function contratoElegivel(c: any, tipo: 'recebimento' | 'reembolso', regra: Regra | null): boolean {
-  if (tipo === 'recebimento') {
-    if (c.recebimento_efetivado === true) return false;
-    const r = regra ?? {};
-    const exige = r.exige_pagamentos ?? 1;
-    const pgtos = [c.data_pgto_primeira_mensalidade, c.data_pgto_segunda_mensalidade, c.data_pgto_terceira_mensalidade].filter(Boolean).length;
-    if (pgtos < exige) return false;
-    if (r.status_contrato_in && c.status_contrato && !r.status_contrato_in.includes(c.status_contrato)) return false;
-    if (r.dias_apos_ativacao && c.data_ativacao) {
-      const diff = (Date.now() - new Date(c.data_ativacao).getTime()) / 86400000;
-      if (diff < r.dias_apos_ativacao) return false;
-    }
-    return true;
-  } else {
-    if (c.reembolso_efetivado === true) return false;
-    if (c.reembolsavel !== true) return false;
-    const r = regra ?? {};
-    if (r.status_contrato_in && c.status_contrato && !r.status_contrato_in.includes(c.status_contrato)) return false;
-    if (r.dias_apos_cancelamento && c.data_cancelamento) {
-      const diff = (Date.now() - new Date(c.data_cancelamento).getTime()) / 86400000;
-      if (diff < r.dias_apos_cancelamento) return false;
-    }
-    return true;
+function getFieldValue(c: any, field: string): any {
+  if (field === 'qtd_pagamentos_efetuados') {
+    return [c.data_pgto_primeira_mensalidade, c.data_pgto_segunda_mensalidade, c.data_pgto_terceira_mensalidade].filter(Boolean).length;
   }
+  return c?.[field];
+}
+
+function toDate(v: any): Date | null {
+  if (!v) return null;
+  if (v === 'today') return new Date(new Date().toISOString().slice(0, 10) + 'T00:00:00Z');
+  const s = typeof v === 'string' ? (v.length >= 10 ? v.slice(0, 10) + 'T00:00:00Z' : v) : v;
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function addOffset(d: Date, offset?: { days?: number; months?: number }): Date {
+  if (!offset) return d;
+  const out = new Date(d.getTime());
+  if (offset.months) out.setUTCMonth(out.getUTCMonth() + offset.months);
+  if (offset.days) out.setUTCDate(out.getUTCDate() + offset.days);
+  return out;
+}
+
+function evalCond(c: any, n: CondNode): boolean {
+  const v = getFieldValue(c, n.field);
+  const op = n.operator;
+  switch (op) {
+    case 'is_null': return v == null || v === '';
+    case 'is_not_null': return v != null && v !== '';
+    case 'is_true': return v === true;
+    case 'is_false': return v === false || v == null;
+    case 'eq': return String(v ?? '') === String(n.value ?? '');
+    case 'neq': return String(v ?? '') !== String(n.value ?? '');
+    case 'in': return Array.isArray(n.value) && n.value.map(String).includes(String(v ?? ''));
+    case 'not_in': return Array.isArray(n.value) && !n.value.map(String).includes(String(v ?? ''));
+    case 'contains': return String(v ?? '').toLowerCase().includes(String(n.value ?? '').toLowerCase());
+    case 'starts_with': return String(v ?? '').toLowerCase().startsWith(String(n.value ?? '').toLowerCase());
+    case 'gt': case 'gte': case 'lt': case 'lte': {
+      // Tenta data primeiro se parecer ISO
+      const isDate = typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v);
+      if (isDate || typeof n.value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(n.value) || n.value === 'today') {
+        const a = toDate(v); const b = toDate(n.value);
+        if (!a || !b) return false;
+        if (op === 'gt') return a > b; if (op === 'gte') return a >= b;
+        if (op === 'lt') return a < b; return a <= b;
+      }
+      const na = Number(v); const nb = Number(n.value);
+      if (isNaN(na) || isNaN(nb)) return false;
+      if (op === 'gt') return na > nb; if (op === 'gte') return na >= nb;
+      if (op === 'lt') return na < nb; return na <= nb;
+    }
+    case 'between': {
+      if (!Array.isArray(n.value) || n.value.length !== 2) return false;
+      const a = toDate(v); const lo = toDate(n.value[0]); const hi = toDate(n.value[1]);
+      if (a && lo && hi) return a >= lo && a <= hi;
+      const na = Number(v);
+      return !isNaN(na) && na >= Number(n.value[0]) && na <= Number(n.value[1]);
+    }
+    case 'lte_date_offset':
+    case 'gte_date_offset':
+    case 'lt_date_offset':
+    case 'gt_date_offset': {
+      const a = toDate(v); const refV = n.ref ? toDate(getFieldValue(c, n.ref)) : null;
+      if (!a || !refV) return false;
+      const target = addOffset(refV, n.offset);
+      if (op === 'lte_date_offset') return a <= target;
+      if (op === 'gte_date_offset') return a >= target;
+      if (op === 'lt_date_offset') return a < target;
+      return a > target;
+    }
+    default: return false;
+  }
+}
+
+function evalNode(c: any, node: Node | null | undefined): boolean {
+  if (!node) return false;
+  if ('op' in node && Array.isArray((node as GroupNode).children)) {
+    const g = node as GroupNode;
+    if (g.children.length === 0) return false;
+    if (g.op === 'OR') return g.children.some(ch => evalNode(c, ch));
+    return g.children.every(ch => evalNode(c, ch));
+  }
+  return evalCond(c, node as CondNode);
+}
+
+// Trace para debug do "testar regra"
+function evalNodeTrace(c: any, node: Node | null | undefined): { result: boolean; trace: any } {
+  if (!node) return { result: false, trace: { type: 'empty', result: false } };
+  if ('op' in node && Array.isArray((node as GroupNode).children)) {
+    const g = node as GroupNode;
+    const childTraces = g.children.map(ch => evalNodeTrace(c, ch));
+    const result = g.op === 'OR' ? childTraces.some(t => t.result) : (childTraces.length > 0 && childTraces.every(t => t.result));
+    return { result, trace: { type: 'group', op: g.op, result, children: childTraces.map(t => t.trace) } };
+  }
+  const cn = node as CondNode;
+  const result = evalCond(c, cn);
+  return { result, trace: { type: 'cond', field: cn.field, operator: cn.operator, value: cn.value, ref: cn.ref, offset: cn.offset, actual: getFieldValue(c, cn.field), result } };
+}
+
+// Adapter formato antigo -> árvore
+function adaptRegraLegacy(r: any, tipo: 'recebimento' | 'reembolso'): Node | null {
+  if (!r || typeof r !== 'object') return null;
+  if ('op' in r && Array.isArray(r.children)) return r as Node;
+  const children: Node[] = [];
+  if (tipo === 'recebimento') {
+    const exige = r.exige_pagamentos ?? 1;
+    if (exige > 0) children.push({ field: 'qtd_pagamentos_efetuados', operator: 'gte', value: exige });
+    if (r.dias_apos_ativacao) children.push({ field: 'today', operator: 'gte_date_offset', ref: 'data_ativacao', offset: { days: r.dias_apos_ativacao } });
+  } else {
+    if (r.dias_apos_cancelamento) children.push({ field: 'today', operator: 'gte_date_offset', ref: 'data_cancelamento', offset: { days: r.dias_apos_cancelamento } });
+  }
+  if (r.status_contrato_in) children.push({ field: 'status_contrato', operator: 'in', value: r.status_contrato_in });
+  if (children.length === 0) return null;
+  return { op: 'AND', children };
+}
+
+interface RegraRow {
+  id: string; nome: string; tipo: 'recebimento' | 'reembolso';
+  provedor_id: string | null; provedor_ids: string[]; aplica_todos: boolean;
+  ativo: boolean; regra: any; prioridade: number;
+}
+
+function regraAplicaAoContrato(r: RegraRow, c: any): boolean {
+  if (r.aplica_todos) return true;
+  if (r.provedor_id && r.provedor_id === c.provedor_id) return true;
+  if (Array.isArray(r.provedor_ids) && r.provedor_ids.includes(c.provedor_id)) return true;
+  return false;
+}
+
+function contratoElegivel(c: any, tipo: 'recebimento' | 'reembolso', regras: RegraRow[]): boolean {
+  if (tipo === 'recebimento' && c.recebimento_efetivado === true) return false;
+  if (tipo === 'reembolso' && c.reembolso_efetivado === true) return false;
+  const aplicaveis = regras.filter(r => r.tipo === tipo && r.ativo && regraAplicaAoContrato(r, c));
+  if (aplicaveis.length === 0) return false; // sem regras = ninguém elegível (modelo conservador)
+  return aplicaveis.some(r => evalNode(c, adaptRegraLegacy(r.regra, tipo)));
 }
 
 serve(async (req) => {
