@@ -12,9 +12,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
-import { Filter, CheckCircle2, Eye, Download, Calendar as CalendarIcon } from 'lucide-react';
+import { Filter, CheckCircle2, Eye, Download, X } from 'lucide-react';
 import { ContractDetailsDialog, ContratoCompleto } from '@/components/ContractDetailsDialog';
 import { formatLocalDate } from '@/lib/dateUtils';
+import { DateConditionBuilder } from '@/components/filters/DateConditionBuilder';
+import { Condition, evaluateConditions, isConditionComplete, summarizeCondition } from '@/components/filters/dateConditionUtils';
 
 interface Props {
   tipo: 'recebimento' | 'reembolso';
@@ -42,8 +44,6 @@ const DATE_FILTER_FIELDS: { key: keyof Contrato; label: string }[] = [
   { key: 'data_pgto_terceira_mensalidade', label: 'Pgto. 3ª mensalidade' },
 ];
 
-type DateRanges = Record<string, { from?: string; to?: string }>;
-
 const fmtBRL = (n: number) => n?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 export default function OperacionalContratos({ tipo }: Props) {
@@ -51,7 +51,7 @@ export default function OperacionalContratos({ tipo }: Props) {
   const [provedorIds, setProvedorIds] = useState<string[]>([]);
   const [busca, setBusca] = useState('');
   const [aba, setAba] = useState<'elegiveis' | 'processados'>('elegiveis');
-  const [dateRanges, setDateRanges] = useState<DateRanges>({});
+  const [conditions, setConditions] = useState<Condition[]>([]);
   const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; contrato?: Contrato; data: string }>({ open: false, data: new Date().toISOString().slice(0, 10) });
 
   // Detalhes
@@ -86,31 +86,16 @@ export default function OperacionalContratos({ tipo }: Props) {
     },
   });
 
-  const activeDateFilterCount = useMemo(
-    () => Object.values(dateRanges).filter(r => r?.from || r?.to).length,
-    [dateRanges]
+  const activeConditions = useMemo(
+    () => conditions.filter(isConditionComplete),
+    [conditions]
   );
 
   const filteredContratos = useMemo(() => {
     const list = contratos || [];
-    if (activeDateFilterCount === 0) return list;
-    return list.filter(c => {
-      for (const { key } of DATE_FILTER_FIELDS) {
-        const r = dateRanges[key as string];
-        if (!r || (!r.from && !r.to)) continue;
-        const v = (c as any)[key];
-        if (!v) return false;
-        const d = String(v).slice(0, 10);
-        if (r.from && d < r.from) return false;
-        if (r.to && d > r.to) return false;
-      }
-      return true;
-    });
-  }, [contratos, dateRanges, activeDateFilterCount]);
-
-  const setRange = (key: string, side: 'from' | 'to', value: string) => {
-    setDateRanges(prev => ({ ...prev, [key]: { ...prev[key], [side]: value || undefined } }));
-  };
+    if (activeConditions.length === 0) return list;
+    return list.filter(c => evaluateConditions(c, activeConditions));
+  }, [contratos, activeConditions]);
 
   const confirmar = useMutation({
     mutationFn: async ({ contratoId, data }: { contratoId: string; data: string }) => {
@@ -201,62 +186,75 @@ export default function OperacionalContratos({ tipo }: Props) {
         <CardHeader>
           <CardTitle className="text-base">Filtros</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-wrap items-end gap-3">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="gap-2">
-                <Filter className="h-4 w-4" />
-                Provedores {provedorIds.length > 0 && <Badge variant="secondary">{provedorIds.length}</Badge>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-72">
-              <div className="space-y-2 max-h-72 overflow-auto">
-                {(provedores || []).map(p => (
-                  <label key={p.id} className="flex items-center gap-2 cursor-pointer text-sm">
-                    <Checkbox checked={provedorIds.includes(p.id)} onCheckedChange={() => toggleProv(p.id)} />
-                    {p.nome}
-                  </label>
-                ))}
-                {provedorIds.length > 0 && (
-                  <Button variant="ghost" size="sm" onClick={() => setProvedorIds([])}>Limpar</Button>
-                )}
-              </div>
-            </PopoverContent>
-          </Popover>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="gap-2">
-                <CalendarIcon className="h-4 w-4" />
-                Filtros de data {activeDateFilterCount > 0 && <Badge variant="secondary">{activeDateFilterCount}</Badge>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[420px]" align="start">
-              <div className="space-y-3 max-h-[420px] overflow-auto pr-1">
-                {DATE_FILTER_FIELDS.map(({ key, label }) => {
-                  const r = dateRanges[key as string] || {};
-                  return (
-                    <div key={key as string} className="space-y-1">
-                      <Label className="text-xs">{label}</Label>
-                      <div className="flex items-center gap-2">
-                        <Input type="date" value={r.from || ''} onChange={e => setRange(key as string, 'from', e.target.value)} className="h-8" />
-                        <span className="text-xs text-muted-foreground">até</span>
-                        <Input type="date" value={r.to || ''} onChange={e => setRange(key as string, 'to', e.target.value)} className="h-8" />
-                      </div>
-                    </div>
-                  );
-                })}
-                {activeDateFilterCount > 0 && (
-                  <Button variant="ghost" size="sm" onClick={() => setDateRanges({})}>Limpar filtros de data</Button>
-                )}
-              </div>
-            </PopoverContent>
-          </Popover>
-          <div className="flex-1 min-w-[240px]">
-            <Label>Buscar</Label>
-            <Input placeholder="Nome, CPF, código contrato/cliente" value={busca} onChange={e => setBusca(e.target.value)} />
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap items-end gap-3">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <Filter className="h-4 w-4" />
+                  Provedores {provedorIds.length > 0 && <Badge variant="secondary">{provedorIds.length}</Badge>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-72">
+                <div className="space-y-2 max-h-72 overflow-auto">
+                  {(provedores || []).map(p => (
+                    <label key={p.id} className="flex items-center gap-2 cursor-pointer text-sm">
+                      <Checkbox checked={provedorIds.includes(p.id)} onCheckedChange={() => toggleProv(p.id)} />
+                      {p.nome}
+                    </label>
+                  ))}
+                  {provedorIds.length > 0 && (
+                    <Button variant="ghost" size="sm" onClick={() => setProvedorIds([])}>Limpar</Button>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
+            <div className="flex-1 min-w-[240px]">
+              <Label>Buscar</Label>
+              <Input placeholder="Nome, CPF, código contrato/cliente" value={busca} onChange={e => setBusca(e.target.value)} />
+            </div>
+          </div>
+
+          <div>
+            <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Filtros de data
+            </div>
+            <DateConditionBuilder
+              value={conditions}
+              onChange={setConditions}
+              fields={DATE_FILTER_FIELDS as any}
+            />
           </div>
         </CardContent>
       </Card>
+
+      {activeConditions.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs text-muted-foreground">Filtros ativos:</span>
+          {activeConditions.map((c, i) => (
+            <div key={c.id} className="flex items-center gap-1">
+              {i > 0 && (
+                <span className={`text-[10px] font-bold uppercase ${c.connector === 'AND' ? 'text-primary' : 'text-amber-600 dark:text-amber-400'}`}>
+                  {c.connector === 'AND' ? 'E' : 'OU'}
+                </span>
+              )}
+              <Badge variant="secondary" className="gap-1.5 pr-1">
+                {summarizeCondition(c, DATE_FILTER_FIELDS as any)}
+                <button
+                  type="button"
+                  onClick={() => setConditions(prev => prev.filter(x => x.id !== c.id))}
+                  className="rounded-sm p-0.5 hover:bg-background/60"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            </div>
+          ))}
+          <Button variant="ghost" size="sm" className="h-6 text-xs text-muted-foreground" onClick={() => setConditions([])}>
+            Limpar
+          </Button>
+        </div>
+      )}
 
       <Tabs value={aba} onValueChange={v => setAba(v as any)}>
         <TabsList>
