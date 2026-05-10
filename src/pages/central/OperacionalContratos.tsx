@@ -159,7 +159,7 @@ export default function OperacionalContratos({ tipo }: Props) {
   };
 
   const exportCSV = () => {
-    const rows = contratos || [];
+    const rows = filteredContratos || [];
     if (!rows.length) { toast.info('Nada para exportar'); return; }
     const isProc = aba === 'processados';
     const dataCol = tipo === 'recebimento' ? 'data_ativacao' : 'data_cancelamento';
