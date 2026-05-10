@@ -1,10 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, Pencil } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Loader2, Pencil, X } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import { ContractEditDialog } from './ContractEditDialog';
 import { formatLocalDate } from '@/lib/dateUtils';
 
@@ -108,6 +113,46 @@ export function ContractDetailsDialog({
   onContractUpdated 
 }: ContractDetailsDialogProps) {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editStatusOp, setEditStatusOp] = useState(false);
+  const [savingStatusOp, setSavingStatusOp] = useState(false);
+  const [recebFlag, setRecebFlag] = useState(false);
+  const [recebData, setRecebData] = useState('');
+  const [reembFlag, setReembFlag] = useState(false);
+  const [reembData, setReembData] = useState('');
+
+  useEffect(() => {
+    if (!contract) return;
+    setRecebFlag(!!contract.recebimento_efetivado);
+    setRecebData(contract.data_recebimento ? String(contract.data_recebimento).slice(0, 10) : '');
+    setReembFlag(!!contract.reembolso_efetivado);
+    setReembData(contract.data_reembolso ? String(contract.data_reembolso).slice(0, 10) : '');
+  }, [contract, editStatusOp]);
+
+  const salvarStatusOp = async () => {
+    if (!contract) return;
+    setSavingStatusOp(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('central-operacional', {
+        body: {
+          action: 'atualizarStatusOperacional',
+          contratoId: contract.id,
+          recebimento_efetivado: recebFlag,
+          data_recebimento: recebFlag ? (recebData || null) : null,
+          reembolso_efetivado: reembFlag,
+          data_reembolso: reembFlag ? (reembData || null) : null,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success('Status operacional atualizado');
+      setEditStatusOp(false);
+      onContractUpdated?.();
+    } catch (e: any) {
+      toast.error('Erro: ' + e.message);
+    } finally {
+      setSavingStatusOp(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -276,7 +321,18 @@ export function ContractDetailsDialog({
 
               {/* Status Operacional */}
               <section>
-                <h3 className="font-semibold text-lg mb-3">Status Operacional</h3>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold text-lg">Status Operacional</h3>
+                  {!editStatusOp ? (
+                    <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => setEditStatusOp(true)}>
+                      <Pencil className="h-3.5 w-3.5" /> Editar recebimento/reembolso
+                    </Button>
+                  ) : (
+                    <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => setEditStatusOp(false)}>
+                      <X className="h-3.5 w-3.5" /> Cancelar
+                    </Button>
+                  )}
+                </div>
                 <div className="space-y-1">
                   <InfoRow
                     label="Status do Contrato"
@@ -285,24 +341,57 @@ export function ContractDetailsDialog({
                   <InfoRow label="Data de Ativação" value={formatDate(contract.data_ativacao ?? null)} />
                   <InfoRow label="Data de Cancelamento" value={formatDate(contract.data_cancelamento ?? null)} />
                   <InfoRow label="Motivo do Cancelamento" value={contract.motivo_cancelamento || '-'} />
-                  <InfoRow
-                    label="Recebimento"
-                    value={
-                      contract.recebimento_efetivado
-                        ? <Badge variant="secondary">Efetivado em {formatDate(contract.data_recebimento ?? null)}</Badge>
-                        : <Badge variant="outline">Pendente</Badge>
-                    }
-                  />
-                  <InfoRow
-                    label="Reembolso"
-                    value={
-                      contract.reembolso_efetivado
-                        ? <Badge variant="secondary">Efetivado em {formatDate(contract.data_reembolso ?? null)}</Badge>
-                        : contract.reembolsavel
-                          ? <Badge variant="outline">Elegível</Badge>
-                          : '-'
-                    }
-                  />
+
+                  {!editStatusOp ? (
+                    <>
+                      <InfoRow
+                        label="Recebimento"
+                        value={
+                          contract.recebimento_efetivado
+                            ? <Badge variant="secondary">Efetivado em {formatDate(contract.data_recebimento ?? null)}</Badge>
+                            : <Badge variant="outline">Pendente</Badge>
+                        }
+                      />
+                      <InfoRow
+                        label="Reembolso"
+                        value={
+                          contract.reembolso_efetivado
+                            ? <Badge variant="secondary">Efetivado em {formatDate(contract.data_reembolso ?? null)}</Badge>
+                            : contract.reembolsavel
+                              ? <Badge variant="outline">Elegível</Badge>
+                              : '-'
+                        }
+                      />
+                    </>
+                  ) : (
+                    <div className="space-y-3 rounded-md border p-3 bg-muted/30">
+                      <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 items-end">
+                        <div className="flex items-center gap-2">
+                          <Checkbox id="receb-flag" checked={recebFlag} onCheckedChange={(v) => setRecebFlag(!!v)} />
+                          <Label htmlFor="receb-flag" className="cursor-pointer">Recebimento efetivado</Label>
+                        </div>
+                        <div>
+                          <Label className="text-xs">Data do recebimento</Label>
+                          <Input type="date" value={recebData} disabled={!recebFlag} onChange={e => setRecebData(e.target.value)} />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 items-end">
+                        <div className="flex items-center gap-2">
+                          <Checkbox id="reemb-flag" checked={reembFlag} onCheckedChange={(v) => setReembFlag(!!v)} />
+                          <Label htmlFor="reemb-flag" className="cursor-pointer">Reembolso efetivado</Label>
+                        </div>
+                        <div>
+                          <Label className="text-xs">Data do reembolso</Label>
+                          <Input type="date" value={reembData} disabled={!reembFlag} onChange={e => setReembData(e.target.value)} />
+                        </div>
+                      </div>
+                      <div className="flex justify-end">
+                        <Button size="sm" disabled={savingStatusOp} onClick={salvarStatusOp}>
+                          {savingStatusOp ? 'Salvando...' : 'Salvar alterações'}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </section>
 
