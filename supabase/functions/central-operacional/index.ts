@@ -27,6 +27,7 @@ function getFieldValue(c: any, field: string): any {
   if (field === 'qtd_pagamentos_efetuados') {
     return [c.data_pgto_primeira_mensalidade, c.data_pgto_segunda_mensalidade, c.data_pgto_terceira_mensalidade].filter(Boolean).length;
   }
+  if (field === 'today') return new Date().toISOString().slice(0, 10);
   return c?.[field];
 }
 
