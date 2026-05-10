@@ -1,42 +1,25 @@
-# Corrigir builder de regras
+# Adicionar `created_at` e `updated_at` ao builder de regras
 
-## Problema
+## Mudanças
 
-No `RegraEditorDialog.tsx`, clicar em **"+ Condição"** ou **"+ Grupo"** no nível raiz não tem efeito.
-
-**Causa:** em `updateNode`, com `path=[]`, o código faz `parent.children[0] = updater(...)` em um wrapper local `{ children: [clone] }`. Isso reatribui o slot do array temporário, mas a variável `clone` continua apontando para o objeto antigo — e é `clone` que vai pro `setTree`. Resultado: ações no grupo raiz (adicionar condição/grupo, remover filho via helper, etc.) não modificam o estado.
-
-Em grupos aninhados funciona "por acidente" porque a mutação acontece dentro do `clone` real.
-
-## Correção
-
-Reescrever `updateNode` com recursão imutável que funciona em qualquer profundidade, incluindo raiz:
+### 1. `src/lib/regras/fields.ts`
+Adicionar dois campos na seção "Datas":
 
 ```ts
-const updateNode = (path: number[], updater: (n: Node) => Node) => {
-  const recur = (node: Node, depth: number): Node => {
-    if (depth === path.length) return updater(node);
-    if (!isGroup(node)) return node;
-    const idx = path[depth];
-    const newChildren = node.children.map((c, i) => i === idx ? recur(c, depth + 1) : c);
-    return { ...node, children: newChildren };
-  };
-  setTree(recur(tree, 0) as Group);
-};
+{ key: 'created_at', label: 'Data de criação do contrato', type: 'date', isDate: true },
+{ key: 'updated_at', label: 'Última atualização do contrato', type: 'date', isDate: true },
 ```
 
-## Limpeza adicional (mesmo arquivo)
+Eles automaticamente aparecem:
+- no select de campos do `ConditionRow`
+- na lista de campos de data disponíveis para `lte_date_offset`/`gte_date_offset` (via `ALL_FIELDS_INCLUDING_TODAY.filter(f => f.isDate)`)
 
-- Adicionar `DialogDescription` no `DialogContent` para eliminar o warning de acessibilidade visto no console.
-- Pré-popular **uma condição inicial** ao abrir "Nova regra" para o usuário não ver a tela vazia "Nenhuma condição".
+### 2. `supabase/functions/central-operacional/index.ts`
+No avaliador, garantir que `created_at`/`updated_at` (que vêm como timestamps ISO completos) sejam tratados como datas. O parser de datas já existente precisa aceitar tanto `YYYY-MM-DD` quanto `YYYY-MM-DDTHH:mm:ss...` — verificar e ajustar a função de leitura de campo de data se necessário (truncar para os 10 primeiros caracteres antes de comparar).
 
-## Arquivo afetado
-
-- `src/components/RegraEditorDialog.tsx`
+Sem alterações de banco. Sem alterações de UI além das acima.
 
 ## Validação
-
-- Abrir "Nova regra" → "+ Condição" adiciona linha. ✓
-- "+ Grupo" adiciona grupo filho. ✓
-- Adicionar/remover dentro de grupo aninhado segue funcionando. ✓
-- Console limpo (sem warning de DialogDescription). ✓
+- Abrir editor de regra → campo "Data de criação do contrato" disponível.
+- Operador "em ou antes de (campo + offset)" lista `created_at`/`updated_at` como referência.
+- Testar regra com contrato real retorna resultado correto (sem erro de parsing de data).
