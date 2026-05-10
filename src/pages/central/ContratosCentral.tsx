@@ -49,8 +49,7 @@ export default function ContratosCentral() {
   const [pStatusContrato, setPStatusContrato] = useState('todos');
   const [pTipoVenda, setPTipoVenda] = useState('todos');
   const [pBusca, setPBusca] = useState('');
-  const [pDataInicio, setPDataInicio] = useState('');
-  const [pDataFim, setPDataFim] = useState('');
+  const [pConditions, setPConditions] = useState<Condition[]>([]);
 
   const [filters, setFilters] = useState<any>(null);
   const [page, setPage] = useState(1);
@@ -85,6 +84,11 @@ export default function ContratosCentral() {
     enabled: !!filters,
   });
 
+  const activeConditions = useMemo(
+    () => pConditions.filter(isConditionComplete),
+    [pConditions]
+  );
+
   const apply = () => {
     setFilters({
       provedorIds: pProvedores.length ? pProvedores : undefined,
@@ -92,15 +96,14 @@ export default function ContratosCentral() {
       statusContrato: pStatusContrato !== 'todos' ? pStatusContrato : undefined,
       tipoVenda: pTipoVenda !== 'todos' ? pTipoVenda : undefined,
       busca: pBusca || undefined,
-      dataInicio: pDataInicio || undefined,
-      dataFim: pDataFim || undefined,
+      dateConditions: activeConditions.length ? activeConditions : undefined,
     });
     setPage(1);
   };
 
   const clear = () => {
     setPProvedores([]); setPStatus('todos'); setPStatusContrato('todos');
-    setPTipoVenda('todos'); setPBusca(''); setPDataInicio(''); setPDataFim('');
+    setPTipoVenda('todos'); setPBusca(''); setPConditions([]);
     setFilters(null); setPage(1);
   };
 
