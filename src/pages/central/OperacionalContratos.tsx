@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
-import { Filter, CheckCircle2, Eye, Download } from 'lucide-react';
+import { Filter, CheckCircle2, Eye, Download, Calendar as CalendarIcon } from 'lucide-react';
 import { ContractDetailsDialog, ContratoCompleto } from '@/components/ContractDetailsDialog';
 import { formatLocalDate } from '@/lib/dateUtils';
 
