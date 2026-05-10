@@ -8,24 +8,24 @@
  * @param isoDateString - String no formato YYYY-MM-DD
  * @returns Date object no timezone local
  */
-export const parseLocalDate = (isoDateString: string): Date => {
+export const parseLocalDate = (isoDateString: string | null | undefined): Date | null => {
+  if (!isoDateString) return null;
   // Aceita 'YYYY-MM-DD' ou timestamp ISO completo ('YYYY-MM-DDTHH:mm:ss...')
-  const datePart = isoDateString.includes('T') ? isoDateString.slice(0, 10) : isoDateString.slice(0, 10);
+  const datePart = isoDateString.slice(0, 10);
   const [year, month, day] = datePart.split('-').map(Number);
+  if (!year || !month || !day) return null;
   return new Date(year, month - 1, day); // month is 0-indexed in JavaScript
 };
 
 /**
  * Formata string de data (YYYY-MM-DD) para formato brasileiro sem conversão de timezone
- * @param dateString - String no formato YYYY-MM-DD
- * @param options - Opções de formatação Intl.DateTimeFormat
- * @returns String formatada
  */
 export const formatLocalDate = (
-  dateString: string,
+  dateString: string | null | undefined,
   options: Intl.DateTimeFormatOptions = { day: '2-digit', month: '2-digit', year: 'numeric' }
 ): string => {
   const date = parseLocalDate(dateString);
+  if (!date) return '';
   return date.toLocaleDateString('pt-BR', options);
 };
 
