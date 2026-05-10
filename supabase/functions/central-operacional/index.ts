@@ -377,15 +377,21 @@ serve(async (req) => {
       case 'listContratos': {
         const {
           provedorIds, status, statusContrato, tipoVenda,
-          dataInicio, dataFim, busca, page = 1, pageSize = 20,
+          dataInicio, dataFim, dateConditions, busca, page = 1, pageSize = 20,
         } = params;
         let q = supabase.from('contratos').select('*', { count: 'exact' });
         if (provedorIds && provedorIds.length > 0) q = q.in('provedor_id', provedorIds);
         if (status) q = q.eq('status', status);
         if (statusContrato) q = q.eq('status_contrato', statusContrato);
         if (tipoVenda) q = q.eq('tipo_venda', tipoVenda);
-        if (dataInicio) q = q.gte('created_at', dataInicio);
-        if (dataFim) q = q.lte('created_at', dataFim + 'T23:59:59');
+        // Compat: dataInicio/dataFim antigos => filtra por created_at
+        if (!Array.isArray(dateConditions) || dateConditions.length === 0) {
+          if (dataInicio) q = q.gte('created_at', dataInicio);
+          if (dataFim) q = q.lte('created_at', dataFim + 'T23:59:59');
+        } else {
+          const orFilter = buildDateConditionsFilter(dateConditions);
+          if (orFilter) q = q.or(orFilter);
+        }
         if (busca) {
           const s = `%${busca}%`;
           q = q.or(`nome_completo.ilike.${s},cpf.ilike.${s},codigo_contrato.ilike.${s},codigo_cliente.ilike.${s},email.ilike.${s},celular.ilike.${s}`);
@@ -400,7 +406,7 @@ serve(async (req) => {
       case 'exportContratos': {
         const {
           provedorIds, status, statusContrato, tipoVenda,
-          dataInicio, dataFim, busca,
+          dataInicio, dataFim, dateConditions, busca,
         } = params;
         const MAX = 50000;
         let q = supabase.from('contratos').select('*', { count: 'exact' });
@@ -408,8 +414,13 @@ serve(async (req) => {
         if (status) q = q.eq('status', status);
         if (statusContrato) q = q.eq('status_contrato', statusContrato);
         if (tipoVenda) q = q.eq('tipo_venda', tipoVenda);
-        if (dataInicio) q = q.gte('created_at', dataInicio);
-        if (dataFim) q = q.lte('created_at', dataFim + 'T23:59:59');
+        if (!Array.isArray(dateConditions) || dateConditions.length === 0) {
+          if (dataInicio) q = q.gte('created_at', dataInicio);
+          if (dataFim) q = q.lte('created_at', dataFim + 'T23:59:59');
+        } else {
+          const orFilter = buildDateConditionsFilter(dateConditions);
+          if (orFilter) q = q.or(orFilter);
+        }
         if (busca) {
           const s = `%${busca}%`;
           q = q.or(`nome_completo.ilike.${s},cpf.ilike.${s},codigo_contrato.ilike.${s},codigo_cliente.ilike.${s},email.ilike.${s},celular.ilike.${s}`);
