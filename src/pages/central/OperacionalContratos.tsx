@@ -53,6 +53,8 @@ export default function OperacionalContratos({ tipo }: Props) {
   const [aba, setAba] = useState<'elegiveis' | 'processados'>('elegiveis');
   const [conditions, setConditions] = useState<Condition[]>([]);
   const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; contrato?: Contrato; data: string }>({ open: false, data: new Date().toISOString().slice(0, 10) });
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDialog, setBulkDialog] = useState<{ open: boolean; data: string }>({ open: false, data: new Date().toISOString().slice(0, 10) });
 
   // Detalhes
   const [detailsOpen, setDetailsOpen] = useState(false);
