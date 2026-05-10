@@ -273,6 +273,48 @@ serve(async (req) => {
         if (historicoRows.length) await supabase.from('historico_contratos').insert(historicoRows);
         return json({ success: true, count: contratosLote?.length || 0 });
       }
+      case 'atualizarStatusOperacional': {
+        const { contratoId, recebimento_efetivado, data_recebimento, reembolso_efetivado, data_reembolso } = params;
+        if (!contratoId) return json({ error: 'contratoId obrigatório' }, 400);
+        const updates: any = {};
+        if (recebimento_efetivado !== undefined) {
+          updates.recebimento_efetivado = !!recebimento_efetivado;
+          updates.data_recebimento = recebimento_efetivado ? (data_recebimento || new Date().toISOString().slice(0, 10)) : null;
+        }
+        if (reembolso_efetivado !== undefined) {
+          updates.reembolso_efetivado = !!reembolso_efetivado;
+          updates.data_reembolso = reembolso_efetivado ? (data_reembolso || new Date().toISOString().slice(0, 10)) : null;
+        }
+        // Permitir editar somente a data sem mudar o flag
+        if (recebimento_efetivado === undefined && data_recebimento !== undefined) {
+          updates.data_recebimento = data_recebimento || null;
+        }
+        if (reembolso_efetivado === undefined && data_reembolso !== undefined) {
+          updates.data_reembolso = data_reembolso || null;
+        }
+        if (Object.keys(updates).length === 0) return json({ error: 'Nada para atualizar' }, 400);
+        const { data: contrato, error: cErr } = await supabase
+          .from('contratos').select('provedor_id, nome_completo, recebimento_efetivado, reembolso_efetivado, data_recebimento, data_reembolso')
+          .eq('id', contratoId).single();
+        if (cErr) throw cErr;
+        const { error } = await supabase.from('contratos').update(updates).eq('id', contratoId);
+        if (error) throw error;
+        const historicoRows: any[] = [];
+        for (const [campo, valorNovo] of Object.entries(updates)) {
+          historicoRows.push({
+            contrato_id: contratoId,
+            provedor_id: contrato.provedor_id,
+            entidade_nome: contrato.nome_completo,
+            usuario_id: user.id,
+            tipo_acao: 'status_operacional_atualizado',
+            campo_alterado: campo,
+            valor_anterior: String((contrato as any)[campo] ?? ''),
+            valor_novo: String(valorNovo ?? ''),
+          });
+        }
+        if (historicoRows.length) await supabase.from('historico_contratos').insert(historicoRows);
+        return json({ success: true });
+      }
       case 'listProvedores': {
         const { data, error } = await supabase.from('provedores').select('id, nome').eq('ativo', true).order('nome');
         if (error) throw error;
