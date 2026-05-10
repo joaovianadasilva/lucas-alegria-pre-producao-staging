@@ -255,9 +255,9 @@ export default function OperacionalContratos({ tipo }: Props) {
                 <TableBody>
                   {isLoading ? (
                     <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
-                  ) : (contratos || []).length === 0 ? (
+                  ) : (filteredContratos || []).length === 0 ? (
                     <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Nenhum contrato encontrado.</TableCell></TableRow>
-                  ) : (contratos || []).map(c => (
+                  ) : (filteredContratos || []).map(c => (
                     <TableRow key={c.id} className="cursor-pointer hover:bg-muted/50" onClick={() => openDetails(c)}>
                       <TableCell>{provedorMap.get(c.provedor_id) || '—'}</TableCell>
                       <TableCell className="font-mono text-xs">{c.codigo_contrato || c.id.slice(0, 8)}</TableCell>
