@@ -283,6 +283,59 @@ export function ContractDetailsDialog({
                   <InfoRow label="Tipo de Venda" value={contract.tipo_venda} />
                   <InfoRow label="Código do Contrato" value={contract.codigo_contrato} />
                   <InfoRow label="Código do Cliente" value={contract.codigo_cliente} />
+              <Separator />
+
+              {/* Status Operacional */}
+              <section>
+                <h3 className="font-semibold text-lg mb-3">Status Operacional</h3>
+                <div className="space-y-1">
+                  <InfoRow
+                    label="Status do Contrato"
+                    value={contract.status_contrato ? <Badge variant="outline">{contract.status_contrato}</Badge> : '-'}
+                  />
+                  <InfoRow label="Data de Ativação" value={formatDate(contract.data_ativacao ?? null)} />
+                  <InfoRow label="Data de Cancelamento" value={formatDate(contract.data_cancelamento ?? null)} />
+                  {contract.motivo_cancelamento && (
+                    <div className="pt-2">
+                      <p className="text-sm text-muted-foreground mb-1">Motivo do Cancelamento:</p>
+                      <p className="text-sm bg-muted/30 rounded-md p-2">{contract.motivo_cancelamento}</p>
+                    </div>
+                  )}
+                  <InfoRow label="Pgto. 1ª mensalidade" value={formatDate(contract.data_pgto_primeira_mensalidade ?? null)} />
+                  <InfoRow label="Pgto. 2ª mensalidade" value={formatDate(contract.data_pgto_segunda_mensalidade ?? null)} />
+                  <InfoRow label="Pgto. 3ª mensalidade" value={formatDate(contract.data_pgto_terceira_mensalidade ?? null)} />
+                  <InfoRow
+                    label="Recebimento"
+                    value={
+                      contract.recebimento_efetivado
+                        ? <Badge variant="secondary">Efetivado em {formatDate(contract.data_recebimento ?? null)}</Badge>
+                        : <Badge variant="outline">Pendente</Badge>
+                    }
+                  />
+                  <InfoRow
+                    label="Reembolso"
+                    value={
+                      contract.reembolso_efetivado
+                        ? <Badge variant="secondary">Efetivado em {formatDate(contract.data_reembolso ?? null)}</Badge>
+                        : contract.reembolsavel
+                          ? <Badge variant="outline">Elegível</Badge>
+                          : '-'
+                    }
+                  />
+                </div>
+              </section>
+
+              <Separator />
+
+              {/* Seção 4: Outras Informações */}
+              <section>
+                <h3 className="font-semibold text-lg mb-3">Outras Informações</h3>
+                <div className="space-y-1">
+                  <InfoRow label="Origem da Venda" value={contract.origem} />
+                  <InfoRow label="Representante de Vendas" value={contract.representante_vendas} />
+                  <InfoRow label="Tipo de Venda" value={contract.tipo_venda} />
+                  <InfoRow label="Código do Contrato" value={contract.codigo_contrato} />
+                  <InfoRow label="Código do Cliente" value={contract.codigo_cliente} />
                   <InfoRow 
                     label="Status" 
                     value={contract.status ? <Badge variant="outline">{contract.status}</Badge> : '-'} 
