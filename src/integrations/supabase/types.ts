@@ -482,6 +482,7 @@ export type Database = {
           endereco: string | null
           id: number
           internet_anterior: string | null
+          logradouro_cep: string | null
           nome: string | null
           opcionais: Json | null
           orgao_emissor: string | null
@@ -511,6 +512,7 @@ export type Database = {
           endereco?: string | null
           id?: number
           internet_anterior?: string | null
+          logradouro_cep?: string | null
           nome?: string | null
           opcionais?: Json | null
           orgao_emissor?: string | null
@@ -540,6 +542,7 @@ export type Database = {
           endereco?: string | null
           id?: number
           internet_anterior?: string | null
+          logradouro_cep?: string | null
           nome?: string | null
           opcionais?: Json | null
           orgao_emissor?: string | null
