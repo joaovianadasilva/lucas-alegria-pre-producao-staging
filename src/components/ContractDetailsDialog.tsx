@@ -321,7 +321,18 @@ export function ContractDetailsDialog({
 
               {/* Status Operacional */}
               <section>
-                <h3 className="font-semibold text-lg mb-3">Status Operacional</h3>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold text-lg">Status Operacional</h3>
+                  {!editStatusOp ? (
+                    <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => setEditStatusOp(true)}>
+                      <Pencil className="h-3.5 w-3.5" /> Editar recebimento/reembolso
+                    </Button>
+                  ) : (
+                    <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => setEditStatusOp(false)}>
+                      <X className="h-3.5 w-3.5" /> Cancelar
+                    </Button>
+                  )}
+                </div>
                 <div className="space-y-1">
                   <InfoRow
                     label="Status do Contrato"
@@ -330,24 +341,57 @@ export function ContractDetailsDialog({
                   <InfoRow label="Data de Ativação" value={formatDate(contract.data_ativacao ?? null)} />
                   <InfoRow label="Data de Cancelamento" value={formatDate(contract.data_cancelamento ?? null)} />
                   <InfoRow label="Motivo do Cancelamento" value={contract.motivo_cancelamento || '-'} />
-                  <InfoRow
-                    label="Recebimento"
-                    value={
-                      contract.recebimento_efetivado
-                        ? <Badge variant="secondary">Efetivado em {formatDate(contract.data_recebimento ?? null)}</Badge>
-                        : <Badge variant="outline">Pendente</Badge>
-                    }
-                  />
-                  <InfoRow
-                    label="Reembolso"
-                    value={
-                      contract.reembolso_efetivado
-                        ? <Badge variant="secondary">Efetivado em {formatDate(contract.data_reembolso ?? null)}</Badge>
-                        : contract.reembolsavel
-                          ? <Badge variant="outline">Elegível</Badge>
-                          : '-'
-                    }
-                  />
+
+                  {!editStatusOp ? (
+                    <>
+                      <InfoRow
+                        label="Recebimento"
+                        value={
+                          contract.recebimento_efetivado
+                            ? <Badge variant="secondary">Efetivado em {formatDate(contract.data_recebimento ?? null)}</Badge>
+                            : <Badge variant="outline">Pendente</Badge>
+                        }
+                      />
+                      <InfoRow
+                        label="Reembolso"
+                        value={
+                          contract.reembolso_efetivado
+                            ? <Badge variant="secondary">Efetivado em {formatDate(contract.data_reembolso ?? null)}</Badge>
+                            : contract.reembolsavel
+                              ? <Badge variant="outline">Elegível</Badge>
+                              : '-'
+                        }
+                      />
+                    </>
+                  ) : (
+                    <div className="space-y-3 rounded-md border p-3 bg-muted/30">
+                      <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 items-end">
+                        <div className="flex items-center gap-2">
+                          <Checkbox id="receb-flag" checked={recebFlag} onCheckedChange={(v) => setRecebFlag(!!v)} />
+                          <Label htmlFor="receb-flag" className="cursor-pointer">Recebimento efetivado</Label>
+                        </div>
+                        <div>
+                          <Label className="text-xs">Data do recebimento</Label>
+                          <Input type="date" value={recebData} disabled={!recebFlag} onChange={e => setRecebData(e.target.value)} />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 items-end">
+                        <div className="flex items-center gap-2">
+                          <Checkbox id="reemb-flag" checked={reembFlag} onCheckedChange={(v) => setReembFlag(!!v)} />
+                          <Label htmlFor="reemb-flag" className="cursor-pointer">Reembolso efetivado</Label>
+                        </div>
+                        <div>
+                          <Label className="text-xs">Data do reembolso</Label>
+                          <Input type="date" value={reembData} disabled={!reembFlag} onChange={e => setReembData(e.target.value)} />
+                        </div>
+                      </div>
+                      <div className="flex justify-end">
+                        <Button size="sm" disabled={savingStatusOp} onClick={salvarStatusOp}>
+                          {savingStatusOp ? 'Salvando...' : 'Salvar alterações'}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </section>
 
