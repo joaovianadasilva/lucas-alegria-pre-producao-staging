@@ -235,7 +235,8 @@ export default function RelatorioVisaoGeralReceita() {
           </div>
 
           {/* Receita & comissão */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <KpiCard titulo="Vendas consideradas" valor={fmtNum(k!.contratosComBase)} sub="Base para cálculo da comissão" accent="text-indigo-600" />
             <KpiCard titulo="Faturamento (regras de receita)" valor={fmtBRL(k!.faturamentoTotal)} sub={`${k!.contratosComBase} contratos atingidos`} accent="text-primary" />
             <KpiCard titulo="Comissão total" valor={fmtBRL(k!.comissaoTotal)} sub={`${fmtNum(k!.percentualComissao, 2)}% do faturamento`} accent="text-amber-600" />
             <KpiCard titulo="Ticket médio" valor={fmtBRL(k!.ticketMedio)} sub="Faturamento ÷ contratos" />
