@@ -46,10 +46,11 @@ interface Relatorio {
   };
   serieTemporal: { data: string; faturamento: number; comissao: number }[];
   porRegraReceita: { id: string; nome: string; contratos: number; base: number }[];
-  porReguaComissao: { id: string; nome: string; regra_receita_nome: string; base: number; comissao: number; aplicacoes: number }[];
+  porReguaComissao: { id: string; nome: string; regra_receita_nome: string; base: number; comissao: number; aplicacoes: number; faixas_acionadas?: string[] }[];
   detalhado: any[];
   totalRegrasReceita: number;
   totalReguasComissao: number;
+  avisos?: string[];
 }
 
 const PAGE_SIZE = 20;
