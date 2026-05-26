@@ -315,30 +315,6 @@ export default function RegraReceitaEditorDialog({ open, onOpenChange, initial, 
                     </Select>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div>
-                    <Label>Entidades incluídas</Label>
-                    <div className="flex gap-4 mt-2">
-                      {ENTIDADES.map(e => (
-                        <label key={e.value} className="flex items-center gap-2 text-sm cursor-pointer">
-                          <Checkbox checked={(bc.entidades_incluidas || []).includes(e.value)} onCheckedChange={() => setBc({ entidades_incluidas: toggleEntidade(bc.entidades_incluidas || [], e.value) })} />
-                          <span>{e.label}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <Label>Entidades excluídas</Label>
-                    <div className="flex gap-4 mt-2">
-                      {ENTIDADES.map(e => (
-                        <label key={e.value} className="flex items-center gap-2 text-sm cursor-pointer">
-                          <Checkbox checked={(bc.entidades_excluidas || []).includes(e.value)} onCheckedChange={() => setBc({ entidades_excluidas: toggleEntidade(bc.entidades_excluidas || [], e.value) })} />
-                          <span>{e.label}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                </div>
               </CardContent>
             )}
           </Card>
