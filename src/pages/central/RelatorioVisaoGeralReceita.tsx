@@ -444,6 +444,14 @@ export default function RelatorioVisaoGeralReceita() {
           </Card>
         </>
       )}
+
+      <ContractDetailsDialog
+        open={detailsOpen}
+        onOpenChange={setDetailsOpen}
+        contract={contractDetails}
+        loading={loadingDetails}
+        onContractUpdated={() => qc.invalidateQueries({ queryKey: ['central-relatorio-receita'] })}
+      />
     </div>
   );
 }
