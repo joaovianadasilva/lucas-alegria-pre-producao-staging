@@ -28,6 +28,7 @@ import Reembolsos from "./pages/central/Reembolsos";
 import ContratosCentral from "./pages/central/ContratosCentral";
 import RelatorioVisaoGeralVendas from "./pages/central/RelatorioVisaoGeralVendas";
 import RelatorioVisaoGeralAgendamentos from "./pages/central/RelatorioVisaoGeralAgendamentos";
+import RelatorioVisaoGeralReceita from "./pages/central/RelatorioVisaoGeralReceita";
 import RegrasOperacionais from "./pages/central/RegrasOperacionais";
 
 const queryClient = new QueryClient();
