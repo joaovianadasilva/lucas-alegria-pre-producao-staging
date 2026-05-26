@@ -46,10 +46,11 @@ interface Relatorio {
   };
   serieTemporal: { data: string; faturamento: number; comissao: number }[];
   porRegraReceita: { id: string; nome: string; contratos: number; base: number }[];
-  porReguaComissao: { id: string; nome: string; regra_receita_nome: string; base: number; comissao: number; aplicacoes: number }[];
+  porReguaComissao: { id: string; nome: string; regra_receita_nome: string; base: number; comissao: number; aplicacoes: number; faixas_acionadas?: string[] }[];
   detalhado: any[];
   totalRegrasReceita: number;
   totalReguasComissao: number;
+  avisos?: string[];
 }
 
 const PAGE_SIZE = 20;
@@ -300,16 +301,22 @@ export default function RelatorioVisaoGeralReceita() {
                   <TableHeader><TableRow>
                     <TableHead>Régua</TableHead>
                     <TableHead>Regra de receita</TableHead>
+                    <TableHead>Faixa(s) acionada(s)</TableHead>
                     <TableHead className="text-right">Base</TableHead>
                     <TableHead className="text-right">Comissão</TableHead>
                   </TableRow></TableHeader>
                   <TableBody>
                     {relatorio.porReguaComissao.length === 0 ? (
-                      <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-6">—</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-6">—</TableCell></TableRow>
                     ) : relatorio.porReguaComissao.map(r => (
                       <TableRow key={r.id}>
                         <TableCell className="font-medium">{r.nome}</TableCell>
                         <TableCell className="text-muted-foreground">{r.regra_receita_nome}</TableCell>
+                        <TableCell className="text-xs">
+                          {r.faixas_acionadas && r.faixas_acionadas.length > 0
+                            ? r.faixas_acionadas.map((f, i) => <Badge key={i} variant="outline" className="mr-1 mb-1">{f}</Badge>)
+                            : <span className="text-muted-foreground">—</span>}
+                        </TableCell>
                         <TableCell className="text-right">{fmtBRL(r.base)}</TableCell>
                         <TableCell className="text-right font-semibold">{fmtBRL(r.comissao)}</TableCell>
                       </TableRow>
@@ -319,6 +326,16 @@ export default function RelatorioVisaoGeralReceita() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Avisos de inconsistência */}
+          {relatorio.avisos && relatorio.avisos.length > 0 && (
+            <Card className="border-amber-500/40 bg-amber-50 dark:bg-amber-950/20">
+              <CardHeader className="pb-2"><CardTitle className="text-base text-amber-700 dark:text-amber-400">Avisos de configuração</CardTitle></CardHeader>
+              <CardContent className="space-y-1 text-sm">
+                {relatorio.avisos.map((a, i) => <div key={i}>• {a}</div>)}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Detalhado */}
           <Card>
@@ -347,11 +364,12 @@ export default function RelatorioVisaoGeralReceita() {
                   <TableHead className="text-right">Valor contrato</TableHead>
                   <TableHead>Regra de receita</TableHead>
                   <TableHead className="text-right">Base gerada</TableHead>
+                  <TableHead>Faixa</TableHead>
                   <TableHead className="text-right">Comissão</TableHead>
                 </TableRow></TableHeader>
                 <TableBody>
                   {paged.length === 0 ? (
-                    <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-6">Sem registros.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-6">Sem registros.</TableCell></TableRow>
                   ) : paged.map((r: any, idx: number) => (
                     <TableRow key={`${r.contrato_id}-${r.regra_receita_id}-${idx}`}>
                       <TableCell className="font-mono text-xs">{r.codigo_contrato || '—'}</TableCell>
@@ -362,6 +380,11 @@ export default function RelatorioVisaoGeralReceita() {
                       <TableCell className="text-right">{fmtBRL(r.valor_total_contrato)}</TableCell>
                       <TableCell className="text-xs">{r.regra_receita_nome}</TableCell>
                       <TableCell className="text-right">{fmtBRL(r.base_gerada)}</TableCell>
+                      <TableCell className="text-xs">
+                        {(r.comissoes || []).map((c: any, i: number) => c.faixa_label && c.faixa_label !== '—'
+                          ? <Badge key={i} variant="outline" className="mr-1">{c.faixa_label}</Badge>
+                          : null)}
+                      </TableCell>
                       <TableCell className="text-right font-semibold">{fmtBRL(r.comissao_total)}</TableCell>
                     </TableRow>
                   ))}
