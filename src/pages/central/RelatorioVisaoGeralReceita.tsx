@@ -364,11 +364,12 @@ export default function RelatorioVisaoGeralReceita() {
                   <TableHead className="text-right">Valor contrato</TableHead>
                   <TableHead>Regra de receita</TableHead>
                   <TableHead className="text-right">Base gerada</TableHead>
+                  <TableHead>Faixa</TableHead>
                   <TableHead className="text-right">Comissão</TableHead>
                 </TableRow></TableHeader>
                 <TableBody>
                   {paged.length === 0 ? (
-                    <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-6">Sem registros.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-6">Sem registros.</TableCell></TableRow>
                   ) : paged.map((r: any, idx: number) => (
                     <TableRow key={`${r.contrato_id}-${r.regra_receita_id}-${idx}`}>
                       <TableCell className="font-mono text-xs">{r.codigo_contrato || '—'}</TableCell>
@@ -379,6 +380,11 @@ export default function RelatorioVisaoGeralReceita() {
                       <TableCell className="text-right">{fmtBRL(r.valor_total_contrato)}</TableCell>
                       <TableCell className="text-xs">{r.regra_receita_nome}</TableCell>
                       <TableCell className="text-right">{fmtBRL(r.base_gerada)}</TableCell>
+                      <TableCell className="text-xs">
+                        {(r.comissoes || []).map((c: any, i: number) => c.faixa_label && c.faixa_label !== '—'
+                          ? <Badge key={i} variant="outline" className="mr-1">{c.faixa_label}</Badge>
+                          : null)}
+                      </TableCell>
                       <TableCell className="text-right font-semibold">{fmtBRL(r.comissao_total)}</TableCell>
                     </TableRow>
                   ))}
