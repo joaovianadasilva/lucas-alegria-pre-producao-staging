@@ -146,6 +146,11 @@ export function validateReguaComissao(
         if (f.min <= prev.max) return `Faixas ${i} e ${i + 1} se sobrepõem`;
       }
     }
+    // Faixa com fator percentual aplicada sobre base de contagem é financeiramente inconsistente
+    const temFatorPercentual = r.faixas.some(f => f.tipo_fator === 'percentual');
+    if (temFatorPercentual && isBaseVolume(r.base_calculo)) {
+      return 'Faixas com fator percentual exigem base de cálculo monetária (ex.: valor do plano). Para "R$ por unidade", use fator do tipo "valor fixo".';
+    }
   }
 
   if (!r.ciclo?.tipo) return 'Selecione o ciclo de apuração';
