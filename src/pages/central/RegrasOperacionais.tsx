@@ -9,8 +9,9 @@ import { Plus, Pencil, Trash2, Power, PowerOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import RegraEditorDialog from '@/components/RegraEditorDialog';
+import RegraReceitaEditorDialog from '@/components/RegraReceitaEditorDialog';
 
-type Tipo = 'recebimento' | 'reembolso';
+type Tipo = 'recebimento' | 'reembolso' | 'receita';
 interface Provedor { id: string; nome: string }
 interface Regra {
   id: string; nome: string; tipo: Tipo;
