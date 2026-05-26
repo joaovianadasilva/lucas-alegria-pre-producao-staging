@@ -235,7 +235,7 @@ export default function RegraReceitaEditorDialog({ open, onOpenChange, initial, 
 
           {/* 5. Condições */}
           <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm">3. Condições de elegibilidade</CardTitle></CardHeader>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">4. Condições de elegibilidade</CardTitle></CardHeader>
             <CardContent>
               <p className="text-xs text-muted-foreground mb-2">Combine condições com E/OU. Um contrato entra na regra quando a expressão é verdadeira.</p>
               <GroupEditor
