@@ -91,6 +91,14 @@ export function CentralSidebar() {
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isActive('/central/relatorios/visao-geral-receita')}>
+                  <NavLink to="/central/relatorios/visao-geral-receita" className={cls}>
+                    <FileBarChart className="h-4 w-4" />
+                    {!collapsed && <span>Visão Geral de Receita</span>}
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

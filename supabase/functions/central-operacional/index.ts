@@ -912,6 +912,228 @@ serve(async (req) => {
           registradosPorDia,
         });
       }
+      case 'relatorioReceita': {
+        const { provedorIds, dataInicio, dataFim } = params as { provedorIds?: string[]; dataInicio: string; dataFim: string };
+        if (!dataInicio || !dataFim) return json({ error: 'dataInicio e dataFim obrigatórios' }, 400);
+
+        const inicioISO = `${dataInicio}T00:00:00`;
+        const fimISO = `${dataFim}T23:59:59`;
+
+        const fetchAll = async (build: () => any) => {
+          const out: any[] = [];
+          const page = 1000;
+          for (let from = 0; ; from += page) {
+            const { data, error } = await build().range(from, from + page - 1);
+            if (error) throw error;
+            out.push(...(data || []));
+            if (!data || data.length < page) break;
+          }
+          return out;
+        };
+
+        const baseFilter = (q: any) => {
+          if (provedorIds && provedorIds.length > 0) q = q.in('provedor_id', provedorIds);
+          return q;
+        };
+
+        const [byCreated, byAtivacao] = await Promise.all([
+          fetchAll(() => baseFilter(supabase.from('contratos').select('*').gte('created_at', inicioISO).lte('created_at', fimISO))),
+          fetchAll(() => baseFilter(supabase.from('contratos').select('*').gte('data_ativacao', dataInicio).lte('data_ativacao', dataFim).not('data_ativacao', 'is', null))),
+        ]);
+        const mapContratos = new Map<string, any>();
+        for (const c of byCreated) mapContratos.set(c.id, c);
+        for (const c of byAtivacao) mapContratos.set(c.id, c);
+        const contratos = Array.from(mapContratos.values());
+
+        const idsAll = contratos.map(c => c.id);
+        const adicionais: any[] = [];
+        const chunk = 200;
+        for (let i = 0; i < idsAll.length; i += chunk) {
+          const slice = idsAll.slice(i, i + chunk);
+          if (slice.length === 0) continue;
+          const { data, error } = await supabase.from('adicionais_contrato')
+            .select('contrato_id, adicional_codigo, adicional_nome, adicional_valor')
+            .in('contrato_id', slice);
+          if (error) throw error;
+          adicionais.push(...(data || []));
+        }
+        const adicPorContrato = new Map<string, any[]>();
+        for (const a of adicionais) {
+          if (!adicPorContrato.has(a.contrato_id)) adicPorContrato.set(a.contrato_id, []);
+          adicPorContrato.get(a.contrato_id)!.push(a);
+        }
+
+        const { data: todasRegras } = await supabase
+          .from('regras_operacionais_provedor')
+          .select('id, nome, tipo, provedor_id, provedor_ids, aplica_todos, ativo, regra')
+          .eq('ativo', true)
+          .in('tipo', ['receita', 'comissao']);
+        const regrasReceita = (todasRegras || []).filter((r: any) => r.tipo === 'receita');
+        const reguasComissao = (todasRegras || []).filter((r: any) => r.tipo === 'comissao');
+
+        const aplicaProv = (r: any, provedor_id: string) => {
+          if (r.aplica_todos) return true;
+          if (r.provedor_id === provedor_id) return true;
+          if (Array.isArray(r.provedor_ids) && r.provedor_ids.includes(provedor_id)) return true;
+          return false;
+        };
+        const vigente = (r: any, dataEvento: string) => {
+          const vi = r.regra?.vigencia_inicio;
+          const vf = r.regra?.vigencia_fim;
+          if (vi && dataEvento < vi) return false;
+          if (vf && dataEvento > vf) return false;
+          return true;
+        };
+        const valorBase = (c: any, base: string) => {
+          const adic = adicPorContrato.get(c.id) || [];
+          const sumAdic = adic.reduce((s, a) => s + Number(a.adicional_valor || 0), 0);
+          switch (base) {
+            case 'valor_plano': return Number(c.plano_valor || 0);
+            case 'valor_adicionais': return sumAdic;
+            case 'valor_total_venda': return Number(c.valor_total || (Number(c.plano_valor || 0) + sumAdic));
+            case 'contratos': return 1;
+            case 'planos_vendidos': return 1;
+            case 'adicionais_vendidos': return adic.length;
+            default: return 0;
+          }
+        };
+
+        const valorCadastrados = byCreated.reduce((s, c) => s + Number(c.valor_total || 0), 0);
+        const valorInstalados = byAtivacao.reduce((s, c) => s + Number(c.valor_total || 0), 0);
+
+        const detalhado: any[] = [];
+        const porRegraReceita = new Map<string, { id: string; nome: string; contratos: number; base: number }>();
+        const porReguaComissao = new Map<string, { id: string; nome: string; regra_receita_id: string; regra_receita_nome: string; base: number; comissao: number; aplicacoes: number }>();
+        const serieMap = new Map<string, { data: string; faturamento: number; comissao: number }>();
+        const ensureSerie = (d: string) => {
+          if (!serieMap.has(d)) serieMap.set(d, { data: d, faturamento: 0, comissao: 0 });
+          return serieMap.get(d)!;
+        };
+
+        let faturamentoTotal = 0;
+        let comissaoTotal = 0;
+        const contratosComBase = new Set<string>();
+
+        for (const c of contratos) {
+          for (const rr of regrasReceita) {
+            if (!aplicaProv(rr, c.provedor_id)) continue;
+            const dataRef = rr.regra?.data_referencia || 'created_at';
+            const dataEvento = (c[dataRef] || c.created_at || '').slice(0, 10);
+            if (!dataEvento) continue;
+            if (dataEvento < dataInicio || dataEvento > dataFim) continue;
+            if (!vigente(rr, dataEvento)) continue;
+
+            const tree = rr.regra?.condicoes;
+            const condOk = !tree || !Array.isArray(tree.children) || tree.children.length === 0
+              ? true
+              : evalNode(c, tree);
+            if (!condOk) continue;
+
+            const baseValorKey = rr.regra?.base_valor || 'valor_plano';
+            const baseGerada = valorBase(c, baseValorKey);
+
+            faturamentoTotal += baseGerada;
+            contratosComBase.add(c.id);
+            ensureSerie(dataEvento).faturamento += baseGerada;
+
+            const aggR = porRegraReceita.get(rr.id) || { id: rr.id, nome: rr.nome, contratos: 0, base: 0 };
+            aggR.contratos += 1;
+            aggR.base += baseGerada;
+            porRegraReceita.set(rr.id, aggR);
+
+            const reguas = reguasComissao.filter((rc: any) =>
+              rc.regra?.regra_receita_id === rr.id && aplicaProv(rc, c.provedor_id) && vigente(rc, dataEvento)
+            );
+
+            const linhasComissao: any[] = [];
+            for (const rc of reguas) {
+              const rj = rc.regra || {};
+              const baseCalc = rj.base_calculo || baseValorKey;
+              const baseCalcValor = valorBase(c, baseCalc);
+              const baseFaixaValor = rj.base_faixa ? valorBase(c, rj.base_faixa) : baseCalcValor;
+              let comissao = 0;
+              let faixaUsada: any = null;
+
+              switch (rj.tipo_regua) {
+                case 'percentual_fixo':
+                  comissao = baseCalcValor * (Number(rj.percentual_fixo || 0) / 100);
+                  break;
+                case 'valor_fixo_unidade':
+                  comissao = baseCalcValor * Number(rj.valor_fixo_unidade || 0);
+                  break;
+                case 'faixa_volume':
+                case 'faixa_valor':
+                case 'hibrida': {
+                  const faixas = Array.isArray(rj.faixas) ? rj.faixas : [];
+                  const f = faixas.find((x: any) =>
+                    baseFaixaValor >= Number(x.min || 0) &&
+                    (x.max == null || baseFaixaValor <= Number(x.max))
+                  );
+                  if (f) {
+                    faixaUsada = f;
+                    if (f.tipo_fator === 'valor_fixo') comissao = baseCalcValor * Number(f.fator || 0);
+                    else comissao = baseCalcValor * (Number(f.fator || 0) / 100);
+                  }
+                  break;
+                }
+              }
+
+              comissaoTotal += comissao;
+              ensureSerie(dataEvento).comissao += comissao;
+
+              const aggC = porReguaComissao.get(rc.id) || { id: rc.id, nome: rc.nome, regra_receita_id: rr.id, regra_receita_nome: rr.nome, base: 0, comissao: 0, aplicacoes: 0 };
+              aggC.base += baseCalcValor;
+              aggC.comissao += comissao;
+              aggC.aplicacoes += 1;
+              porReguaComissao.set(rc.id, aggC);
+
+              linhasComissao.push({ regua_id: rc.id, regua_nome: rc.nome, base_calculo: baseCalc, base_calculo_valor: baseCalcValor, faixa: faixaUsada, comissao });
+            }
+
+            detalhado.push({
+              contrato_id: c.id,
+              codigo_contrato: c.codigo_contrato,
+              codigo_cliente: c.codigo_cliente,
+              nome_completo: c.nome_completo,
+              provedor_id: c.provedor_id,
+              data_evento: dataEvento,
+              plano_nome: c.plano_nome,
+              valor_total_contrato: Number(c.valor_total || 0),
+              regra_receita_id: rr.id,
+              regra_receita_nome: rr.nome,
+              base_valor: baseValorKey,
+              base_gerada: baseGerada,
+              comissoes: linhasComissao,
+              comissao_total: linhasComissao.reduce((s, x) => s + x.comissao, 0),
+            });
+          }
+        }
+
+        const serieTemporal = Array.from(serieMap.values()).sort((a, b) => a.data.localeCompare(b.data));
+
+        const kpis = {
+          contratosCadastrados: byCreated.length,
+          valorContratosCadastrados: valorCadastrados,
+          contratosInstalados: byAtivacao.length,
+          valorContratosInstalados: valorInstalados,
+          faturamentoTotal,
+          comissaoTotal,
+          contratosComBase: contratosComBase.size,
+          ticketMedio: contratosComBase.size > 0 ? faturamentoTotal / contratosComBase.size : 0,
+          percentualComissao: faturamentoTotal > 0 ? (comissaoTotal / faturamentoTotal) * 100 : 0,
+        };
+
+        return json({
+          success: true,
+          kpis,
+          serieTemporal,
+          porRegraReceita: Array.from(porRegraReceita.values()).sort((a, b) => b.base - a.base),
+          porReguaComissao: Array.from(porReguaComissao.values()).sort((a, b) => b.comissao - a.comissao),
+          detalhado: detalhado.sort((a, b) => b.data_evento.localeCompare(a.data_evento)),
+          totalRegrasReceita: regrasReceita.length,
+          totalReguasComissao: reguasComissao.length,
+        });
+      }
       default:
         return json({ error: 'Ação desconhecida' }, 400);
     }
