@@ -9,8 +9,9 @@ import { Plus, Pencil, Trash2, Power, PowerOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import RegraEditorDialog from '@/components/RegraEditorDialog';
+import RegraReceitaEditorDialog from '@/components/RegraReceitaEditorDialog';
 
-type Tipo = 'recebimento' | 'reembolso';
+type Tipo = 'recebimento' | 'reembolso' | 'receita';
 interface Provedor { id: string; nome: string }
 interface Regra {
   id: string; nome: string; tipo: Tipo;
@@ -78,7 +79,7 @@ export default function RegrasOperacionais() {
     return (
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Regras de {t === 'recebimento' ? 'Recebimento' : 'Reembolso'}</CardTitle>
+          <CardTitle className="text-base">Regras de {t === 'recebimento' ? 'Recebimento' : t === 'reembolso' ? 'Reembolso' : 'Receita'}</CardTitle>
           <Button size="sm" onClick={() => { setEditing(null); setEditorOpen(true); }}><Plus className="h-4 w-4 mr-1" /> Nova regra</Button>
         </CardHeader>
         <CardContent>
@@ -138,19 +139,31 @@ export default function RegrasOperacionais() {
         <TabsList>
           <TabsTrigger value="recebimento">Recebimento</TabsTrigger>
           <TabsTrigger value="reembolso">Reembolso</TabsTrigger>
+          <TabsTrigger value="receita">Receita</TabsTrigger>
         </TabsList>
         <TabsContent value="recebimento" className="mt-4">{renderLista('recebimento')}</TabsContent>
         <TabsContent value="reembolso" className="mt-4">{renderLista('reembolso')}</TabsContent>
+        <TabsContent value="receita" className="mt-4">{renderLista('receita')}</TabsContent>
       </Tabs>
 
-      <RegraEditorDialog
-        open={editorOpen}
-        onOpenChange={setEditorOpen}
-        tipo={tipo}
-        initial={editing}
-        provedores={provedores}
-        onSaved={carregar}
-      />
+      {tipo !== 'receita' ? (
+        <RegraEditorDialog
+          open={editorOpen}
+          onOpenChange={setEditorOpen}
+          tipo={tipo as 'recebimento' | 'reembolso'}
+          initial={editing}
+          provedores={provedores}
+          onSaved={carregar}
+        />
+      ) : (
+        <RegraReceitaEditorDialog
+          open={editorOpen}
+          onOpenChange={setEditorOpen}
+          initial={editing}
+          provedores={provedores}
+          onSaved={carregar}
+        />
+      )}
 
       <AlertDialog open={!!confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(null)}>
         <AlertDialogContent>

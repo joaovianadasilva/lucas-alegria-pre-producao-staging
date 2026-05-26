@@ -392,7 +392,7 @@ serve(async (req) => {
       case 'criarRegra': {
         const { nome, tipo, provedor_ids = [], aplica_todos = false, regra, ativo = true, prioridade = 0 } = params;
         if (!nome || !tipo || !regra) return json({ error: 'nome, tipo e regra são obrigatórios' }, 400);
-        if (tipo !== 'recebimento' && tipo !== 'reembolso') return json({ error: 'tipo inválido' }, 400);
+        if (tipo !== 'recebimento' && tipo !== 'reembolso' && tipo !== 'receita') return json({ error: 'tipo inválido' }, 400);
         if (!aplica_todos && (!Array.isArray(provedor_ids) || provedor_ids.length === 0)) {
           return json({ error: 'Selecione ao menos um provedor ou marque "aplica a todos"' }, 400);
         }
@@ -409,7 +409,7 @@ serve(async (req) => {
         const allowed = ['nome', 'tipo', 'provedor_ids', 'aplica_todos', 'regra', 'ativo', 'prioridade'];
         const upd: any = {};
         for (const k of allowed) if (k in updates) upd[k] = updates[k];
-        if (upd.tipo && upd.tipo !== 'recebimento' && upd.tipo !== 'reembolso') return json({ error: 'tipo inválido' }, 400);
+        if (upd.tipo && upd.tipo !== 'recebimento' && upd.tipo !== 'reembolso' && upd.tipo !== 'receita') return json({ error: 'tipo inválido' }, 400);
         const { data, error } = await supabase.from('regras_operacionais_provedor').update(upd).eq('id', id).select().single();
         if (error) throw error;
         return json({ success: true, regra: data });

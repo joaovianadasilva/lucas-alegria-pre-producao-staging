@@ -16,11 +16,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 type Tipo = 'recebimento' | 'reembolso';
-type Group = { op: 'AND' | 'OR'; children: Node[] };
-type Cond = { field: string; operator: string; value?: any; ref?: string; offset?: { days?: number; months?: number } };
-type Node = Group | Cond;
+export type Group = { op: 'AND' | 'OR'; children: Node[] };
+export type Cond = { field: string; operator: string; value?: any; ref?: string; offset?: { days?: number; months?: number } };
+export type Node = Group | Cond;
 
-const isGroup = (n: Node): n is Group => (n as any).op !== undefined && Array.isArray((n as any).children);
+export const isGroup = (n: Node): n is Group => (n as any).op !== undefined && Array.isArray((n as any).children);
 
 interface Provedor { id: string; nome: string }
 
@@ -263,7 +263,7 @@ export default function RegraEditorDialog({ open, onOpenChange, tipo, initial, p
 
 // ===== Sub-componentes =====
 
-function GroupEditor(props: {
+export function GroupEditor(props: {
   node: Group;
   path: number[];
   root?: boolean;
