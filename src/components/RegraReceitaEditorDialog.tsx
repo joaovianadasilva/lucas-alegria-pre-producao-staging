@@ -13,7 +13,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
-  EVENTOS_GERADORES, DATAS_REFERENCIA, ENTIDADES, BASES_VALOR, BASES_VOLUME,
+  EVENTOS_GERADORES, EVENTOS_GERADORES_VALIDOS, DATA_REFERENCIA_PADRAO,
+  DATAS_REFERENCIA, ENTIDADES, BASES_VALOR, BASES_VOLUME,
   RegraReceitaJSON, emptyRegraReceita, validateRegraReceita, Entidade,
 } from '@/lib/regras/receita';
 import { GroupEditor, Group, Node, isGroup } from './RegraEditorDialog';
@@ -163,10 +164,25 @@ export default function RegraReceitaEditorDialog({ open, onOpenChange, initial, 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                   <Label>Evento gerador</Label>
-                  <Select value={r.evento_gerador} onValueChange={(v: any) => setR(s => ({ ...s, evento_gerador: v }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                  <Select
+                    value={(EVENTOS_GERADORES_VALIDOS as readonly string[]).includes(r.evento_gerador) ? r.evento_gerador : ''}
+                    onValueChange={(v: any) => setR(s => ({
+                      ...s,
+                      evento_gerador: v,
+                      data_referencia: (DATA_REFERENCIA_PADRAO[v] as any) || s.data_referencia,
+                    }))}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Selecione o evento" /></SelectTrigger>
                     <SelectContent>{EVENTOS_GERADORES.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
                   </Select>
+                  {!(EVENTOS_GERADORES_VALIDOS as readonly string[]).includes(r.evento_gerador) && (
+                    <p className="text-xs text-destructive mt-1">
+                      Evento "{r.evento_gerador}" não é mais válido para regras de receita. Selecione Venda ou Ativação.
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Venda conta no cadastro do contrato (cancelamentos posteriores não removem da base). Ativação conta quando <code>data_ativacao</code> é preenchida.
+                  </p>
                 </div>
                 <div>
                   <Label>Data de referência</Label>
