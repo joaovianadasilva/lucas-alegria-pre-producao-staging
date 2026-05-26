@@ -998,12 +998,54 @@ serve(async (req) => {
           }
         };
 
+        // ---- Helper: chave de ciclo para agregação de faixa ----
+        const cicloKey = (dataISO: string, ciclo: any): string => {
+          const tipo = ciclo?.tipo || 'mensal';
+          if (!dataISO) return 'NA';
+          const d = new Date(dataISO + 'T00:00:00Z');
+          const y = d.getUTCFullYear();
+          const m = d.getUTCMonth() + 1;
+          const day = d.getUTCDate();
+          switch (tipo) {
+            case 'evento': return `E:${dataISO}`;
+            case 'semanal': {
+              const tmp = new Date(d.getTime());
+              const dayNum = (tmp.getUTCDay() + 6) % 7;
+              tmp.setUTCDate(tmp.getUTCDate() - dayNum);
+              return `W:${tmp.toISOString().slice(0,10)}`;
+            }
+            case 'quinzenal': {
+              const half = day <= 15 ? 'A' : 'B';
+              return `Q:${y}-${String(m).padStart(2,'0')}-${half}`;
+            }
+            case 'mensal':
+              return `M:${y}-${String(m).padStart(2,'0')}`;
+            case 'personalizado': {
+              const intervalo = Number(ciclo.intervalo_dias || 30);
+              const ancoraStr = ciclo.ancora || '2024-01-01';
+              const ancora = new Date(ancoraStr + 'T00:00:00Z');
+              const diff = Math.floor((d.getTime() - ancora.getTime()) / 86400000);
+              const bucket = Math.floor(diff / intervalo);
+              return `P:${bucket}`;
+            }
+            default:
+              return `M:${y}-${String(m).padStart(2,'0')}`;
+          }
+        };
+
         const valorCadastrados = byCreated.reduce((s, c) => s + Number(c.valor_total || 0), 0);
         const valorInstalados = byAtivacao.reduce((s, c) => s + Number(c.valor_total || 0), 0);
 
-        const detalhado: any[] = [];
+        // ---- Pass 1: para cada (contrato × regra_receita) que produz base, registrar contribuição ----
+        interface Contribuicao {
+          contrato: any;
+          regraReceita: any;
+          dataEvento: string;
+          baseValorKey: string;
+          baseGerada: number;
+        }
+        const contribuicoes: Contribuicao[] = [];
         const porRegraReceita = new Map<string, { id: string; nome: string; contratos: number; base: number }>();
-        const porReguaComissao = new Map<string, { id: string; nome: string; regra_receita_id: string; regra_receita_nome: string; base: number; comissao: number; aplicacoes: number }>();
         const serieMap = new Map<string, { data: string; faturamento: number; comissao: number }>();
         const ensureSerie = (d: string) => {
           if (!serieMap.has(d)) serieMap.set(d, { data: d, faturamento: 0, comissao: 0 });
@@ -1011,7 +1053,6 @@ serve(async (req) => {
         };
 
         let faturamentoTotal = 0;
-        let comissaoTotal = 0;
         const contratosComBase = new Set<string>();
 
         for (const c of contratos) {
@@ -1041,72 +1082,136 @@ serve(async (req) => {
             aggR.base += baseGerada;
             porRegraReceita.set(rr.id, aggR);
 
-            const reguas = reguasComissao.filter((rc: any) =>
-              rc.regra?.regra_receita_id === rr.id && aplicaProv(rc, c.provedor_id) && vigente(rc, dataEvento)
-            );
+            contribuicoes.push({ contrato: c, regraReceita: rr, dataEvento, baseValorKey, baseGerada });
+          }
+        }
 
-            const linhasComissao: any[] = [];
-            for (const rc of reguas) {
-              const rj = rc.regra || {};
-              const baseCalc = rj.base_calculo || baseValorKey;
-              const baseCalcValor = valorBase(c, baseCalc);
-              const baseFaixaValor = rj.base_faixa ? valorBase(c, rj.base_faixa) : baseCalcValor;
-              let comissao = 0;
-              let faixaUsada: any = null;
+        // ---- Pass 2a: agregar valores por (régua, provedor, ciclo) para resolver faixas ----
+        // chave: `${reguaId}|${provedor_id}|${cicloKey}` -> { volumeFaixa, valorFaixa, contribCount }
+        const cicloAgg = new Map<string, { baseFaixaSum: number; baseCalcSum: number }>();
+        const reguasApplicableCache = new Map<string, any[]>(); // regraReceitaId -> reguas[]
 
-              switch (rj.tipo_regua) {
-                case 'percentual_fixo':
-                  comissao = baseCalcValor * (Number(rj.percentual_fixo || 0) / 100);
-                  break;
-                case 'valor_fixo_unidade':
-                  comissao = baseCalcValor * Number(rj.valor_fixo_unidade || 0);
-                  break;
-                case 'faixa_volume':
-                case 'faixa_valor':
-                case 'hibrida': {
-                  const faixas = Array.isArray(rj.faixas) ? rj.faixas : [];
-                  const f = faixas.find((x: any) =>
-                    baseFaixaValor >= Number(x.min || 0) &&
-                    (x.max == null || baseFaixaValor <= Number(x.max))
-                  );
-                  if (f) {
-                    faixaUsada = f;
-                    if (f.tipo_fator === 'valor_fixo') comissao = baseCalcValor * Number(f.fator || 0);
-                    else comissao = baseCalcValor * (Number(f.fator || 0) / 100);
+        const reguasFor = (rrId: string, provedor_id: string, dataEvento: string) => {
+          const key = `${rrId}|${provedor_id}|${dataEvento}`;
+          if (reguasApplicableCache.has(key)) return reguasApplicableCache.get(key)!;
+          const list = reguasComissao.filter((rc: any) =>
+            rc.regra?.regra_receita_id === rrId && aplicaProv(rc, provedor_id) && vigente(rc, dataEvento)
+          );
+          reguasApplicableCache.set(key, list);
+          return list;
+        };
+
+        for (const co of contribuicoes) {
+          const reguas = reguasFor(co.regraReceita.id, co.contrato.provedor_id, co.dataEvento);
+          for (const rc of reguas) {
+            const rj = rc.regra || {};
+            const baseCalc = rj.base_calculo || co.baseValorKey;
+            const baseFaixaKey = rj.base_faixa || baseCalc;
+            const baseCalcValor = valorBase(co.contrato, baseCalc);
+            const baseFaixaValor = valorBase(co.contrato, baseFaixaKey);
+            const ck = cicloKey(co.dataEvento, rj.ciclo);
+            const aggKey = `${rc.id}|${co.contrato.provedor_id}|${ck}`;
+            const cur = cicloAgg.get(aggKey) || { baseFaixaSum: 0, baseCalcSum: 0 };
+            cur.baseFaixaSum += baseFaixaValor;
+            cur.baseCalcSum += baseCalcValor;
+            cicloAgg.set(aggKey, cur);
+          }
+        }
+
+        // ---- Pass 2b: calcular comissão por contribuição usando faixa do ciclo ----
+        const detalhado: any[] = [];
+        const porReguaComissao = new Map<string, { id: string; nome: string; regra_receita_id: string; regra_receita_nome: string; base: number; comissao: number; aplicacoes: number; faixas_acionadas: Set<string> }>();
+        let comissaoTotal = 0;
+
+        const inconsistencias = new Set<string>();
+
+        for (const co of contribuicoes) {
+          const reguas = reguasFor(co.regraReceita.id, co.contrato.provedor_id, co.dataEvento);
+          const linhasComissao: any[] = [];
+
+          for (const rc of reguas) {
+            const rj = rc.regra || {};
+            const baseCalc = rj.base_calculo || co.baseValorKey;
+            const baseFaixaKey = rj.base_faixa || baseCalc;
+            const baseCalcValor = valorBase(co.contrato, baseCalc);
+            const ck = cicloKey(co.dataEvento, rj.ciclo);
+            const agg = cicloAgg.get(`${rc.id}|${co.contrato.provedor_id}|${ck}`) || { baseFaixaSum: 0, baseCalcSum: 0 };
+
+            let comissao = 0;
+            let faixaUsada: any = null;
+            let faixaLabel = '—';
+
+            switch (rj.tipo_regua) {
+              case 'percentual_fixo':
+                comissao = baseCalcValor * (Number(rj.percentual_fixo || 0) / 100);
+                faixaLabel = `${rj.percentual_fixo || 0}%`;
+                break;
+              case 'valor_fixo_unidade':
+                comissao = baseCalcValor * Number(rj.valor_fixo_unidade || 0);
+                faixaLabel = `R$ ${Number(rj.valor_fixo_unidade || 0).toFixed(2)}/un`;
+                break;
+              case 'faixa_volume':
+              case 'faixa_valor':
+              case 'hibrida': {
+                const faixas = Array.isArray(rj.faixas) ? rj.faixas : [];
+                // Usa volume/valor acumulado do ciclo para selecionar a faixa
+                const volumeCiclo = agg.baseFaixaSum;
+                const f = faixas.find((x: any) =>
+                  volumeCiclo >= Number(x.min || 0) &&
+                  (x.max == null || volumeCiclo <= Number(x.max))
+                );
+                if (f) {
+                  faixaUsada = f;
+                  faixaLabel = `${f.min}-${f.max ?? '∞'} → ${f.tipo_fator === 'valor_fixo' ? `R$ ${f.fator}` : `${f.fator}%`}`;
+                  if (f.tipo_fator === 'valor_fixo') comissao = baseCalcValor * Number(f.fator || 0);
+                  else {
+                    // Detecta inconsistência: percentual sobre base de contagem
+                    const baseIsVolume = ['planos_vendidos', 'adicionais_vendidos', 'contratos'].includes(baseCalc);
+                    if (baseIsVolume) {
+                      inconsistencias.add(`${rc.nome}: fator percentual aplicado sobre base de contagem (${baseCalc}). Considere usar uma base monetária ou trocar o fator para "valor fixo por unidade".`);
+                    }
+                    comissao = baseCalcValor * (Number(f.fator || 0) / 100);
                   }
-                  break;
                 }
+                break;
               }
-
-              comissaoTotal += comissao;
-              ensureSerie(dataEvento).comissao += comissao;
-
-              const aggC = porReguaComissao.get(rc.id) || { id: rc.id, nome: rc.nome, regra_receita_id: rr.id, regra_receita_nome: rr.nome, base: 0, comissao: 0, aplicacoes: 0 };
-              aggC.base += baseCalcValor;
-              aggC.comissao += comissao;
-              aggC.aplicacoes += 1;
-              porReguaComissao.set(rc.id, aggC);
-
-              linhasComissao.push({ regua_id: rc.id, regua_nome: rc.nome, base_calculo: baseCalc, base_calculo_valor: baseCalcValor, faixa: faixaUsada, comissao });
             }
 
-            detalhado.push({
-              contrato_id: c.id,
-              codigo_contrato: c.codigo_contrato,
-              codigo_cliente: c.codigo_cliente,
-              nome_completo: c.nome_completo,
-              provedor_id: c.provedor_id,
-              data_evento: dataEvento,
-              plano_nome: c.plano_nome,
-              valor_total_contrato: Number(c.valor_total || 0),
-              regra_receita_id: rr.id,
-              regra_receita_nome: rr.nome,
-              base_valor: baseValorKey,
-              base_gerada: baseGerada,
-              comissoes: linhasComissao,
-              comissao_total: linhasComissao.reduce((s, x) => s + x.comissao, 0),
+            comissaoTotal += comissao;
+            ensureSerie(co.dataEvento).comissao += comissao;
+
+            const aggC = porReguaComissao.get(rc.id) || { id: rc.id, nome: rc.nome, regra_receita_id: co.regraReceita.id, regra_receita_nome: co.regraReceita.nome, base: 0, comissao: 0, aplicacoes: 0, faixas_acionadas: new Set<string>() };
+            aggC.base += baseCalcValor;
+            aggC.comissao += comissao;
+            aggC.aplicacoes += 1;
+            if (faixaUsada) aggC.faixas_acionadas.add(faixaLabel);
+            porReguaComissao.set(rc.id, aggC);
+
+            linhasComissao.push({
+              regua_id: rc.id, regua_nome: rc.nome,
+              tipo_regua: rj.tipo_regua,
+              base_calculo: baseCalc, base_calculo_valor: baseCalcValor,
+              base_faixa: rj.base_faixa, volume_ciclo: agg.baseFaixaSum, ciclo_key: ck,
+              faixa: faixaUsada, faixa_label: faixaLabel, comissao
             });
           }
+
+          detalhado.push({
+            contrato_id: co.contrato.id,
+            codigo_contrato: co.contrato.codigo_contrato,
+            codigo_cliente: co.contrato.codigo_cliente,
+            nome_completo: co.contrato.nome_completo,
+            provedor_id: co.contrato.provedor_id,
+            data_evento: co.dataEvento,
+            plano_nome: co.contrato.plano_nome,
+            valor_total_contrato: Number(co.contrato.valor_total || 0),
+            regra_receita_id: co.regraReceita.id,
+            regra_receita_nome: co.regraReceita.nome,
+            base_valor: co.baseValorKey,
+            base_gerada: co.baseGerada,
+            comissoes: linhasComissao,
+            comissao_total: linhasComissao.reduce((s, x) => s + x.comissao, 0),
+          });
         }
 
         const serieTemporal = Array.from(serieMap.values()).sort((a, b) => a.data.localeCompare(b.data));
@@ -1128,10 +1233,13 @@ serve(async (req) => {
           kpis,
           serieTemporal,
           porRegraReceita: Array.from(porRegraReceita.values()).sort((a, b) => b.base - a.base),
-          porReguaComissao: Array.from(porReguaComissao.values()).sort((a, b) => b.comissao - a.comissao),
+          porReguaComissao: Array.from(porReguaComissao.values())
+            .map(r => ({ ...r, faixas_acionadas: Array.from(r.faixas_acionadas) }))
+            .sort((a, b) => b.comissao - a.comissao),
           detalhado: detalhado.sort((a, b) => b.data_evento.localeCompare(a.data_evento)),
           totalRegrasReceita: regrasReceita.length,
           totalReguasComissao: reguasComissao.length,
+          avisos: Array.from(inconsistencias),
         });
       }
       default:
