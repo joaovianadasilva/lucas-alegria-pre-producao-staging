@@ -139,19 +139,31 @@ export default function RegrasOperacionais() {
         <TabsList>
           <TabsTrigger value="recebimento">Recebimento</TabsTrigger>
           <TabsTrigger value="reembolso">Reembolso</TabsTrigger>
+          <TabsTrigger value="receita">Receita</TabsTrigger>
         </TabsList>
         <TabsContent value="recebimento" className="mt-4">{renderLista('recebimento')}</TabsContent>
         <TabsContent value="reembolso" className="mt-4">{renderLista('reembolso')}</TabsContent>
+        <TabsContent value="receita" className="mt-4">{renderLista('receita')}</TabsContent>
       </Tabs>
 
-      <RegraEditorDialog
-        open={editorOpen}
-        onOpenChange={setEditorOpen}
-        tipo={tipo}
-        initial={editing}
-        provedores={provedores}
-        onSaved={carregar}
-      />
+      {tipo !== 'receita' ? (
+        <RegraEditorDialog
+          open={editorOpen}
+          onOpenChange={setEditorOpen}
+          tipo={tipo}
+          initial={editing}
+          provedores={provedores}
+          onSaved={carregar}
+        />
+      ) : (
+        <RegraReceitaEditorDialog
+          open={editorOpen}
+          onOpenChange={setEditorOpen}
+          initial={editing}
+          provedores={provedores}
+          onSaved={carregar}
+        />
+      )}
 
       <AlertDialog open={!!confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(null)}>
         <AlertDialogContent>
