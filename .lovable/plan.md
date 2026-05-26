@@ -1,54 +1,94 @@
-## Seleção em massa para confirmar recebimentos/reembolsos
+## Regras de Receita — CRUD na aba "Receita"
 
-Adicionar a capacidade de selecionar múltiplos contratos na aba **Elegíveis** (de Recebimentos e Reembolsos) e confirmá-los em massa com uma data única.
+Adiciona uma terceira classe de regra operacional ("receita") ao lado de Recebimento e Reembolso. Esta entrega é **somente cadastro**: estrutura de dados, editor visual e listagem. Cálculos agregados, dashboards e integrações com relatórios ficam para uma entrega futura.
 
-### UX
+### Onde aparece
 
-1. **Coluna de seleção** na tabela:
-   - Checkbox no `TableHead` para selecionar/desmarcar todos os contratos visíveis (após filtros).
-   - Checkbox em cada linha (clique não propaga para abrir detalhes).
-   - Estado indeterminado quando há seleção parcial.
-   - Aparece somente na aba **Elegíveis** (não faz sentido em "Já recebidos/reembolsados").
+- Tela existente `/central/regras-operacionais` ganha uma terceira aba: **Receita**.
+- Mesma listagem (nome, escopo, ativa/inativa, ações ativar/editar/excluir) que hoje existe para Recebimento/Reembolso.
+- Botão **Nova regra** abre um editor próprio (separado do `RegraEditorDialog` atual, porque os campos são muito diferentes).
 
-2. **Barra de ações em massa** acima da tabela (visível apenas com seleção > 0):
-   - Texto: `N contrato(s) selecionado(s)` + soma do valor (`fmtBRL`).
-   - Botão `Confirmar em massa` (abre dialog).
-   - Botão `Limpar seleção`.
+### O que o usuário cadastra
 
-3. **Dialog "Confirmar em massa"**:
-   - Mostra resumo: `N contratos · Total: R$ X`.
-   - Lista compacta dos primeiros nomes (ex.: "Fulano, Beltrano e mais N").
-   - Campo `Data do recebimento/reembolso` (input date, default hoje).
-   - Botões `Cancelar` / `Confirmar N contratos`.
-   - Durante envio: botão em loading; ao fim, toast com sucessos/erros e fecha o dialog.
+Editor `RegraReceitaEditorDialog` com as seções:
 
-4. **Limpeza automática** da seleção:
-   - Ao trocar de aba, mudar provedores, busca, condições de data, ou após confirmar.
+1. **Identificação**
+   - Nome
+   - Descrição (textarea opcional)
+   - Provedores alvo (multi-select) ou "aplica a todos"
+   - Status ativo/inativo
+   - Vigência inicial (date)
+   - Vigência final (date, opcional)
 
-### Backend
+2. **Evento gerador** (radio): `venda` | `ativacao` | `instalacao` | `cancelamento` | `reembolso`
 
-Nova ação `confirmarLote` em `supabase/functions/central-operacional/index.ts`:
+3. **Data de referência** (select): `created_at`, `data_ativacao`, `data_pgto_primeira_mensalidade`, `data_cancelamento`, `data_reembolso`, `data_recebimento` — controla em que data o valor é posicionado no tempo.
 
-```ts
-// params: { tipo: 'recebimento' | 'reembolso', contratoIds: string[], data: string (YYYY-MM-DD) }
+4. **Entidades elegíveis** (checkbox group): `plano_principal`, `adicionais`. Pelo menos uma obrigatória.
+
+5. **Condições de elegibilidade** — reaproveita o `GroupEditor` AND/OR do editor atual sobre os campos de contrato (status_contrato, tipo_venda, motivo_cancelamento, etc.). É o que decide quais contratos entram.
+
+6. **Base de valor** (radio): `valor_plano` | `valor_adicionais` | `valor_total_venda`.
+
+7. **Base de volume** (radio): `contratos` | `planos_vendidos` | `adicionais_vendidos`. Texto explicativo deixando claro que volume ≠ valor.
+
+8. **Base de comissão** (collapsible, embutida na mesma regra)
+   - Toggle "Esta regra gera base de comissão?"
+   - Quando ligado, mostra:
+     - Nome da base de comissão
+     - Base de valor da comissão (mesmas opções da seção 6, pode divergir)
+     - Evento de referência da comissão (mesmas opções da seção 2)
+     - Data de referência da comissão (mesmas opções da seção 3)
+     - Entidades incluídas (checkbox: plano, adicionais)
+     - Entidades excluídas (checkbox: plano, adicionais) — UI valida que não há sobreposição
+
+9. **Validação** antes de salvar: nome preenchido, ao menos um provedor (ou aplica_todos), vigência_inicial preenchida, ao menos uma entidade elegível, base de valor e volume escolhidas, e se a base de comissão estiver ligada, nome e evento/data/base preenchidos.
+
+### Persistência
+
+Não precisa migration nova: usa a tabela existente `regras_operacionais_provedor`. Apenas amplia o domínio do campo `tipo` para aceitar `'receita'` além de `'recebimento'` e `'reembolso'`. O objeto inteiro (vigência, evento, entidades, condições, valor/volume, base_comissao) vai no campo `regra` (JSONB).
+
+Formato do JSON `regra` para o tipo receita:
+```json
+{
+  "descricao": "...",
+  "vigencia_inicio": "2026-01-01",
+  "vigencia_fim": null,
+  "evento_gerador": "venda",
+  "data_referencia": "created_at",
+  "entidades_elegiveis": ["plano_principal", "adicionais"],
+  "condicoes": { "op": "AND", "children": [ ... ] },
+  "base_valor": "valor_plano",
+  "base_volume": "planos_vendidos",
+  "base_comissao": {
+    "ativa": true,
+    "nome": "Comissão venda W2A",
+    "base_valor": "valor_plano",
+    "evento_gerador": "venda",
+    "data_referencia": "created_at",
+    "entidades_incluidas": ["plano_principal"],
+    "entidades_excluidas": ["adicionais"]
+  }
+}
 ```
 
-- Valida `tipo` e `contratoIds` (array não vazio, máx 500).
-- Faz `select('id, provedor_id, nome_completo')` filtrando `.in('id', contratoIds)`.
-- Faz `update` em massa: `.update(updates).in('id', contratoIds)` com os mesmos campos do fluxo atual (`recebimento_efetivado`/`data_recebimento` ou `reembolso_efetivado`/`data_reembolso`).
-- Insere uma linha em `historico_contratos` por contrato (mesmo formato da ação singular), em uma única chamada `.insert([...])`.
-- Resposta: `{ success: true, count: N }`. Em erro parcial, retorna `{ success: false, error }`.
+### Edge function
 
-Sem mudança de schema — todos os campos já existem em `contratos`.
+`supabase/functions/central-operacional/index.ts`:
+- Expandir as validações em `criarRegra` e `atualizarRegra` para aceitar `tipo === 'receita'`.
+- Manter `listarRegras` retornando todas; o frontend filtra por aba.
+- Não tocar nas actions de elegibilidade de contratos (`listElegiveis`, `confirmar*`) — receita não interfere com recebimento/reembolso nesta entrega.
 
-### Arquivos modificados
+### Arquivos a alterar
 
-- `src/pages/central/OperacionalContratos.tsx`
-  - Novo state `selectedIds: Set<string>`.
-  - Coluna checkbox + barra de ações em massa + dialog de bulk.
-  - `useEffect` para limpar seleção quando filtros/aba mudam.
-  - Mutation `confirmarLote` chamando a nova action.
-- `supabase/functions/central-operacional/index.ts`
-  - Novo `case 'confirmarLote'` reaproveitando lógica do singular.
+- `supabase/functions/central-operacional/index.ts` — liberar `tipo: 'receita'` em criar/atualizar.
+- `src/pages/central/RegrasOperacionais.tsx` — terceira aba "Receita" reutilizando o componente de listagem, mas roteando para o novo editor quando `tipo === 'receita'`.
+- `src/components/RegraReceitaEditorDialog.tsx` — **novo**, editor específico de receita.
+- `src/lib/regras/receita.ts` — **novo**, tipos TS + catálogos (`EVENTOS_GERADORES`, `DATAS_REFERENCIA`, `ENTIDADES`, `BASES_VALOR`, `BASES_VOLUME`) e função `validateRegraReceita`.
 
-Sem migrations.
+### Fora do escopo desta entrega
+
+- Cálculo agregado por período / dashboard.
+- Eventos negativos (cancelamentos como estornos).
+- Integração nos relatórios de Visão Geral de Vendas.
+- Base de comissão como tabela separada (fica embutida no JSON da regra).
