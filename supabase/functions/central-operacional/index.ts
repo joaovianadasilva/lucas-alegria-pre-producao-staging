@@ -392,7 +392,7 @@ serve(async (req) => {
       case 'criarRegra': {
         const { nome, tipo, provedor_ids = [], aplica_todos = false, regra, ativo = true, prioridade = 0 } = params;
         if (!nome || !tipo || !regra) return json({ error: 'nome, tipo e regra são obrigatórios' }, 400);
-        if (tipo !== 'recebimento' && tipo !== 'reembolso') return json({ error: 'tipo inválido' }, 400);
+        if (tipo !== 'recebimento' && tipo !== 'reembolso' && tipo !== 'receita') return json({ error: 'tipo inválido' }, 400);
         if (!aplica_todos && (!Array.isArray(provedor_ids) || provedor_ids.length === 0)) {
           return json({ error: 'Selecione ao menos um provedor ou marque "aplica a todos"' }, 400);
         }
