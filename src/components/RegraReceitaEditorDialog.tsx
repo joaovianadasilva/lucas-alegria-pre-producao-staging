@@ -283,7 +283,7 @@ export default function RegraReceitaEditorDialog({ open, onOpenChange, initial, 
           {/* 8. Base de comissão */}
           <Card>
             <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-sm">5. Base de comissão</CardTitle>
+              <CardTitle className="text-sm">6. Base de comissão</CardTitle>
               <div className="flex items-center gap-2"><Switch checked={bc.ativa} onCheckedChange={(v) => setBc({ ativa: v })} /><Label className="text-xs">Esta regra gera base de comissão?</Label></div>
             </CardHeader>
             {bc.ativa && (
