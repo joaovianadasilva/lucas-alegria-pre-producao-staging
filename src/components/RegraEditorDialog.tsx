@@ -263,7 +263,7 @@ export default function RegraEditorDialog({ open, onOpenChange, tipo, initial, p
 
 // ===== Sub-componentes =====
 
-function GroupEditor(props: {
+export function GroupEditor(props: {
   node: Group;
   path: number[];
   root?: boolean;
