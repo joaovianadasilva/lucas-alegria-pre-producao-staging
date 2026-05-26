@@ -13,7 +13,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
-  EVENTOS_GERADORES, DATAS_REFERENCIA, ENTIDADES, BASES_VALOR, BASES_VOLUME,
+  EVENTOS_GERADORES, EVENTOS_GERADORES_VALIDOS, DATA_REFERENCIA_PADRAO,
+  DATAS_REFERENCIA, ENTIDADES, BASES_VALOR, BASES_VOLUME,
   RegraReceitaJSON, emptyRegraReceita, validateRegraReceita, Entidade,
 } from '@/lib/regras/receita';
 import { GroupEditor, Group, Node, isGroup } from './RegraEditorDialog';
