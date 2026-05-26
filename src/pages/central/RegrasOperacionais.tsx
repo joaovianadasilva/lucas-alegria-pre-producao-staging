@@ -5,13 +5,15 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Plus, Pencil, Trash2, Power, PowerOff } from 'lucide-react';
+import { Plus, Pencil, Trash2, Power, PowerOff, Copy } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import RegraEditorDialog from '@/components/RegraEditorDialog';
 import RegraReceitaEditorDialog from '@/components/RegraReceitaEditorDialog';
+import ReguaComissaoEditorDialog from '@/components/ReguaComissaoEditorDialog';
+import { labelBase, labelCiclo, labelTipo } from '@/lib/regras/comissao';
 
-type Tipo = 'recebimento' | 'reembolso' | 'receita';
+type Tipo = 'recebimento' | 'reembolso' | 'receita' | 'comissao';
 interface Provedor { id: string; nome: string }
 interface Regra {
   id: string; nome: string; tipo: Tipo;
@@ -59,6 +61,26 @@ export default function RegrasOperacionais() {
     } catch (e: any) { toast.error(e.message); }
   };
 
+  const duplicar = async (r: Regra) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('central-operacional', {
+        body: {
+          action: 'criarRegra',
+          nome: `Cópia de ${r.nome}`,
+          tipo: r.tipo,
+          aplica_todos: r.aplica_todos,
+          provedor_ids: r.aplica_todos ? [] : (r.provedor_ids || []),
+          regra: r.regra,
+          ativo: false,
+          prioridade: r.prioridade,
+        },
+      });
+      if (error || data?.error) throw new Error(error?.message || data?.error);
+      toast.success('Régua duplicada (inativa)');
+      carregar();
+    } catch (e: any) { toast.error(e.message); }
+  };
+
   const handleDelete = async () => {
     if (!confirmDelete) return;
     try {
@@ -74,12 +96,26 @@ export default function RegrasOperacionais() {
 
   const provedorNome = (id: string) => provedores.find(p => p.id === id)?.nome || id.slice(0, 8);
 
-  const renderLista = (t: Tipo) => {
+  const renderEscopo = (r: Regra) => r.aplica_todos ? (
+    <Badge variant="secondary">Todos os provedores</Badge>
+  ) : (
+    <div className="flex flex-wrap gap-1">
+      {(r.provedor_ids || []).slice(0, 3).map(id => <Badge key={id} variant="outline">{provedorNome(id)}</Badge>)}
+      {(r.provedor_ids || []).length > 3 && <Badge variant="outline">+{(r.provedor_ids || []).length - 3}</Badge>}
+      {r.provedor_id && (!r.provedor_ids || r.provedor_ids.length === 0) && <Badge variant="outline">{provedorNome(r.provedor_id)}</Badge>}
+    </div>
+  );
+
+  const tituloAba = (t: Tipo) => ({
+    recebimento: 'Recebimento', reembolso: 'Reembolso', receita: 'Receita', comissao: 'Comissão',
+  } as const)[t];
+
+  const renderListaGenerica = (t: Exclude<Tipo, 'comissao'>) => {
     const list = regras.filter(r => r.tipo === t);
     return (
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Regras de {t === 'recebimento' ? 'Recebimento' : t === 'reembolso' ? 'Reembolso' : 'Receita'}</CardTitle>
+          <CardTitle className="text-base">Regras de {tituloAba(t)}</CardTitle>
           <Button size="sm" onClick={() => { setEditing(null); setEditorOpen(true); }}><Plus className="h-4 w-4 mr-1" /> Nova regra</Button>
         </CardHeader>
         <CardContent>
@@ -99,17 +135,7 @@ export default function RegrasOperacionais() {
                 {list.map(r => (
                   <TableRow key={r.id}>
                     <TableCell className="font-medium">{r.nome}</TableCell>
-                    <TableCell>
-                      {r.aplica_todos ? (
-                        <Badge variant="secondary">Todos os provedores</Badge>
-                      ) : (
-                        <div className="flex flex-wrap gap-1">
-                          {(r.provedor_ids || []).slice(0, 3).map(id => <Badge key={id} variant="outline">{provedorNome(id)}</Badge>)}
-                          {(r.provedor_ids || []).length > 3 && <Badge variant="outline">+{(r.provedor_ids || []).length - 3}</Badge>}
-                          {r.provedor_id && (!r.provedor_ids || r.provedor_ids.length === 0) && <Badge variant="outline">{provedorNome(r.provedor_id)}</Badge>}
-                        </div>
-                      )}
-                    </TableCell>
+                    <TableCell>{renderEscopo(r)}</TableCell>
                     <TableCell>{r.ativo ? <Badge>Ativa</Badge> : <Badge variant="secondary">Inativa</Badge>}</TableCell>
                     <TableCell className="text-right">
                       <Button size="icon" variant="ghost" onClick={() => toggleAtivo(r)} title={r.ativo ? 'Desativar' : 'Ativar'}>
@@ -128,11 +154,74 @@ export default function RegrasOperacionais() {
     );
   };
 
+  const renderListaComissao = () => {
+    const list = regras.filter(r => r.tipo === 'comissao');
+    const receitas = regras.filter(r => r.tipo === 'receita');
+    const receitaNome = (id: string | undefined) => receitas.find(x => x.id === id)?.nome || '—';
+    return (
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-base">Réguas de Comissão</CardTitle>
+          <Button size="sm" onClick={() => { setEditing(null); setEditorOpen(true); }}><Plus className="h-4 w-4 mr-1" /> Nova régua</Button>
+        </CardHeader>
+        <CardContent>
+          {loading && <div className="text-sm text-muted-foreground">Carregando...</div>}
+          {!loading && list.length === 0 && <div className="text-sm text-muted-foreground">Nenhuma régua de comissão cadastrada.</div>}
+          {!loading && list.length > 0 && (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Provedor</TableHead>
+                  <TableHead>Regra de Receita</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Base faixa</TableHead>
+                  <TableHead>Base cálculo</TableHead>
+                  <TableHead>Ciclo</TableHead>
+                  <TableHead>Vigência</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {list.map(r => {
+                  const j = r.regra || {};
+                  const vig = `${j.vigencia_inicio || '—'}${j.vigencia_fim ? ` → ${j.vigencia_fim}` : ''}`;
+                  return (
+                    <TableRow key={r.id}>
+                      <TableCell className="font-medium">{r.nome}</TableCell>
+                      <TableCell>{renderEscopo(r)}</TableCell>
+                      <TableCell className="text-xs">{receitaNome(j.regra_receita_id)}</TableCell>
+                      <TableCell className="text-xs">{labelTipo(j.tipo_regua)}</TableCell>
+                      <TableCell className="text-xs">{j.base_faixa ? labelBase(j.base_faixa) : '—'}</TableCell>
+                      <TableCell className="text-xs">{labelBase(j.base_calculo)}</TableCell>
+                      <TableCell className="text-xs">{labelCiclo(j.ciclo?.tipo)}</TableCell>
+                      <TableCell className="text-xs">{vig}</TableCell>
+                      <TableCell>{r.ativo ? <Badge>Ativa</Badge> : <Badge variant="secondary">Inativa</Badge>}</TableCell>
+                      <TableCell className="text-right whitespace-nowrap">
+                        <Button size="icon" variant="ghost" onClick={() => toggleAtivo(r)} title={r.ativo ? 'Desativar' : 'Ativar'}>
+                          {r.ativo ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}
+                        </Button>
+                        <Button size="icon" variant="ghost" onClick={() => { setEditing(r); setEditorOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+                        <Button size="icon" variant="ghost" onClick={() => duplicar(r)} title="Duplicar"><Copy className="h-4 w-4" /></Button>
+                        <Button size="icon" variant="ghost" onClick={() => setConfirmDelete(r)}><Trash2 className="h-4 w-4" /></Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
+
   return (
     <div className="container py-6 space-y-4">
       <div>
         <h1 className="text-2xl font-bold">Regras Operacionais</h1>
-        <p className="text-sm text-muted-foreground">Configure quando um contrato é elegível para recebimento ou reembolso. Quando há múltiplas regras de um mesmo tipo, basta uma corresponder.</p>
+        <p className="text-sm text-muted-foreground">Configure regras de recebimento, reembolso, receita e réguas de comissão. Comissão é forward-looking — cancelamentos e reembolsos são tratados pelo módulo financeiro.</p>
       </div>
 
       <Tabs value={tipo} onValueChange={(v) => setTipo(v as Tipo)}>
@@ -140,25 +229,35 @@ export default function RegrasOperacionais() {
           <TabsTrigger value="recebimento">Recebimento</TabsTrigger>
           <TabsTrigger value="reembolso">Reembolso</TabsTrigger>
           <TabsTrigger value="receita">Receita</TabsTrigger>
+          <TabsTrigger value="comissao">Comissão</TabsTrigger>
         </TabsList>
-        <TabsContent value="recebimento" className="mt-4">{renderLista('recebimento')}</TabsContent>
-        <TabsContent value="reembolso" className="mt-4">{renderLista('reembolso')}</TabsContent>
-        <TabsContent value="receita" className="mt-4">{renderLista('receita')}</TabsContent>
+        <TabsContent value="recebimento" className="mt-4">{renderListaGenerica('recebimento')}</TabsContent>
+        <TabsContent value="reembolso" className="mt-4">{renderListaGenerica('reembolso')}</TabsContent>
+        <TabsContent value="receita" className="mt-4">{renderListaGenerica('receita')}</TabsContent>
+        <TabsContent value="comissao" className="mt-4">{renderListaComissao()}</TabsContent>
       </Tabs>
 
-      {tipo !== 'receita' ? (
-        <RegraEditorDialog
+      {tipo === 'receita' ? (
+        <RegraReceitaEditorDialog
           open={editorOpen}
           onOpenChange={setEditorOpen}
-          tipo={tipo as 'recebimento' | 'reembolso'}
+          initial={editing}
+          provedores={provedores}
+          onSaved={carregar}
+        />
+      ) : tipo === 'comissao' ? (
+        <ReguaComissaoEditorDialog
+          open={editorOpen}
+          onOpenChange={setEditorOpen}
           initial={editing}
           provedores={provedores}
           onSaved={carregar}
         />
       ) : (
-        <RegraReceitaEditorDialog
+        <RegraEditorDialog
           open={editorOpen}
           onOpenChange={setEditorOpen}
+          tipo={tipo as 'recebimento' | 'reembolso'}
           initial={editing}
           provedores={provedores}
           onSaved={carregar}
