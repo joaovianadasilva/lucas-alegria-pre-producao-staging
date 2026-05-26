@@ -98,9 +98,6 @@ export function validateRegraReceita(nome: string, aplicaTodos: boolean, provedo
     if (!bc.base_valor) return 'Selecione a base de valor da comissão';
     if (!bc.evento_gerador) return 'Selecione o evento de referência da comissão';
     if (!bc.data_referencia) return 'Selecione a data de referência da comissão';
-    const inc = new Set(bc.entidades_incluidas || []);
-    const exc = new Set(bc.entidades_excluidas || []);
-    for (const e of inc) if (exc.has(e)) return 'Uma entidade não pode estar incluída e excluída ao mesmo tempo na base de comissão';
   }
   return null;
 }
