@@ -10,6 +10,7 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
@@ -114,20 +115,49 @@ export default function RegraReceitaEditorDialog({ open, onOpenChange, initial, 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                   <Label>Nome da regra</Label>
-                  <Input value={nome} onChange={e => setNome(e.target.value)} placeholder="Ex.: Receita comissionável W2A" />
+                  <Input value={nome} onChange={e => setNome(e.target.value)} />
                 </div>
-                <div className="flex items-end gap-4">
+                <div className="flex items-end">
                   <div className="flex items-center gap-2"><Switch checked={ativo} onCheckedChange={setAtivo} /><Label>Ativa</Label></div>
-                  <div className="flex items-center gap-2"><Switch checked={aplicaTodos} onCheckedChange={setAplicaTodos} /><Label>Aplica a todos</Label></div>
                 </div>
               </div>
               <div>
                 <Label>Descrição</Label>
                 <Textarea value={r.descricao || ''} onChange={e => setR(s => ({ ...s, descricao: e.target.value }))} rows={2} />
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><Label>Vigência inicial</Label><Input type="date" value={r.vigencia_inicio} onChange={e => setR(s => ({ ...s, vigencia_inicio: e.target.value }))} /></div>
+                <div><Label>Vigência final (opcional)</Label><Input type="date" value={r.vigencia_fim || ''} onChange={e => setR(s => ({ ...s, vigencia_fim: e.target.value || null }))} /></div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 2. Provedor alvo */}
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">2. Provedor alvo</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              <RadioGroup
+                value={aplicaTodos ? 'todos' : 'especificos'}
+                onValueChange={(v) => setAplicaTodos(v === 'todos')}
+                className="space-y-2"
+              >
+                <label className="flex items-start gap-2 cursor-pointer rounded-md border p-3 hover:bg-muted/40">
+                  <RadioGroupItem value="todos" className="mt-0.5" />
+                  <div>
+                    <div className="text-sm font-medium">Aplicar a todos os provedores</div>
+                    <div className="text-xs text-muted-foreground">A regra vale para qualquer provedor da plataforma.</div>
+                  </div>
+                </label>
+                <label className="flex items-start gap-2 cursor-pointer rounded-md border p-3 hover:bg-muted/40">
+                  <RadioGroupItem value="especificos" className="mt-0.5" />
+                  <div className="flex-1">
+                    <div className="text-sm font-medium">Selecionar provedores específicos</div>
+                    <div className="text-xs text-muted-foreground">A regra só vale para os provedores escolhidos abaixo.</div>
+                  </div>
+                </label>
+              </RadioGroup>
               {!aplicaTodos && (
                 <div>
-                  <Label>Provedores alvo</Label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button variant="outline" size="sm">{provedorIds.length === 0 ? 'Selecione provedores' : `${provedorIds.length} selecionado(s)`}</Button>
@@ -150,16 +180,13 @@ export default function RegraReceitaEditorDialog({ open, onOpenChange, initial, 
                   )}
                 </div>
               )}
-              <div className="grid grid-cols-2 gap-3">
-                <div><Label>Vigência inicial</Label><Input type="date" value={r.vigencia_inicio} onChange={e => setR(s => ({ ...s, vigencia_inicio: e.target.value }))} /></div>
-                <div><Label>Vigência final (opcional)</Label><Input type="date" value={r.vigencia_fim || ''} onChange={e => setR(s => ({ ...s, vigencia_fim: e.target.value || null }))} /></div>
-              </div>
             </CardContent>
           </Card>
 
+
           {/* 2-4 Evento, data, entidades */}
           <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm">2. Evento gerador, data e entidades elegíveis</CardTitle></CardHeader>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">3. Evento gerador, data e entidades elegíveis</CardTitle></CardHeader>
             <CardContent className="space-y-3">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
@@ -208,7 +235,7 @@ export default function RegraReceitaEditorDialog({ open, onOpenChange, initial, 
 
           {/* 5. Condições */}
           <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm">3. Condições de elegibilidade</CardTitle></CardHeader>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">4. Condições de elegibilidade</CardTitle></CardHeader>
             <CardContent>
               <p className="text-xs text-muted-foreground mb-2">Combine condições com E/OU. Um contrato entra na regra quando a expressão é verdadeira.</p>
               <GroupEditor
@@ -231,7 +258,7 @@ export default function RegraReceitaEditorDialog({ open, onOpenChange, initial, 
 
           {/* 6-7 Bases */}
           <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm">4. Bases de valor e volume</CardTitle></CardHeader>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">5. Bases de valor e volume</CardTitle></CardHeader>
             <CardContent className="space-y-3">
               <p className="text-xs text-muted-foreground">Base de valor é o que é somado em R$. Base de volume é o que é contado (usado depois em faixas de comissão).</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -256,7 +283,7 @@ export default function RegraReceitaEditorDialog({ open, onOpenChange, initial, 
           {/* 8. Base de comissão */}
           <Card>
             <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-sm">5. Base de comissão</CardTitle>
+              <CardTitle className="text-sm">6. Base de comissão</CardTitle>
               <div className="flex items-center gap-2"><Switch checked={bc.ativa} onCheckedChange={(v) => setBc({ ativa: v })} /><Label className="text-xs">Esta regra gera base de comissão?</Label></div>
             </CardHeader>
             {bc.ativa && (
@@ -286,30 +313,6 @@ export default function RegraReceitaEditorDialog({ open, onOpenChange, initial, 
                       <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                       <SelectContent>{DATAS_REFERENCIA.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
                     </Select>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div>
-                    <Label>Entidades incluídas</Label>
-                    <div className="flex gap-4 mt-2">
-                      {ENTIDADES.map(e => (
-                        <label key={e.value} className="flex items-center gap-2 text-sm cursor-pointer">
-                          <Checkbox checked={(bc.entidades_incluidas || []).includes(e.value)} onCheckedChange={() => setBc({ entidades_incluidas: toggleEntidade(bc.entidades_incluidas || [], e.value) })} />
-                          <span>{e.label}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <Label>Entidades excluídas</Label>
-                    <div className="flex gap-4 mt-2">
-                      {ENTIDADES.map(e => (
-                        <label key={e.value} className="flex items-center gap-2 text-sm cursor-pointer">
-                          <Checkbox checked={(bc.entidades_excluidas || []).includes(e.value)} onCheckedChange={() => setBc({ entidades_excluidas: toggleEntidade(bc.entidades_excluidas || [], e.value) })} />
-                          <span>{e.label}</span>
-                        </label>
-                      ))}
-                    </div>
                   </div>
                 </div>
               </CardContent>

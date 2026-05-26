@@ -1,39 +1,28 @@
+## Mudanças no modal "Nova/Editar regra — Receita"
 
-## Ajustes na aba "Receita" de Regras Operacionais
+### 1. Bloco dedicado para Provedor alvo
+Hoje o seletor de provedores está enfiado dentro de "1. Identificação", misturado com nome/ativa/aplica-todos. Vou separar em um **novo Card "2. Provedor alvo"** com escolha explícita por RadioGroup:
 
-Refinar o catálogo de **eventos geradores** das regras de receita para refletir apenas eventos de receita positiva, conforme definição de negócio.
+- **Aplicar a todos os provedores** (uma linha, descrição curta: "A regra vale para qualquer provedor da plataforma")
+- **Selecionar provedores específicos** (mostra abaixo o popover multi-select + chips dos selecionados)
 
-### Mudanças
+O Card de Identificação (passa a ser "1.") fica só com: Nome, Ativa, Descrição, Vigência inicial/final. O switch "Aplica a todos" sai dali. Os demais cards são renumerados (3. Evento/data/entidades, 4. Condições, 5. Bases, 6. Base de comissão).
 
-**1. `src/lib/regras/receita.ts`**
+### 2. Remover placeholder do Nome da regra
+No input de "Nome da regra", retirar `placeholder="Ex.: Receita comissionável W2A"`. Fica sem placeholder (ou um neutro tipo "Nome da regra"). A confusão com a aba 5 (Base de comissão) some.
 
-Reduzir a lista `EVENTOS_GERADORES` para apenas:
-- `venda` — conta todo contrato criado no período (independe de `status_contrato`; cancelamentos posteriores não retiram da base)
-- `ativacao` — contrato com `data_ativacao` preenchida
+### 3. Remover "Entidades incluídas / excluídas" da Base de comissão
+São redundantes e confusas:
+- O escopo de entidades já é definido no topo pela **Entidades elegíveis** da regra.
+- A **Base de valor da comissão** já decide qual fatia entra no cálculo (plano, adicionais ou total).
+- Só existem 2 entidades hoje (plano_principal e adicionais), o que torna o include/exclude duplicado e gera regras contraditórias.
 
-Remover:
-- `instalacao` (era sinônimo de `ativacao` no schema atual — sem coluna própria)
-- `cancelamento` e `reembolso` (não geram receita positiva; permanecem disponíveis apenas nas regras Operacionais existentes)
+Vou remover os dois grupos de checkbox do Card "Base de comissão" e tirar `entidades_incluidas` / `entidades_excluidas` da validação e do payload enviado. Mantenho os campos opcionais no type por compatibilidade com regras já salvas, mas o editor não escreve mais neles (e a edge function ignora; verifico se há leitura — se houver, passa a usar `entidades_elegiveis` da raiz).
 
-Ajustar também o default das **datas de referência** sugeridas por evento:
-- `venda` → `created_at`
-- `ativacao` → `data_ativacao`
-
-A lista completa de datas selecionáveis permanece (o usuário ainda pode escolher `data_pgto_primeira_mensalidade` etc. para reconhecimento por pagamento), só muda o default e os eventos disponíveis.
-
-**2. `src/components/RegraReceitaEditorDialog.tsx`**
-
-- Atualizar o `Select` de evento gerador para refletir a nova lista (2 opções).
-- Ajustar texto de ajuda abaixo do campo explicando o significado de cada evento.
-- Se uma regra existente no banco tiver `evento = 'instalacao' | 'cancelamento' | 'reembolso'`, o editor exibe um aviso e força a re-seleção antes de salvar (sem migração silenciosa).
-- Atualizar a validação em `validateRegraReceita` para aceitar apenas `venda | ativacao`.
-
-**3. `supabase/functions/central-operacional/index.ts`**
-
-Nenhuma mudança estrutural — a função apenas persiste o JSON. Mas adicionar validação defensiva no payload `tipo='receita'` rejeitando `evento` fora de `['venda','ativacao']` para evitar inserção inválida via API.
+### Arquivos afetados
+- `src/components/RegraReceitaEditorDialog.tsx` — reorganização visual (novo Card de Provedor alvo, RadioGroup, remoção do placeholder e dos blocos de entidades em Base de comissão).
+- `src/lib/regras/receita.ts` — remover a checagem de conflito incluídas×excluídas em `validateRegraReceita`; manter campos no type como opcionais (legado).
+- `supabase/functions/central-operacional/index.ts` — só se houver uso ativo desses campos no cálculo; confirmo durante a build e ajusto para cair em `entidades_elegiveis`.
 
 ### Fora de escopo
-
-- Migração de dados (não há regras de receita em produção ainda, criadas agora).
-- Qualquer mudança nas abas Recebimento/Reembolso.
-- Cálculo agregado / dashboards (continua fora desta entrega).
+Lógica de eventos geradores, cálculo de receita e base de comissão em si não mudam — só UX do modal e limpeza dos campos redundantes.
