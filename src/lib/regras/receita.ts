@@ -3,17 +3,20 @@
 export const EVENTOS_GERADORES = [
   { value: 'venda', label: 'Venda (cadastro do contrato)' },
   { value: 'ativacao', label: 'Ativação' },
-  { value: 'instalacao', label: 'Instalação' },
-  { value: 'cancelamento', label: 'Cancelamento' },
-  { value: 'reembolso', label: 'Reembolso' },
 ] as const;
+
+export const EVENTOS_GERADORES_VALIDOS = ['venda', 'ativacao'] as const;
+
+// Default de data de referência sugerido para cada evento gerador
+export const DATA_REFERENCIA_PADRAO: Record<string, string> = {
+  venda: 'created_at',
+  ativacao: 'data_ativacao',
+};
 
 export const DATAS_REFERENCIA = [
   { value: 'created_at', label: 'Data da venda (created_at)' },
   { value: 'data_ativacao', label: 'Data de ativação' },
   { value: 'data_pgto_primeira_mensalidade', label: 'Pgto 1ª mensalidade' },
-  { value: 'data_cancelamento', label: 'Data de cancelamento' },
-  { value: 'data_reembolso', label: 'Data de reembolso' },
   { value: 'data_recebimento', label: 'Data de recebimento' },
 ] as const;
 
