@@ -9,7 +9,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Filter, Wallet, Download } from 'lucide-react';
+import { Filter, Wallet, Download, Eye } from 'lucide-react';
+import { ContractDetailsDialog, ContratoCompleto } from '@/components/ContractDetailsDialog';
 import { toast } from 'sonner';
 import { formatLocalDate, toISODateString } from '@/lib/dateUtils';
 import {
