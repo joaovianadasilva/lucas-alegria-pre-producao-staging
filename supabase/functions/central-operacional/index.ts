@@ -409,7 +409,7 @@ serve(async (req) => {
         const allowed = ['nome', 'tipo', 'provedor_ids', 'aplica_todos', 'regra', 'ativo', 'prioridade'];
         const upd: any = {};
         for (const k of allowed) if (k in updates) upd[k] = updates[k];
-        if (upd.tipo && upd.tipo !== 'recebimento' && upd.tipo !== 'reembolso') return json({ error: 'tipo inválido' }, 400);
+        if (upd.tipo && upd.tipo !== 'recebimento' && upd.tipo !== 'reembolso' && upd.tipo !== 'receita') return json({ error: 'tipo inválido' }, 400);
         const { data, error } = await supabase.from('regras_operacionais_provedor').update(upd).eq('id', id).select().single();
         if (error) throw error;
         return json({ success: true, regra: data });
