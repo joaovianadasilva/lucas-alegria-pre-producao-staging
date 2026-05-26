@@ -301,16 +301,22 @@ export default function RelatorioVisaoGeralReceita() {
                   <TableHeader><TableRow>
                     <TableHead>Régua</TableHead>
                     <TableHead>Regra de receita</TableHead>
+                    <TableHead>Faixa(s) acionada(s)</TableHead>
                     <TableHead className="text-right">Base</TableHead>
                     <TableHead className="text-right">Comissão</TableHead>
                   </TableRow></TableHeader>
                   <TableBody>
                     {relatorio.porReguaComissao.length === 0 ? (
-                      <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-6">—</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-6">—</TableCell></TableRow>
                     ) : relatorio.porReguaComissao.map(r => (
                       <TableRow key={r.id}>
                         <TableCell className="font-medium">{r.nome}</TableCell>
                         <TableCell className="text-muted-foreground">{r.regra_receita_nome}</TableCell>
+                        <TableCell className="text-xs">
+                          {r.faixas_acionadas && r.faixas_acionadas.length > 0
+                            ? r.faixas_acionadas.map((f, i) => <Badge key={i} variant="outline" className="mr-1 mb-1">{f}</Badge>)
+                            : <span className="text-muted-foreground">—</span>}
+                        </TableCell>
                         <TableCell className="text-right">{fmtBRL(r.base)}</TableCell>
                         <TableCell className="text-right font-semibold">{fmtBRL(r.comissao)}</TableCell>
                       </TableRow>
@@ -320,6 +326,16 @@ export default function RelatorioVisaoGeralReceita() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Avisos de inconsistência */}
+          {relatorio.avisos && relatorio.avisos.length > 0 && (
+            <Card className="border-amber-500/40 bg-amber-50 dark:bg-amber-950/20">
+              <CardHeader className="pb-2"><CardTitle className="text-base text-amber-700 dark:text-amber-400">Avisos de configuração</CardTitle></CardHeader>
+              <CardContent className="space-y-1 text-sm">
+                {relatorio.avisos.map((a, i) => <div key={i}>• {a}</div>)}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Detalhado */}
           <Card>
