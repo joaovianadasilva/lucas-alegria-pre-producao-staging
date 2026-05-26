@@ -150,7 +150,7 @@ export default function RegrasOperacionais() {
         <RegraEditorDialog
           open={editorOpen}
           onOpenChange={setEditorOpen}
-          tipo={tipo}
+          tipo={tipo as 'recebimento' | 'reembolso'}
           initial={editing}
           provedores={provedores}
           onSaved={carregar}
