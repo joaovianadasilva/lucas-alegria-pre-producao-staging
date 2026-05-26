@@ -86,6 +86,9 @@ export function validateRegraReceita(nome: string, aplicaTodos: boolean, provedo
   if (!aplicaTodos && provedorIds.length === 0) return 'Selecione provedores ou marque "aplica a todos"';
   if (!r.vigencia_inicio) return 'Informe a vigência inicial';
   if (r.vigencia_fim && r.vigencia_fim < r.vigencia_inicio) return 'Vigência final não pode ser anterior à inicial';
+  if (!(EVENTOS_GERADORES_VALIDOS as readonly string[]).includes(r.evento_gerador)) {
+    return 'Evento gerador inválido: selecione Venda ou Ativação';
+  }
   if (!r.entidades_elegiveis || r.entidades_elegiveis.length === 0) return 'Selecione ao menos uma entidade elegível';
   if (!r.base_valor) return 'Selecione a base de valor';
   if (!r.base_volume) return 'Selecione a base de volume';
