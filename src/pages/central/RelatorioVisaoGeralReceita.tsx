@@ -66,6 +66,30 @@ export default function RelatorioVisaoGeralReceita() {
   const [page, setPage] = useState(1);
   const [busca, setBusca] = useState('');
 
+  const qc = useQueryClient();
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+  const [contractDetails, setContractDetails] = useState<ContratoCompleto | null>(null);
+
+  const openDetails = async (contratoId: string, provedorId: string) => {
+    setDetailsOpen(true);
+    setLoadingDetails(true);
+    setContractDetails(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('manage-contracts', {
+        body: { action: 'getContract', provedorId, contratoId },
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Erro');
+      setContractDetails(data.contrato);
+    } catch (e: any) {
+      toast.error('Erro: ' + e.message);
+      setDetailsOpen(false);
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
+
   const { data: provedores } = useQuery({
     queryKey: ['central-provedores'],
     queryFn: async () => {
