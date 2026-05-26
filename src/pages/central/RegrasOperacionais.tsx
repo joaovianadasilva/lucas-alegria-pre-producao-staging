@@ -79,7 +79,7 @@ export default function RegrasOperacionais() {
     return (
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Regras de {t === 'recebimento' ? 'Recebimento' : 'Reembolso'}</CardTitle>
+          <CardTitle className="text-base">Regras de {t === 'recebimento' ? 'Recebimento' : t === 'reembolso' ? 'Reembolso' : 'Receita'}</CardTitle>
           <Button size="sm" onClick={() => { setEditing(null); setEditorOpen(true); }}><Plus className="h-4 w-4 mr-1" /> Nova regra</Button>
         </CardHeader>
         <CardContent>
