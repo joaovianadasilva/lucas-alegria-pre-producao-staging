@@ -186,7 +186,7 @@ export default function RegraReceitaEditorDialog({ open, onOpenChange, initial, 
 
           {/* 2-4 Evento, data, entidades */}
           <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm">2. Evento gerador, data e entidades elegíveis</CardTitle></CardHeader>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">3. Evento gerador, data e entidades elegíveis</CardTitle></CardHeader>
             <CardContent className="space-y-3">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
