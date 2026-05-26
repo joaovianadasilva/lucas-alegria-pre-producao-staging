@@ -393,6 +393,9 @@ serve(async (req) => {
         const { nome, tipo, provedor_ids = [], aplica_todos = false, regra, ativo = true, prioridade = 0 } = params;
         if (!nome || !tipo || !regra) return json({ error: 'nome, tipo e regra são obrigatórios' }, 400);
         if (tipo !== 'recebimento' && tipo !== 'reembolso' && tipo !== 'receita') return json({ error: 'tipo inválido' }, 400);
+        if (tipo === 'receita' && regra?.evento_gerador && !['venda', 'ativacao'].includes(regra.evento_gerador)) {
+          return json({ error: 'evento_gerador inválido para regra de receita (use venda ou ativacao)' }, 400);
+        }
         if (!aplica_todos && (!Array.isArray(provedor_ids) || provedor_ids.length === 0)) {
           return json({ error: 'Selecione ao menos um provedor ou marque "aplica a todos"' }, 400);
         }
@@ -410,6 +413,10 @@ serve(async (req) => {
         const upd: any = {};
         for (const k of allowed) if (k in updates) upd[k] = updates[k];
         if (upd.tipo && upd.tipo !== 'recebimento' && upd.tipo !== 'reembolso' && upd.tipo !== 'receita') return json({ error: 'tipo inválido' }, 400);
+        const tipoEfetivo = upd.tipo ?? null;
+        if (tipoEfetivo === 'receita' && upd.regra?.evento_gerador && !['venda', 'ativacao'].includes(upd.regra.evento_gerador)) {
+          return json({ error: 'evento_gerador inválido para regra de receita (use venda ou ativacao)' }, 400);
+        }
         const { data, error } = await supabase.from('regras_operacionais_provedor').update(upd).eq('id', id).select().single();
         if (error) throw error;
         return json({ success: true, regra: data });
