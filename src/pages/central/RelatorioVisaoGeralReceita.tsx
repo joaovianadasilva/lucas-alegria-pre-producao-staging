@@ -271,7 +271,7 @@ export default function RelatorioVisaoGeralReceita() {
 
           {/* Gráfico temporal */}
           <Card>
-            <CardHeader><CardTitle className="text-base">Faturamento × Comissão por dia</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-base">Faturamento por dia</CardTitle></CardHeader>
             <CardContent style={{ height: 320 }}>
               {relatorio.serieTemporal.length === 0 ? (
                 <div className="h-full flex items-center justify-center text-muted-foreground">Sem dados no período.</div>
@@ -284,7 +284,6 @@ export default function RelatorioVisaoGeralReceita() {
                     <Tooltip labelFormatter={d => formatLocalDate(String(d))} formatter={(v: any) => fmtBRL(Number(v))} />
                     <Legend />
                     <Bar dataKey="faturamento" name="Faturamento" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="comissao" name="Comissão" fill="hsl(38 92% 50%)" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               )}
