@@ -1,0 +1,2 @@
+ALTER TABLE public.regras_operacionais_provedor DROP CONSTRAINT IF EXISTS regras_operacionais_provedor_tipo_check;
+ALTER TABLE public.regras_operacionais_provedor ADD CONSTRAINT regras_operacionais_provedor_tipo_check CHECK (tipo IN ('recebimento','reembolso','receita'));
