@@ -391,12 +391,17 @@ export default function RelatorioVisaoGeralReceita() {
                   <TableHead className="text-right">Base gerada</TableHead>
                   <TableHead>Faixa</TableHead>
                   <TableHead className="text-right">Comissão</TableHead>
+                  <TableHead className="text-right w-[60px]">Ações</TableHead>
                 </TableRow></TableHeader>
                 <TableBody>
                   {paged.length === 0 ? (
-                    <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-6">Sem registros.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={11} className="text-center text-muted-foreground py-6">Sem registros.</TableCell></TableRow>
                   ) : paged.map((r: any, idx: number) => (
-                    <TableRow key={`${r.contrato_id}-${r.regra_receita_id}-${idx}`}>
+                    <TableRow
+                      key={`${r.contrato_id}-${r.regra_receita_id}-${idx}`}
+                      className="cursor-pointer hover:bg-muted/40"
+                      onClick={() => r.contrato_id && openDetails(r.contrato_id, r.provedor_id)}
+                    >
                       <TableCell className="font-mono text-xs">{r.codigo_contrato || '—'}</TableCell>
                       <TableCell className="max-w-[220px] truncate" title={r.nome_completo}>{r.nome_completo}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">{provedorMap.get(r.provedor_id) || '—'}</TableCell>
@@ -411,6 +416,17 @@ export default function RelatorioVisaoGeralReceita() {
                           : null)}
                       </TableCell>
                       <TableCell className="text-right font-semibold">{fmtBRL(r.comissao_total)}</TableCell>
+                      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title="Ver detalhes do contrato"
+                          onClick={() => r.contrato_id && openDetails(r.contrato_id, r.provedor_id)}
+                          disabled={!r.contrato_id}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
