@@ -258,7 +258,7 @@ export default function RegraReceitaEditorDialog({ open, onOpenChange, initial, 
 
           {/* 6-7 Bases */}
           <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm">4. Bases de valor e volume</CardTitle></CardHeader>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">5. Bases de valor e volume</CardTitle></CardHeader>
             <CardContent className="space-y-3">
               <p className="text-xs text-muted-foreground">Base de valor é o que é somado em R$. Base de volume é o que é contado (usado depois em faixas de comissão).</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
