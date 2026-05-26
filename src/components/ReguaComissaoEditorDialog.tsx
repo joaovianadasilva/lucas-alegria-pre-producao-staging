@@ -105,18 +105,11 @@ export default function ReguaComissaoEditorDialog({ open, onOpenChange, initial,
     const vals = receitaSelecionada.base_valor ? BASES_VALOR.filter(b => b.value === receitaSelecionada.base_valor) : [];
     if (r.tipo_regua === 'valor_fixo_unidade') return vols;
     if (r.tipo_regua === 'hibrida') return [...vols, ...vals].filter(b => b.value !== r.base_faixa);
-    if (r.tipo_regua === 'faixa_volume') return vols;
-    if (r.tipo_regua === 'faixa_valor') return vals;
-    // percentual_fixo
+    // faixa_volume, faixa_valor e percentual_fixo: oferece todas as bases da receita
+    // (o usuário escolhe se a comissão incide sobre volume — com fator valor_fixo —
+    // ou sobre valor monetário — com fator percentual).
     return [...vols, ...vals];
   }, [receitaSelecionada, r.tipo_regua, r.base_faixa]);
-
-  // Auto-ajusta base_calculo = base_faixa em faixa_volume/faixa_valor
-  useEffect(() => {
-    if ((r.tipo_regua === 'faixa_volume' || r.tipo_regua === 'faixa_valor') && r.base_faixa && r.base_calculo !== r.base_faixa) {
-      setR(s => ({ ...s, base_calculo: s.base_faixa! }));
-    }
-  }, [r.tipo_regua, r.base_faixa]);
 
   const showFaixa = r.tipo_regua === 'faixa_volume' || r.tipo_regua === 'faixa_valor' || r.tipo_regua === 'hibrida';
   const showFaixas = showFaixa;
