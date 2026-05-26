@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Filter, Wallet, Download } from 'lucide-react';
+import { Filter, Wallet, Download, Eye } from 'lucide-react';
+import { ContractDetailsDialog, ContratoCompleto } from '@/components/ContractDetailsDialog';
 import { toast } from 'sonner';
 import { formatLocalDate, toISODateString } from '@/lib/dateUtils';
 import {
@@ -64,6 +65,30 @@ export default function RelatorioVisaoGeralReceita() {
   const [applied, setApplied] = useState({ provedorIds: [] as string[], dataInicio: initial.ini, dataFim: initial.fim, key: 0 });
   const [page, setPage] = useState(1);
   const [busca, setBusca] = useState('');
+
+  const qc = useQueryClient();
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+  const [contractDetails, setContractDetails] = useState<ContratoCompleto | null>(null);
+
+  const openDetails = async (contratoId: string, provedorId: string) => {
+    setDetailsOpen(true);
+    setLoadingDetails(true);
+    setContractDetails(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('manage-contracts', {
+        body: { action: 'getContract', provedorId, contratoId },
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Erro');
+      setContractDetails(data.contrato);
+    } catch (e: any) {
+      toast.error('Erro: ' + e.message);
+      setDetailsOpen(false);
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
 
   const { data: provedores } = useQuery({
     queryKey: ['central-provedores'],
@@ -366,12 +391,17 @@ export default function RelatorioVisaoGeralReceita() {
                   <TableHead className="text-right">Base gerada</TableHead>
                   <TableHead>Faixa</TableHead>
                   <TableHead className="text-right">Comissão</TableHead>
+                  <TableHead className="text-right w-[60px]">Ações</TableHead>
                 </TableRow></TableHeader>
                 <TableBody>
                   {paged.length === 0 ? (
-                    <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-6">Sem registros.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={11} className="text-center text-muted-foreground py-6">Sem registros.</TableCell></TableRow>
                   ) : paged.map((r: any, idx: number) => (
-                    <TableRow key={`${r.contrato_id}-${r.regra_receita_id}-${idx}`}>
+                    <TableRow
+                      key={`${r.contrato_id}-${r.regra_receita_id}-${idx}`}
+                      className="cursor-pointer hover:bg-muted/40"
+                      onClick={() => r.contrato_id && openDetails(r.contrato_id, r.provedor_id)}
+                    >
                       <TableCell className="font-mono text-xs">{r.codigo_contrato || '—'}</TableCell>
                       <TableCell className="max-w-[220px] truncate" title={r.nome_completo}>{r.nome_completo}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">{provedorMap.get(r.provedor_id) || '—'}</TableCell>
@@ -386,6 +416,17 @@ export default function RelatorioVisaoGeralReceita() {
                           : null)}
                       </TableCell>
                       <TableCell className="text-right font-semibold">{fmtBRL(r.comissao_total)}</TableCell>
+                      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title="Ver detalhes do contrato"
+                          onClick={() => r.contrato_id && openDetails(r.contrato_id, r.provedor_id)}
+                          disabled={!r.contrato_id}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -403,6 +444,14 @@ export default function RelatorioVisaoGeralReceita() {
           </Card>
         </>
       )}
+
+      <ContractDetailsDialog
+        open={detailsOpen}
+        onOpenChange={setDetailsOpen}
+        contract={contractDetails}
+        loading={loadingDetails}
+        onContractUpdated={() => qc.invalidateQueries({ queryKey: ['central-relatorio-receita'] })}
+      />
     </div>
   );
 }
