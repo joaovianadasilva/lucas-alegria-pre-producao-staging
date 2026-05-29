@@ -29,6 +29,7 @@ import ContratosCentral from "./pages/central/ContratosCentral";
 import RelatorioVisaoGeralVendas from "./pages/central/RelatorioVisaoGeralVendas";
 import RelatorioVisaoGeralAgendamentos from "./pages/central/RelatorioVisaoGeralAgendamentos";
 import RelatorioVisaoGeralReceita from "./pages/central/RelatorioVisaoGeralReceita";
+import RelatorioCaixa from "./pages/central/RelatorioCaixa";
 import RegrasOperacionais from "./pages/central/RegrasOperacionais";
 
 const queryClient = new QueryClient();
@@ -99,6 +100,7 @@ const App = () => (
                 <Route path="relatorios/visao-geral-vendas" element={<RelatorioVisaoGeralVendas />} />
                 <Route path="relatorios/visao-geral-agendamentos" element={<RelatorioVisaoGeralAgendamentos />} />
                 <Route path="relatorios/visao-geral-receita" element={<RelatorioVisaoGeralReceita />} />
+                <Route path="relatorios/caixa" element={<RelatorioCaixa />} />
                 <Route path="regras" element={<RegrasOperacionais />} />
               </Route>
             </Route>
