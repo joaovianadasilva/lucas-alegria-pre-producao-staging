@@ -1,29 +1,43 @@
-## Objetivo
+## Relatório de Caixa
 
-Permitir clicar nos contratos da lista detalhada do **Relatório de Receita** (`/central/relatorios/visao-geral-receita`) para abrir o mesmo modal de detalhes/edição usado na tela **Contratos (Central > Dados)**, com acesso a edição do contrato, recebimento e reembolso.
+Nova tela em **Central → Relatórios → Caixa** (`/central/relatorios/caixa`), seguindo o padrão visual do Relatório de Receita (filtros de provedores + período preset/custom + botão Aplicar).
 
-## Abordagem
+### KPIs (cards no topo)
 
-Reaproveitar exatamente o padrão já em produção em `src/pages/central/ContratosCentral.tsx`: o componente `ContractDetailsDialog` (que já cobre detalhes, edição de campos, recebimento e reembolso) carregado via `manage-contracts → getContract`.
+| Indicador | Definição |
+|---|---|
+| Contas a Receber | Faturamento gerado pelas Regras de Receita no período (mesma base do Relatório de Receita) |
+| Receita Recebida | Soma de `valor_total` dos contratos com `recebimento_efetivado = true` e `data_recebimento` dentro do período |
+| Reembolsos a Pagar | Soma de `valor_total` dos contratos com `reembolsavel = true` e `reembolso_efetivado = false`, considerando `data_cancelamento` dentro do período (fallback `created_at` quando não houver) |
+| Reembolsos Pagos | Soma de `valor_total` dos contratos com `reembolso_efetivado = true` e `data_reembolso` dentro do período |
+| Despesas Pagas | Placeholder = R$ 0 (campo preparado para futuro) |
+| Fluxo de Caixa Líquido | Receita Recebida − Reembolsos Pagos − Despesas Pagas |
 
-A linha da tabela detalhada já carrega `contrato_id` e `provedor_id`, então não é preciso mudar o backend nem o payload.
+### Tabela: KPIs por provedor
 
-## Alterações
+Linhas = provedores selecionados (ou todos). Colunas = Contas a Receber, Receita Recebida, Reembolsos a Pagar, Reembolsos Pagos, Fluxo Líquido. (Despesas omitida.)
 
-**Arquivo único:** `src/pages/central/RelatorioVisaoGeralReceita.tsx`
+### Listas detalhadas
 
-1. Importar `ContractDetailsDialog`, `ContratoCompleto` e o ícone `Eye`.
-2. Adicionar estados: `detailsOpen`, `loadingDetails`, `contractDetails`.
-3. Adicionar função `openDetails(contratoId, provedorId)` idêntica à de `ContratosCentral` (invoca `manage-contracts` com `getContract`).
-4. Na tabela detalhada (linhas ~358-392):
-   - Acrescentar uma `TableHead` "Ações" à direita.
-   - Em cada linha, adicionar uma célula com botão `Eye` que chama `openDetails(r.contrato_id, r.provedor_id)`.
-   - Tornar a linha visualmente clicável (`cursor-pointer hover:bg-muted/40`) acionando a mesma função, para usabilidade.
-   - Ajustar `colSpan` do estado vazio de 10 → 11.
-5. Renderizar `<ContractDetailsDialog ... onContractUpdated={() => refetch()}>` no final do componente, invalidando/refazendo a query do relatório quando o contrato for atualizado (para que valores de comissão/faturamento reflitam mudanças, como marcação de recebimento).
+**Bloco 1 — duas tabelas lado a lado:**
 
-## Fora de escopo
+1. **Contratos vendidos no período** (filtrados por `created_at`), com coluna "Status de recebimento":
+   - `Recebido` quando `recebimento_efetivado = true`
+   - `Elegível` quando `reembolsavel = false` e ainda não recebido
+   - `Pendente` quando `reembolsavel = true` e ainda não recebido/reembolsado
+2. **Contratos reembolsáveis no período** (`reembolsavel = true`, por `data_cancelamento`/`created_at`), com status do reembolso (Pendente / Pago) e botão de exportação CSV (compatível com Google Sheets).
 
-- Mudanças no edge function `central-operacional` (o payload já traz `contrato_id` + `provedor_id`).
-- Alterações no `ContractDetailsDialog` em si — ele já suporta edição completa incluindo recebimento/reembolso.
-- Mesma ação na tabela "Por Regra de Receita" (essa é agregada por regra, não tem contrato unitário).
+**Bloco 2 — duas tabelas lado a lado:**
+
+3. **Contratos Recebidos** no período (`recebimento_efetivado=true`, `data_recebimento` ∈ período).
+4. **Contratos Reembolsados** no período (`reembolso_efetivado=true`, `data_reembolso` ∈ período).
+
+Todas as linhas das 4 tabelas são clicáveis e abrem o `ContractDetailsDialog` (mesmo padrão do Relatório de Receita), permitindo editar inclusive recebimento/reembolso. Ao fechar, o relatório é invalidado e recarregado.
+
+### Detalhes técnicos
+
+- **Edge function**: adicionar `action: 'relatorioCaixa'` em `supabase/functions/central-operacional/index.ts`. Reaproveita a lógica de "faturamento por regras de receita" do `relatorioReceita` para Contas a Receber, e busca contratos por três janelas (`created_at`, `data_recebimento`, `data_reembolso`, `data_cancelamento`) para os demais indicadores. Retorna KPIs globais, breakdown por provedor e as 4 listas detalhadas.
+- **Frontend**: novo arquivo `src/pages/central/RelatorioCaixa.tsx` espelhando o layout de `RelatorioVisaoGeralReceita.tsx` (filtros, presets, KPI cards, tabelas, paginação 20/pg, busca, export CSV nas listas).
+- **Rota**: adicionar `/central/relatorios/caixa` em `src/App.tsx`.
+- **Sidebar**: adicionar item "Caixa" em `src/components/CentralSidebar.tsx` no grupo Relatórios.
+- Sem mudanças de schema.
