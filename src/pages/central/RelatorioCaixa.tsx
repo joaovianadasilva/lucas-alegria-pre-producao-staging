@@ -268,55 +268,71 @@ export default function RelatorioCaixa() {
             </CardContent>
           </Card>
 
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-            <ContratosTabela
-              titulo="Contratos vendidos no período"
-              rows={relatorio.contratosVendidos}
-              provedorMap={provedorMap}
-              dateField="created_at"
-              dateLabel="Cadastro"
-              extraColumns={[
-                { header: 'Recebimento', render: r => statusBadge(r.status_recebimento) },
-              ]}
-              onRowClick={openDetails}
-              filename="contratos-vendidos"
-            />
-            <ContratosTabela
-              titulo="Contratos reembolsáveis no período"
-              rows={relatorio.contratosReembolsaveis}
-              provedorMap={provedorMap}
-              dateField="data_cancelamento"
-              dateLabel="Cancelamento"
-              extraColumns={[
-                { header: 'Reembolso', render: r => r.status_reembolso === 'pago'
-                  ? <Badge variant="default" className="bg-emerald-600">Pago</Badge>
-                  : <Badge variant="outline">Pendente</Badge> },
-              ]}
-              onRowClick={openDetails}
-              filename="contratos-reembolsaveis"
-            />
-          </div>
+          <Tabs defaultValue="vendidos">
+            <TabsList className="mb-2">
+              <TabsTrigger value="vendidos">Contratos vendidos ({relatorio.contratosVendidos.length})</TabsTrigger>
+              <TabsTrigger value="reembolsaveis">Contratos reembolsáveis ({relatorio.contratosReembolsaveis.length})</TabsTrigger>
+            </TabsList>
+            <TabsContent value="vendidos">
+              <ContratosTabela
+                titulo="Contratos vendidos no período"
+                rows={relatorio.contratosVendidos}
+                provedorMap={provedorMap}
+                dateField="created_at"
+                dateLabel="Cadastro"
+                extraColumns={[
+                  { header: 'Recebimento', render: r => statusBadge(r.status_recebimento) },
+                ]}
+                onRowClick={openDetails}
+                filename="contratos-vendidos"
+              />
+            </TabsContent>
+            <TabsContent value="reembolsaveis">
+              <ContratosTabela
+                titulo="Contratos reembolsáveis no período"
+                rows={relatorio.contratosReembolsaveis}
+                provedorMap={provedorMap}
+                dateField="data_cancelamento"
+                dateLabel="Cancelamento"
+                extraColumns={[
+                  { header: 'Reembolso', render: r => r.status_reembolso === 'pago'
+                    ? <Badge variant="default" className="bg-emerald-600">Pago</Badge>
+                    : <Badge variant="outline">Pendente</Badge> },
+                ]}
+                onRowClick={openDetails}
+                filename="contratos-reembolsaveis"
+              />
+            </TabsContent>
+          </Tabs>
 
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-            <ContratosTabela
-              titulo="Contratos Recebidos no período"
-              rows={relatorio.contratosRecebidos}
-              provedorMap={provedorMap}
-              dateField="data_recebimento"
-              dateLabel="Recebimento"
-              onRowClick={openDetails}
-              filename="contratos-recebidos"
-            />
-            <ContratosTabela
-              titulo="Contratos Reembolsados no período"
-              rows={relatorio.contratosReembolsados}
-              provedorMap={provedorMap}
-              dateField="data_reembolso"
-              dateLabel="Reembolso"
-              onRowClick={openDetails}
-              filename="contratos-reembolsados"
-            />
-          </div>
+          <Tabs defaultValue="recebidos">
+            <TabsList className="mb-2">
+              <TabsTrigger value="recebidos">Contratos recebidos ({relatorio.contratosRecebidos.length})</TabsTrigger>
+              <TabsTrigger value="reembolsados">Contratos reembolsados ({relatorio.contratosReembolsados.length})</TabsTrigger>
+            </TabsList>
+            <TabsContent value="recebidos">
+              <ContratosTabela
+                titulo="Contratos Recebidos no período"
+                rows={relatorio.contratosRecebidos}
+                provedorMap={provedorMap}
+                dateField="data_recebimento"
+                dateLabel="Recebimento"
+                onRowClick={openDetails}
+                filename="contratos-recebidos"
+              />
+            </TabsContent>
+            <TabsContent value="reembolsados">
+              <ContratosTabela
+                titulo="Contratos Reembolsados no período"
+                rows={relatorio.contratosReembolsados}
+                provedorMap={provedorMap}
+                dateField="data_reembolso"
+                dateLabel="Reembolso"
+                onRowClick={openDetails}
+                filename="contratos-reembolsados"
+              />
+            </TabsContent>
+          </Tabs>
         </>
       )}
 
